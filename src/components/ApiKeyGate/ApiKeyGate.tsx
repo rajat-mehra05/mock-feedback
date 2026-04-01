@@ -46,7 +46,13 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
           <h2 className="mb-2 text-lg font-semibold">Enter your OpenAI API Key</h2>
           <p className="mb-4 text-sm text-muted-foreground">{API_KEY_DESCRIPTION}</p>
 
-          <div className="space-y-3">
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
             <div className="flex gap-2">
               <Input
                 id="gate-api-key"
@@ -54,10 +60,10 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
                 placeholder="sk-..."
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 aria-label="OpenAI API Key"
               />
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowKey(!showKey)}
@@ -68,8 +74,8 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
             </div>
 
             <Button
+              type="submit"
               className="w-full"
-              onClick={handleSave}
               disabled={!keyInput.trim() || status === 'saving'}
             >
               {status === 'saving' ? 'Saving...' : 'Save & Continue'}
@@ -78,7 +84,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
             {status === 'error' && (
               <p className="text-sm text-destructive">Failed to save key. Please try again.</p>
             )}
-          </div>
+          </form>
 
           <p className="mt-4 text-xs text-muted-foreground">
             Need a key?{' '}
@@ -89,6 +95,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
               className="underline hover:text-foreground"
             >
               Get one from OpenAI
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
           </p>
         </div>

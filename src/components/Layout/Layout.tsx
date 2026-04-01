@@ -30,13 +30,23 @@ export function Layout({ children }: { children: ReactNode }) {
             Mock Feedback
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setHowItWorksOpen(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHowItWorksOpen(true)}
+              aria-haspopup="dialog"
+            >
               How it works
             </Button>
             <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/history" />}>
               History
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              aria-haspopup="dialog"
+            >
               Settings
             </Button>
           </div>

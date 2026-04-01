@@ -36,18 +36,23 @@ export function Home() {
       </section>
 
       <div className="flex flex-col items-center gap-4">
-        <div className="relative" title={!hasKey ? 'Configure your API key in Settings first' : ''}>
+        <div className="relative">
           <button
             onClick={() => setStartOpen(true)}
             disabled={!hasKey}
             aria-label="Start new interview session"
+            aria-describedby={!hasKey ? 'start-disabled-hint' : undefined}
             className="flex h-28 w-28 items-center justify-center rounded-full bg-green-500 text-lg font-bold text-white shadow-lg transition-colors hover:bg-green-600 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 motion-safe:active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-500 disabled:hover:shadow-lg disabled:active:scale-100"
           >
             Start
           </button>
         </div>
 
-        {!hasKey && <p className="text-sm text-muted-foreground">{NO_API_KEY_MESSAGE}</p>}
+        {!hasKey && (
+          <p id="start-disabled-hint" className="text-sm text-muted-foreground">
+            {NO_API_KEY_MESSAGE}
+          </p>
+        )}
       </div>
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />

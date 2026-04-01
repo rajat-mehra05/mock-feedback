@@ -51,7 +51,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
           <div>
             <label htmlFor="api-key-input" className="mb-1.5 block text-sm font-medium">
               OpenAI API Key
@@ -63,9 +69,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 placeholder={apiKey ? '••••••••••••••••' : 'sk-...'}
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               />
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowKey(!showKey)}
@@ -90,15 +96,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
             <div className="flex gap-2">
               {apiKey && (
-                <Button variant="destructive" size="sm" onClick={handleRemove}>
+                <Button type="button" variant="destructive" size="sm" onClick={handleRemove}>
                   Remove
                 </Button>
               )}
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={!keyInput.trim() || status === 'saving'}
-              >
+              <Button type="submit" size="sm" disabled={!keyInput.trim() || status === 'saving'}>
                 {status === 'saving' ? 'Saving...' : 'Save'}
               </Button>
             </div>
@@ -113,9 +115,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               className="underline hover:text-foreground"
             >
               Get one from OpenAI
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
           </p>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
