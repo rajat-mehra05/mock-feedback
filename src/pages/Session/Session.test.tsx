@@ -12,7 +12,7 @@ test('user sees topic header, question counter, recording indicator, and stop bu
 
   expect(screen.getByRole('heading', { name: /react & next\.js/i })).toBeInTheDocument();
   expect(screen.getByText(/question 1 of 7/i)).toBeInTheDocument();
-  expect(screen.getByLabelText(/recording in progress/i)).toBeInTheDocument();
+  expect(screen.getByRole('status', { name: /recording status/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /stop recording/i })).toBeInTheDocument();
   expect(screen.getByText(/max answer length.*maximum silence/i)).toBeInTheDocument();
   expect(screen.getByText(/closures/i)).toBeInTheDocument();
