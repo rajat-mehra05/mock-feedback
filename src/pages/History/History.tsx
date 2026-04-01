@@ -1,5 +1,5 @@
-import { SessionCard } from '@/components/SessionCard';
-import { useSessions } from '@/hooks/useSessions';
+import { SessionCard } from '@/components/SessionCard/SessionCard';
+import { useSessions } from '@/hooks/useSessions/useSessions';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 
@@ -17,7 +17,11 @@ export function History() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">My Interview History</h1>
 
-      <div className="grid grid-cols-3 gap-4 rounded-lg border border-border bg-muted/30 p-4">
+      <div
+        role="region"
+        aria-label="Interview statistics"
+        className="grid grid-cols-3 gap-4 rounded-lg border border-border bg-muted/30 p-4"
+      >
         <div className="text-center">
           <p className="text-2xl font-bold text-foreground">{totalInterviews}</p>
           <p className="text-xs text-muted-foreground">Interviews</p>

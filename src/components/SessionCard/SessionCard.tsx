@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Session } from '@/db';
+import type { Session } from '@/db/sessions/sessions';
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -33,7 +33,7 @@ export function SessionCard({ session }: { session: Session }) {
   return (
     <article>
       <Link to={`/history/${session.id}`} className="block">
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="motion-safe:transition-shadow hover:shadow-md">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between">
               <CardTitle className="text-base">{session.topic}</CardTitle>

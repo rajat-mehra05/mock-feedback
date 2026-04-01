@@ -46,9 +46,7 @@ export function SessionErrorFallback() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8">
       <h2 className="text-xl font-bold text-foreground">Session encountered an error</h2>
-      <p className="text-muted-foreground">
-        Something went wrong during your interview session.
-      </p>
+      <p className="text-muted-foreground">Something went wrong during your interview session.</p>
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => (window.location.href = '/')}>
           Return Home

@@ -86,7 +86,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
                 Interview Topic
               </label>
               <Select value={topic} onValueChange={(v) => setTopic(v ?? '')}>
-                <SelectTrigger id="topic-select" >
+                <SelectTrigger id="topic-select">
                   <SelectValue placeholder="Select a topic" />
                 </SelectTrigger>
                 <SelectContent>
@@ -103,8 +103,11 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
               <label htmlFor="count-select" className="mb-1.5 block text-sm font-medium">
                 Number of Questions
               </label>
-              <Select value={questionCount} onValueChange={(v) => setQuestionCount(v ?? DEFAULT_QUESTION_COUNT)}>
-                <SelectTrigger id="count-select" >
+              <Select
+                value={questionCount}
+                onValueChange={(v) => setQuestionCount(v ?? DEFAULT_QUESTION_COUNT)}
+              >
+                <SelectTrigger id="count-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getSession, type Session } from '@/db';
+import { getSession, type Session } from '@/db/sessions/sessions';
 
 function scoreColor(score: number): string {
   if (score >= 8) return 'text-green-600';
@@ -45,7 +45,9 @@ export function Feedback() {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <p className="text-lg text-muted-foreground">Session not found</p>
-        <Button render={<Link to="/history" />}>Back to History</Button>
+        <Button nativeButton={false} render={<Link to="/history" />}>
+          Back to History
+        </Button>
       </div>
     );
   }
@@ -106,9 +108,7 @@ export function Feedback() {
             ) : (
               <div className="rounded-md bg-green-50 p-3">
                 <p className="mb-1 text-xs font-medium text-green-700">Model Answer</p>
-                <p className="text-sm text-green-900">
-                  {q.feedback}
-                </p>
+                <p className="text-sm text-green-900">{q.feedback}</p>
               </div>
             )}
           </section>
@@ -131,7 +131,9 @@ export function Feedback() {
       </section>
 
       <div className="flex justify-center">
-        <Button render={<Link to="/history" />}>Back to History</Button>
+        <Button nativeButton={false} render={<Link to="/history" />}>
+          Back to History
+        </Button>
       </div>
     </div>
   );
