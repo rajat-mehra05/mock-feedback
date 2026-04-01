@@ -32,7 +32,11 @@ export function SessionCard({ session }: { session: Session }) {
 
   return (
     <article>
-      <Link to={`/history/${session.id}`} className="block">
+      <Link
+        to={`/history/${session.id}`}
+        className="block rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label={`View feedback for ${session.topic} interview on ${formatDate(session.createdAt)}`}
+      >
         <Card className="motion-safe:transition-shadow hover:shadow-md">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between">
