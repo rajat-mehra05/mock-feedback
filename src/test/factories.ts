@@ -4,7 +4,7 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 'test-session-1',
     topic: 'JavaScript / TypeScript',
-    createdAt: new Date('2026-03-28T10:00:00'),
+    createdAt: new Date('2026-03-28T10:00:00Z'),
     duration: 600,
     questionCount: 3,
     averageScore: 7.5,

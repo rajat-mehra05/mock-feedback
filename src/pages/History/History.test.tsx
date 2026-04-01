@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { History } from './History';
 import { db } from '@/db/sessions/sessions';
@@ -10,7 +10,9 @@ test('user sees empty state when no sessions exist', async () => {
   renderWithProviders(<History />);
 
   expect(await screen.findByText(/no interviews yet/i)).toBeInTheDocument();
-  expect(screen.getByText('0')).toBeInTheDocument();
+
+  const stats = screen.getByRole('region', { name: /interview statistics/i });
+  expect(within(stats).getByText('0')).toBeInTheDocument();
 });
 
 test('user sees stats bar and session cards when sessions exist', async () => {
@@ -20,7 +22,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
     {
       id: 's1',
       topic: 'JavaScript / TypeScript',
-      createdAt: new Date('2026-03-28'),
+      createdAt: new Date('2026-03-28Z'),
       duration: 600,
       questionCount: 5,
       averageScore: 7.0,
@@ -29,7 +31,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
     {
       id: 's2',
       topic: 'Node.js',
-      createdAt: new Date('2026-03-30'),
+      createdAt: new Date('2026-03-30Z'),
       duration: 480,
       questionCount: 3,
       averageScore: 8.0,
@@ -39,9 +41,11 @@ test('user sees stats bar and session cards when sessions exist', async () => {
 
   renderWithProviders(<History />);
 
-  // Stats bar
-  expect(await screen.findByText('2')).toBeInTheDocument();
-  expect(screen.getByText('7.5')).toBeInTheDocument();
+  // Wait for session data to load, then check stats
+  await screen.findByText('JavaScript / TypeScript');
+  const stats = screen.getByRole('region', { name: /interview statistics/i });
+  expect(within(stats).getByText('2')).toBeInTheDocument();
+  expect(within(stats).getByText('7.5')).toBeInTheDocument();
 
   // Session cards
   expect(screen.getAllByText('JavaScript / TypeScript')[0]).toBeInTheDocument();

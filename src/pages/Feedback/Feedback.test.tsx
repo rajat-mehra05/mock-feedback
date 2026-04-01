@@ -2,8 +2,7 @@ import { expect, test } from 'vitest';
 import { screen, render } from '@testing-library/react';
 import { Feedback } from './Feedback';
 import { db } from '@/db/sessions/sessions';
-import { Routes, Route } from 'react-router-dom';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 function renderFeedback(sessionId: string) {
   return render(
