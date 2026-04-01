@@ -12,7 +12,9 @@ import { MicCheckGate } from './MicCheckGate';
 export function Session() {
   const [searchParams] = useSearchParams();
   const topic = searchParams.get('topic') ?? 'javascript-typescript';
-  const count = Number(searchParams.get('count') ?? DEFAULT_QUESTION_COUNT);
+  const rawCount = Number(searchParams.get('count'));
+  const count =
+    Number.isFinite(rawCount) && rawCount > 0 ? rawCount : Number(DEFAULT_QUESTION_COUNT);
   const topicLabel = TOPIC_LABELS[topic] ?? topic;
   const { state, start, stop, retry, stopRecordingOnly } = useInterviewSession();
   const startedRef = useRef(false);

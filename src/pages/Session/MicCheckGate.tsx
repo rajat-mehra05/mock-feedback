@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { checkMediaRecorderSupport, checkMicDevices } from '@/lib/micCheck';
 import {
   UNSUPPORTED_BROWSER_MESSAGE,
@@ -12,14 +12,20 @@ type CheckStatus = 'checking' | 'passed' | 'failed';
 export function MicCheckGate({ onReady, children }: { onReady: () => void; children: ReactNode }) {
   const [status, setStatus] = useState<CheckStatus>('checking');
   const [errorMessage, setErrorMessage] = useState('');
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    runChecks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   async function runChecks() {
+    const token = ++requestIdRef.current;
+
     if (!checkMediaRecorderSupport()) {
+      if (!mountedRef.current || token !== requestIdRef.current) return;
       setErrorMessage(UNSUPPORTED_BROWSER_MESSAGE);
       setStatus('failed');
       return;
@@ -27,12 +33,14 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
 
     try {
       const hasDevices = await checkMicDevices();
+      if (!mountedRef.current || token !== requestIdRef.current) return;
       if (!hasDevices) {
         setErrorMessage(NO_MIC_MESSAGE);
         setStatus('failed');
         return;
       }
     } catch {
+      if (!mountedRef.current || token !== requestIdRef.current) return;
       setErrorMessage(NO_MIC_MESSAGE);
       setStatus('failed');
       return;
@@ -44,14 +52,21 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
         s.getTracks().forEach((t) => t.stop());
       });
     } catch {
+      if (!mountedRef.current || token !== requestIdRef.current) return;
       setErrorMessage(MIC_PERMISSION_MESSAGE);
       setStatus('failed');
       return;
     }
 
+    if (!mountedRef.current || token !== requestIdRef.current) return;
     setStatus('passed');
     onReady();
   }
+
+  useEffect(() => {
+    runChecks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (status === 'checking') {
     return (

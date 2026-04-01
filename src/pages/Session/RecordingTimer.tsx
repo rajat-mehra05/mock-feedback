@@ -25,6 +25,8 @@ export function RecordingTimer({ isActive, onMaxReached }: RecordingTimerProps) 
     const interval = setInterval(() => {
       const secs = Math.floor((Date.now() - startTime) / 1000);
       if (secs >= MAX_RECORDING_SECONDS) {
+        clearInterval(interval);
+        setElapsed(MAX_RECORDING_SECONDS);
         onMaxRef.current();
       } else {
         setElapsed(secs);

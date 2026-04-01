@@ -43,8 +43,10 @@ export function useInterviewSession() {
             (sig) => generateNextQuestion(state.topic, state.history, sig),
             { ...RETRY_OPTS, signal: s },
           );
+          if (s.aborted) return;
           dispatch({ type: 'QUESTION_READY', question });
         } catch (error) {
+          if (s.aborted) return;
           onError(error, 'generating');
         }
       })();
@@ -54,8 +56,10 @@ export function useInterviewSession() {
       (async () => {
         try {
           await speakText(state.currentQuestion!, s);
+          if (s.aborted) return;
           dispatch({ type: 'TTS_DONE' });
         } catch {
+          if (s.aborted) return;
           dispatch({ type: 'TTS_FAILED', question: state.currentQuestion! });
         }
       })();
@@ -74,7 +78,9 @@ export function useInterviewSession() {
           } catch {
             // TTS failure is non-blocking
           }
+          if (s.aborted) return;
           const result = await generateFeedback(state.topic, state.history, s);
+          if (s.aborted) return;
           const sessionId = crypto.randomUUID();
           const elapsed = state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : 0;
           const avg =
@@ -96,14 +102,27 @@ export function useInterviewSession() {
               followUp: result.questions[i]?.modelAnswer,
             })),
           });
+          if (s.aborted) return;
           dispatch({ type: 'FEEDBACK_DONE', sessionId });
         } catch (error) {
+          if (s.aborted) return;
           onError(error, 'generating_feedback');
         }
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.status, state.currentQuestionIndex]);
+
+  // Surface recorder errors into session state
+  useEffect(() => {
+    if (recorder.error && state.status === 'user_recording') {
+      onError(
+        { type: 'unknown', message: recorder.error, retryable: false } as OpenAIServiceError,
+        'user_recording',
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recorder.error]);
 
   // audioBlob ready → transition to transcribing
   useEffect(() => {
@@ -117,12 +136,15 @@ export function useInterviewSession() {
   useEffect(() => {
     if (state.status !== 'transcribing' || !recorder.audioBlob) return;
     const blob = recorder.audioBlob;
-    recorder.clearBlob();
+    const s = getSignal();
     (async () => {
       try {
-        const transcript = await transcribeAudio(blob, getSignal());
+        const transcript = await transcribeAudio(blob, s);
+        if (s.aborted) return;
+        recorder.clearBlob();
         dispatch({ type: 'RECORDING_DONE', transcript });
       } catch (error) {
+        if (s.aborted) return;
         onError(error, 'transcribing');
       }
     })();

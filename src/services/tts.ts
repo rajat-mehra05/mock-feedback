@@ -29,7 +29,7 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
     );
 
     const arrayBuffer = await response.arrayBuffer();
-    await playAudioBuffer(arrayBuffer, signal);
+    await playAudioBuffer(arrayBuffer, mergedSignal);
   } catch (error) {
     throw classifyOpenAIError(error);
   } finally {
@@ -39,14 +39,21 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
 
 async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promise<void> {
   const audioContext = new AudioContext();
-  const audioBuffer = await audioContext.decodeAudioData(buffer);
-  const source = audioContext.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
-
   const closeContext = () => {
     if (audioContext.state !== 'closed') audioContext.close();
   };
+
+  let audioBuffer: AudioBuffer;
+  try {
+    audioBuffer = await audioContext.decodeAudioData(buffer);
+  } catch (error) {
+    closeContext();
+    throw error;
+  }
+
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
 
   return new Promise<void>((resolve, reject) => {
     source.onended = () => {

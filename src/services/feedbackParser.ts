@@ -5,7 +5,7 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
   // Strip markdown code fences if present
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
   }
 
   let parsed: unknown;

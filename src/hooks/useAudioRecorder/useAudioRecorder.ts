@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AUDIO_MIME_TYPES } from '@/constants/openai';
 import { SILENCE_TIMEOUT_SECONDS, SILENCE_RMS_THRESHOLD } from '@/constants/session';
 
@@ -131,13 +131,29 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         stopRecording,
       );
     } catch (err) {
+      cleanupSilenceDetection();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       const msg =
         err instanceof DOMException && err.name === 'NotAllowedError'
           ? 'Microphone access is required. Please allow microphone access in your browser settings.'
           : 'Failed to start recording.';
       setError(msg);
     }
-  }, [stopRecording]);
+  }, [stopRecording, cleanupSilenceDetection]);
+
+  // Release all resources on unmount
+  useEffect(() => {
+    return () => {
+      cleanupSilenceDetection();
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop();
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [cleanupSilenceDetection]);
 
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 
