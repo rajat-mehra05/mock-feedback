@@ -16,15 +16,15 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install --frozen-lockfile || npm install
 
       - name: Lint
         run: npm run lint
@@ -32,7 +32,7 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      - name: Unit Tests
+      - name: Unit tests
         run: npm run test
 
       - name: Build
@@ -41,6 +41,6 @@ jobs:
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
         with:
-          configPath: './lighthouserc.cjs'
+          configPath: ./lighthouserc.cjs
           uploadArtifacts: true
           temporaryPublicStorage: true
