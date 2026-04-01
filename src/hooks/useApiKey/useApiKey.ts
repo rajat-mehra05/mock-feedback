@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { ApiKeyContext, type ApiKeyState } from '@/hooks/apiKeyState';
+import { ApiKeyContext, type ApiKeyState } from '@/hooks/ApiKeyContext/apiKeyState';
 
 export function useApiKey(): ApiKeyState {
   const ctx = useContext(ApiKeyContext);

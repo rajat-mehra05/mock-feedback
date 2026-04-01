@@ -36,9 +36,9 @@ export function Session() {
         ))}
       </section>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
         <div
-          className="flex h-4 w-4 animate-pulse rounded-full bg-red-500"
+          className="flex h-4 w-4 rounded-full bg-red-500 motion-safe:animate-pulse"
           aria-label="Recording in progress"
         />
         <p className="text-xs text-muted-foreground">Recording your answer...</p>
@@ -47,7 +47,7 @@ export function Session() {
 
       <button
         aria-label="Stop recording"
-        className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white shadow-lg transition-all hover:bg-violet-700 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 active:scale-95"
+        className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white shadow-lg transition-colors hover:bg-violet-700 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 motion-safe:active:scale-95"
       >
         Stop
       </button>

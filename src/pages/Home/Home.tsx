@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { StartModal } from '@/components/StartModal';
-import { SessionCard } from '@/components/SessionCard';
-import { useApiKey } from '@/hooks/useApiKey';
-import { useSessions } from '@/hooks/useSessions';
+import { StartModal } from '@/components/StartModal/StartModal';
+import { SessionCard } from '@/components/SessionCard/SessionCard';
+import { useApiKey } from '@/hooks/useApiKey/useApiKey';
+import { useSessions } from '@/hooks/useSessions/useSessions';
 import { RECENT_SESSIONS_LIMIT } from '@/constants/session';
 import { EMPTY_SESSIONS_MESSAGE, NO_API_KEY_MESSAGE } from '@/constants/copy';
 
@@ -43,7 +43,7 @@ export function Home() {
             onClick={() => setStartOpen(true)}
             disabled={!hasKey}
             aria-label="Start new interview session"
-            className="flex h-28 w-28 items-center justify-center rounded-full bg-green-500 text-lg font-bold text-white shadow-lg transition-all hover:bg-green-600 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-500 disabled:hover:shadow-lg disabled:active:scale-100"
+            className="flex h-28 w-28 items-center justify-center rounded-full bg-green-500 text-lg font-bold text-white shadow-lg transition-colors hover:bg-green-600 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 motion-safe:active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-500 disabled:hover:shadow-lg disabled:active:scale-100"
           >
             Start
           </button>

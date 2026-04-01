@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllSessions, type Session } from '@/db';
+import { getAllSessions, type Session } from '@/db/sessions/sessions';
 
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);

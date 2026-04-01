@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApiKey } from '@/hooks/useApiKey';
+import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { OPENAI_API_KEYS_URL } from '@/constants/copy';
 
 interface SettingsModalProps {
@@ -77,7 +77,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="text-sm">
+            <div className="text-sm" aria-live="polite">
               {apiKey ? (
                 <span className="text-green-600">Key configured</span>
               ) : (

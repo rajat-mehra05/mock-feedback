@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApiKey } from '@/hooks/useApiKey';
+import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { APP_NAME, API_KEY_DESCRIPTION, OPENAI_API_KEYS_URL } from '@/constants/copy';
 
 export function ApiKeyGate({ children }: { children: ReactNode }) {

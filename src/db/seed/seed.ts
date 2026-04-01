@@ -1,4 +1,4 @@
-import { db } from './index';
+import { db } from '@/db/sessions/sessions';
 import { mockSessions } from './mockData';
 import { mockSessionsExtra } from './mockDataExtra';
 

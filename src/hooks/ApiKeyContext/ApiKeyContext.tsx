@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { getApiKey, saveApiKey, deleteApiKey } from '@/db/apiKey';
-import { ApiKeyContext } from '@/hooks/apiKeyState';
+import { getApiKey, saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
+import { ApiKeyContext } from '@/hooks/ApiKeyContext/apiKeyState';
 
 export function ApiKeyProvider({ children }: { children: ReactNode }) {
   const [apiKey, setApiKey] = useState<string | null>(null);

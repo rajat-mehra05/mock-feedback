@@ -1,5 +1,5 @@
-import { SessionCard } from '@/components/SessionCard';
-import { useSessions } from '@/hooks/useSessions';
+import { SessionCard } from '@/components/SessionCard/SessionCard';
+import { useSessions } from '@/hooks/useSessions/useSessions';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 

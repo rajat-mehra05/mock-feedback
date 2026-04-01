@@ -1,4 +1,4 @@
-import type { Session } from './index';
+import type { Session } from '@/db/sessions/sessions';
 
 export const mockSessions: Session[] = [
   {
