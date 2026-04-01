@@ -31,6 +31,7 @@ export function SessionErrorDisplay({ error, onRetry }: SessionErrorDisplayProps
             className="inline-flex h-8 items-center border-2 border-black bg-white px-3 text-sm font-bold uppercase tracking-wide hover:bg-neo-secondary"
           >
             Update API Key
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         )}
         {error.type === 'quota' && (
@@ -41,6 +42,7 @@ export function SessionErrorDisplay({ error, onRetry }: SessionErrorDisplayProps
             className="inline-flex h-8 items-center border-2 border-black bg-white px-3 text-sm font-bold uppercase tracking-wide hover:bg-neo-secondary"
           >
             Check Billing
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         )}
       </div>

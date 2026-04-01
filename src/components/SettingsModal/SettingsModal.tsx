@@ -101,7 +101,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {apiKey ? (
                 <span className="text-green-700">Key configured</span>
               ) : (
-                <span className="text-black/50">No key configured</span>
+                <span className="text-black/70">No key configured</span>
               )}
               {status === 'saved' && <span className="ml-2 text-green-700">Saved!</span>}
               {status === 'error' && <span className="ml-2 text-neo-accent">Error saving key</span>}
@@ -118,7 +118,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
           </div>
 
-          <p className="text-xs font-medium text-black/50">
+          <p className="text-xs font-medium text-black/70">
             Need a key?{' '}
             <a
               href={OPENAI_API_KEYS_URL}

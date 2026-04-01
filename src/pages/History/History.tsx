@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SessionCard } from '@/components/SessionCard/SessionCard';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', da
 
 export function History() {
   const { sessions, isLoading, removeSession, removeAll } = useSessions();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const totalInterviews = sessions.length;
   const avgScore =
@@ -14,6 +16,18 @@ export function History() {
       ? sessions.reduce((sum, s) => sum + s.averageScore, 0) / sessions.length
       : 0;
   const lastDate = sessions.length > 0 ? sessions[0].createdAt : null;
+
+  async function handleDeleteAll() {
+    if (!window.confirm('Delete all interview sessions? This cannot be undone.')) return;
+    setIsDeleting(true);
+    try {
+      await removeAll();
+    } catch {
+      // removeAll triggers a refresh via useSessions — if it fails, the UI will still show sessions
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -23,8 +37,8 @@ export function History() {
         </h1>
         <div className="flex gap-2">
           {sessions.length > 0 && (
-            <Button variant="destructive" size="sm" onClick={removeAll}>
-              Delete All
+            <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete All'}
             </Button>
           )}
           <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>

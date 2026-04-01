@@ -14,7 +14,7 @@ const badgeVariants = cva(
         destructive: 'bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000]',
         outline: 'border-black bg-white text-black',
         ghost: 'border-transparent bg-neo-muted/40 text-black',
-        link: 'text-black underline-offset-4 hover:underline',
+        link: 'border-transparent text-black underline-offset-4 hover:underline',
       },
     },
     defaultVariants: {

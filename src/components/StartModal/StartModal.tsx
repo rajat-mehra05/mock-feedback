@@ -113,7 +113,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
                 value={questionCount}
                 onValueChange={(v) => setQuestionCount(v ?? DEFAULT_QUESTION_COUNT)}
               >
-                <SelectTrigger id="count-select">
+                <SelectTrigger id="count-select" aria-required="true">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -15,7 +15,7 @@ const buttonVariants = cva(
         secondary: 'bg-neo-secondary text-black hover:brightness-110',
         ghost:
           'border-transparent shadow-none hover:border-black hover:bg-neo-secondary hover:shadow-neo-sm',
-        destructive: 'bg-neo-accent text-black hover:brightness-90',
+        destructive: 'bg-red-200 text-red-900 hover:brightness-90',
         link: 'border-transparent text-black underline-offset-4 shadow-none hover:underline',
       },
       size: {
