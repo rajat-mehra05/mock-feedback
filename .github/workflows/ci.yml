@@ -33,7 +33,11 @@ jobs:
         run: npm run format:check
 
       - name: Unit tests
-        run: npm run test
+        run: npm run test:coverage
+
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
 
       - name: Build
         run: npm run build

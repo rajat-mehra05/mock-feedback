@@ -29,7 +29,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       await save(keyInput.trim());
       setStatus('saved');
       setKeyInput('');
-      setTimeout(() => setStatus('idle'), 2000);
+      setTimeout(() => {
+        setStatus('idle');
+        onOpenChange(false);
+      }, 1000);
     } catch {
       setStatus('error');
     }

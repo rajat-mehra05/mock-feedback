@@ -25,6 +25,9 @@ export default defineConfig({
           if (id.includes('node_modules/dexie')) {
             return 'db';
           }
+          if (id.includes('node_modules/openai')) {
+            return 'openai';
+          }
         },
       },
     },
@@ -36,12 +39,20 @@ export default defineConfig({
     css: false,
     testTimeout: 5000,
     coverage: {
+      reporter: ['text', 'json-summary', 'json'],
       exclude: [
         'src/components/ui/**',
         'src/main.tsx',
         'src/App.tsx',
         'src/db/seed/mockData.ts',
         'src/db/seed/mockDataExtra.ts',
+        // Browser-only: require MediaRecorder, AudioContext, navigator.mediaDevices
+        'src/hooks/useAudioRecorder/**',
+        'src/lib/micCheck.ts',
+        'src/services/tts.ts',
+        'src/pages/Session/MicCheckGate.tsx',
+        'src/pages/Session/RecordingTimer.tsx',
+        'src/pages/Session/ConversationLog.tsx',
       ],
     },
   },

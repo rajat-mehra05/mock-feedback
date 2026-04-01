@@ -1,7 +1,9 @@
 import { expect, test } from 'vitest';
 import { screen, render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Feedback } from './Feedback';
 import { db } from '@/db/sessions/sessions';
+import { makeSession } from '@/test/factories';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 function renderFeedback(sessionId: string) {
@@ -25,37 +27,37 @@ test('user sees session not found for invalid id', async () => {
 test('user sees all questions with ratings, feedback text, overall summary, and back link', async () => {
   await db.sessions.clear();
 
-  await db.sessions.add({
-    id: 'fb-session',
-    topic: 'React & Next.js',
-    createdAt: new Date('2026-03-30'),
-    duration: 720,
-    questionCount: 3,
-    averageScore: 7.0,
-    questions: [
-      {
-        id: 'q1',
-        questionText: 'What is the virtual DOM?',
-        userTranscript: 'An in-memory representation of the real DOM.',
-        rating: 9,
-        feedback: 'Excellent answer covering the diffing process.',
-      },
-      {
-        id: 'q2',
-        questionText: 'Explain React hooks rules.',
-        userTranscript: 'Must be called at top level.',
-        rating: 7,
-        feedback: 'Good but could mention the ESLint plugin.',
-      },
-      {
-        id: 'q3',
-        questionText: 'What is prop drilling?',
-        userTranscript: 'Passing props through many layers.',
-        rating: 4,
-        feedback: 'Too brief. Discuss Context API or state management alternatives.',
-      },
-    ],
-  });
+  await db.sessions.add(
+    makeSession({
+      id: 'fb-session',
+      topic: 'React & Next.js',
+      averageScore: 7.0,
+      questionCount: 3,
+      questions: [
+        {
+          id: 'q1',
+          questionText: 'What is the virtual DOM?',
+          userTranscript: 'An in-memory representation of the real DOM.',
+          rating: 9,
+          feedback: 'Excellent answer covering the diffing process.',
+        },
+        {
+          id: 'q2',
+          questionText: 'Explain React hooks rules.',
+          userTranscript: 'Must be called at top level.',
+          rating: 7,
+          feedback: 'Good but could mention the ESLint plugin.',
+        },
+        {
+          id: 'q3',
+          questionText: 'What is prop drilling?',
+          userTranscript: 'Passing props through many layers.',
+          rating: 4,
+          feedback: 'Too brief. Discuss Context API or state management alternatives.',
+        },
+      ],
+    }),
+  );
 
   renderFeedback('fb-session');
 
@@ -83,4 +85,40 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
   // Back link at bottom of page
   const backButtons = screen.getAllByRole('button', { name: /back to history/i });
   expect(backButtons.length).toBeGreaterThan(0);
+});
+
+test('user toggles to Model Answers view and sees followUp content', async () => {
+  await db.sessions.clear();
+  await db.sessions.add(
+    makeSession({
+      id: 'toggle-session',
+      topic: 'JavaScript',
+      averageScore: 8,
+      questions: [
+        {
+          id: 'q1',
+          questionText: 'What is a closure?',
+          userTranscript: 'A function that captures scope.',
+          rating: 8,
+          feedback: 'Good explanation.',
+          followUp: 'A closure is a function that retains access to its lexical scope.',
+        },
+      ],
+    }),
+  );
+
+  const user = userEvent.setup();
+  renderFeedback('toggle-session');
+
+  // Default view shows feedback
+  expect(await screen.findByText(/good explanation/i)).toBeInTheDocument();
+
+  // Toggle to model answers
+  const trigger = screen.getByRole('combobox', { name: /view mode/i });
+  await user.click(trigger);
+  const modelOption = await screen.findByRole('option', { name: /model answers/i });
+  await user.click(modelOption);
+
+  // Model answer (followUp) visible
+  expect(await screen.findByText(/retains access to its lexical scope/i)).toBeInTheDocument();
 });

@@ -108,7 +108,7 @@ export function Feedback() {
             ) : (
               <div className="rounded-md bg-green-50 p-3">
                 <p className="mb-1 text-xs font-medium text-green-700">Model Answer</p>
-                <p className="text-sm text-green-900">{q.feedback}</p>
+                <p className="text-sm text-green-900">{q.followUp || q.feedback}</p>
               </div>
             )}
           </section>

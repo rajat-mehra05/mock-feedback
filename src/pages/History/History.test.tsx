@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { History } from './History';
 import { db } from '@/db/sessions/sessions';
+import { makeSession } from '@/test/factories';
 
 test('user sees empty state when no sessions exist', async () => {
   await db.sessions.clear();
@@ -10,6 +11,7 @@ test('user sees empty state when no sessions exist', async () => {
   renderWithProviders(<History />);
 
   expect(await screen.findByText(/no interviews yet/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /back to home/i })).toBeInTheDocument();
 
   const stats = screen.getByRole('region', { name: /interview statistics/i });
   expect(within(stats).getByText('0')).toBeInTheDocument();
@@ -19,28 +21,18 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   await db.sessions.clear();
 
   await db.sessions.bulkAdd([
-    {
+    makeSession({
       id: 's1',
       topic: 'JavaScript / TypeScript',
       createdAt: new Date('2026-03-28Z'),
-      duration: 600,
-      questionCount: 5,
       averageScore: 7.0,
-      questions: [
-        { id: 'q1', questionText: 'Q?', userTranscript: 'A.', rating: 7, feedback: 'OK.' },
-      ],
-    },
-    {
+    }),
+    makeSession({
       id: 's2',
       topic: 'Node.js',
       createdAt: new Date('2026-03-30Z'),
-      duration: 480,
-      questionCount: 3,
       averageScore: 8.0,
-      questions: [
-        { id: 'q2', questionText: 'Q?', userTranscript: 'A.', rating: 8, feedback: 'Good.' },
-      ],
-    },
+    }),
   ]);
 
   renderWithProviders(<History />);
@@ -54,4 +46,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   // Session cards
   expect(screen.getAllByText('JavaScript / TypeScript')[0]).toBeInTheDocument();
   expect(screen.getAllByText('Node.js')[0]).toBeInTheDocument();
+
+  // Go to Home button always visible
+  expect(screen.getByRole('button', { name: /back to home/i })).toBeInTheDocument();
 });
