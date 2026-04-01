@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/msw/server';
 import { saveApiKey } from '@/db/apiKey/apiKey';
-import { generateFeedback } from '@/services/feedback';
+import { generateFeedback } from '@/services/feedback/feedback';
 
 const BASE_URL = 'https://api.openai.com/v1';
 

@@ -10,8 +10,16 @@ test('session page renders topic header and question counter from query params',
   expect(screen.getByText(/question 0 of 7/i)).toBeInTheDocument();
 });
 
-test('session page falls back to defaults when no query params are provided', () => {
+test('session page falls back to defaults for missing or invalid query params', () => {
+  // No params at all — defaults to JS/TS topic and default count
   renderWithProviders(<Session />, { initialRoute: '/session' });
-
   expect(screen.getByRole('heading', { name: /javascript \/ typescript/i })).toBeInTheDocument();
+  expect(screen.getByText(/question 0 of 5/i)).toBeInTheDocument();
+});
+
+test('session page falls back to default count for non-numeric count param', () => {
+  renderWithProviders(<Session />, { initialRoute: '/session?topic=nodejs&count=abc' });
+
+  expect(screen.getByRole('heading', { name: /node\.js/i })).toBeInTheDocument();
+  expect(screen.getByText(/question 0 of 5/i)).toBeInTheDocument();
 });

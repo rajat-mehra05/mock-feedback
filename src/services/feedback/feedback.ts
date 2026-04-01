@@ -1,6 +1,6 @@
-import { getOpenAIClient } from '@/services/openai';
-import { classifyOpenAIError, createTimeoutSignal } from '@/services/openaiErrors';
-import { parseFeedbackJSON } from '@/services/feedbackParser';
+import { getOpenAIClient } from '@/services/openai/openai';
+import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
+import { parseFeedbackJSON } from '@/services/feedback/feedbackParser';
 import {
   FEEDBACK_MODEL,
   FEEDBACK_TIMEOUT_MS,

@@ -4,16 +4,16 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { saveApiKey } from '@/db/apiKey/apiKey';
 
-vi.mock('@/services/llm', () => ({
+vi.mock('@/services/llm/llm', () => ({
   generateNextQuestion: vi.fn().mockResolvedValue('What is a closure?'),
 }));
-vi.mock('@/services/tts', () => ({
+vi.mock('@/services/tts/tts', () => ({
   speakText: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('@/services/stt', () => ({
+vi.mock('@/services/stt/stt', () => ({
   transcribeAudio: vi.fn().mockResolvedValue('A closure captures variables.'),
 }));
-vi.mock('@/services/feedback', () => ({
+vi.mock('@/services/feedback/feedback', () => ({
   generateFeedback: vi.fn().mockResolvedValue({
     questions: [{ rating: 8, feedback: 'Good.', modelAnswer: 'Model.' }],
     summary: 'Well done.',
@@ -38,17 +38,16 @@ function wrapper({ children }: { children: ReactNode }) {
 
 beforeEach(async () => {
   await saveApiKey('sk-test');
-  // Reset call counts but keep mock implementations intact
-  vi.mocked((await import('@/services/llm')).generateNextQuestion)
+  vi.mocked((await import('@/services/llm/llm')).generateNextQuestion)
     .mockReset()
     .mockResolvedValue('What is a closure?');
-  vi.mocked((await import('@/services/tts')).speakText)
+  vi.mocked((await import('@/services/tts/tts')).speakText)
     .mockReset()
     .mockResolvedValue(undefined);
-  vi.mocked((await import('@/services/stt')).transcribeAudio)
+  vi.mocked((await import('@/services/stt/stt')).transcribeAudio)
     .mockReset()
     .mockResolvedValue('A closure captures variables.');
-  vi.mocked((await import('@/services/feedback')).generateFeedback)
+  vi.mocked((await import('@/services/feedback/feedback')).generateFeedback)
     .mockReset()
     .mockResolvedValue({
       questions: [{ rating: 8, feedback: 'Good.', modelAnswer: 'Model.' }],
@@ -65,7 +64,6 @@ test('hook starts in idle, generates a question, speaks it, and reaches user_rec
   });
   expect(result.current.state.topic).toBe('react-nextjs');
 
-  // Mocks resolve instantly — state moves through generating → ai_speaking → user_recording
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
   expect(result.current.state.currentQuestion).toBe('What is a closure?');
   expect(result.current.state.currentQuestionIndex).toBe(1);
@@ -82,7 +80,7 @@ test('stop with no answers transitions to completed with isPartial', () => {
 });
 
 test('retry after error re-enters the failed status and resumes', async () => {
-  const { generateNextQuestion } = await import('@/services/llm');
+  const { generateNextQuestion } = await import('@/services/llm/llm');
   vi.mocked(generateNextQuestion).mockRejectedValueOnce({
     type: 'network',
     message: 'offline',
@@ -100,7 +98,6 @@ test('retry after error re-enters the failed status and resumes', async () => {
 
   act(() => result.current.retry());
 
-  // Mocks resolve instantly — state moves through generating → ai_speaking → user_recording
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
   expect(result.current.state.currentQuestion).toBe('Retry question');
 });

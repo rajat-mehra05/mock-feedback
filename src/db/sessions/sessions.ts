@@ -50,4 +50,8 @@ export async function deleteSession(id: string): Promise<void> {
   return db.sessions.delete(id);
 }
 
+export async function deleteAllSessions(): Promise<void> {
+  await db.sessions.clear();
+}
+
 export { db };

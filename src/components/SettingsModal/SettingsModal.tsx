@@ -70,7 +70,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           }}
         >
           <div>
-            <label htmlFor="api-key-input" className="mb-1.5 block text-sm font-medium">
+            <label
+              htmlFor="api-key-input"
+              className="mb-1.5 block text-sm font-bold uppercase tracking-wider"
+            >
               OpenAI API Key
             </label>
             <div className="flex gap-2">
@@ -94,16 +97,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="text-sm" aria-live="polite">
+            <div className="text-sm font-bold" aria-live="polite">
               {apiKey ? (
-                <span className="text-green-600">Key configured</span>
+                <span className="text-green-700">Key configured</span>
               ) : (
-                <span className="text-muted-foreground">No key configured</span>
+                <span className="text-black/50">No key configured</span>
               )}
-              {status === 'saved' && <span className="ml-2 text-green-600">Saved!</span>}
-              {status === 'error' && (
-                <span className="ml-2 text-destructive">Error saving key</span>
-              )}
+              {status === 'saved' && <span className="ml-2 text-green-700">Saved!</span>}
+              {status === 'error' && <span className="ml-2 text-neo-accent">Error saving key</span>}
             </div>
             <div className="flex gap-2">
               {apiKey && (
@@ -117,13 +118,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs font-medium text-black/50">
             Need a key?{' '}
             <a
               href={OPENAI_API_KEYS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-foreground"
+              className="font-bold underline hover:text-black"
             >
               Get one from OpenAI
               <span className="sr-only"> (opens in new tab)</span>

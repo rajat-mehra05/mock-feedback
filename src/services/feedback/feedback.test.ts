@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseFeedbackJSON } from '@/services/feedbackParser';
+import { parseFeedbackJSON } from '@/services/feedback/feedbackParser';
 
 test('parseFeedbackJSON extracts valid feedback, clamps ratings, and handles edge cases', () => {
   // Valid JSON

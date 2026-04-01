@@ -44,35 +44,35 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="space-y-3 rounded-lg border border-border bg-muted/50 p-4">
-            <h3 className="text-sm font-semibold">How it works</h3>
-            <ol className="space-y-2 text-sm text-muted-foreground">
+          <div className="space-y-3 border-4 border-black bg-neo-muted/20 p-4 shadow-neo-sm">
+            <h3 className="text-sm font-bold uppercase tracking-wider">How it works</h3>
+            <ol className="space-y-2 text-sm font-medium text-black/80">
               <li className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-accent text-xs font-bold">
                   1
                 </span>
                 Choose a topic and number of questions
               </li>
               <li className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-secondary text-xs font-bold">
                   2
                 </span>
                 The AI interviewer asks you a question via voice
               </li>
               <li className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-muted text-xs font-bold">
                   3
                 </span>
                 Speak your answer — your response is transcribed
               </li>
               <li className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-accent text-xs font-bold">
                   4
                 </span>
                 The AI asks follow-up questions based on your answers
               </li>
               <li className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-secondary text-xs font-bold">
                   5
                 </span>
                 Get detailed feedback with ratings for each answer
@@ -82,7 +82,10 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="topic-select" className="mb-1.5 block text-sm font-medium">
+              <label
+                htmlFor="topic-select"
+                className="mb-1.5 block text-sm font-bold uppercase tracking-wider"
+              >
                 Interview Topic
               </label>
               <Select value={topic} onValueChange={(v) => setTopic(v ?? '')}>
@@ -100,7 +103,10 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
             </div>
 
             <div>
-              <label htmlFor="count-select" className="mb-1.5 block text-sm font-medium">
+              <label
+                htmlFor="count-select"
+                className="mb-1.5 block text-sm font-bold uppercase tracking-wider"
+              >
                 Number of Questions
               </label>
               <Select

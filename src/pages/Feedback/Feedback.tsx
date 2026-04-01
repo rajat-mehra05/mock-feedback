@@ -12,15 +12,15 @@ import {
 import { getSession, type Session } from '@/db/sessions/sessions';
 
 function scoreColor(score: number): string {
-  if (score >= 8) return 'text-green-600';
-  if (score >= 6) return 'text-yellow-600';
-  return 'text-red-600';
+  if (score >= 8) return 'text-green-700';
+  if (score >= 6) return 'text-yellow-700';
+  return 'text-red-700';
 }
 
 function scoreBg(score: number): string {
-  if (score >= 8) return 'bg-green-50 border-green-200';
-  if (score >= 6) return 'bg-yellow-50 border-yellow-200';
-  return 'bg-red-50 border-red-200';
+  if (score >= 8) return 'bg-green-200 border-black';
+  if (score >= 6) return 'bg-yellow-200 border-black';
+  return 'bg-red-200 border-black';
 }
 
 export function Feedback() {
@@ -38,13 +38,13 @@ export function Feedback() {
   }, [id]);
 
   if (isLoading) {
-    return <p className="py-8 text-center text-muted-foreground">Loading feedback...</p>;
+    return <p className="py-8 text-center font-bold text-black/60">Loading feedback...</p>;
   }
 
   if (!session) {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
-        <p className="text-lg text-muted-foreground">Session not found</p>
+        <p className="text-lg font-bold text-black">Session not found</p>
         <Button nativeButton={false} render={<Link to="/history" />}>
           Back to History
         </Button>
@@ -53,11 +53,13 @@ export function Feedback() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Session Feedback</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold uppercase tracking-tight text-black">
+            Session Feedback
+          </h1>
+          <p className="text-sm font-bold text-black/60">
             {session.topic} · {session.questionCount} questions
           </p>
         </div>
@@ -75,55 +77,69 @@ export function Feedback() {
         </Select>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {session.questions.map((q, i) => (
           <section
             key={q.id}
-            className="rounded-lg border border-border bg-card p-5 shadow-sm"
+            className="border-4 border-black bg-white p-6 shadow-neo-sm"
             aria-label={`Question ${i + 1}`}
           >
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-sm font-semibold text-foreground">Question {i + 1}</h3>
+            <div className="mb-4 flex items-start justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-black/60">
+                Question {i + 1}
+              </h3>
               <Badge
-                className={`${scoreBg(q.rating)} border`}
+                className={`${scoreBg(q.rating)} border-2`}
                 aria-label={`Rating: ${q.rating} out of 10`}
               >
                 <span className={`font-bold ${scoreColor(q.rating)}`}>{q.rating}/10</span>
               </Badge>
             </div>
 
-            <p className="mb-3 font-medium text-foreground">{q.questionText}</p>
+            <p className="mb-4 text-lg font-bold text-black">{q.questionText}</p>
 
             {viewMode === 'feedback' ? (
               <>
-                <div className="mb-2 rounded-md bg-muted/50 p-3">
-                  <p className="mb-1 text-xs font-medium text-muted-foreground">Your Answer</p>
-                  <p className="text-sm text-foreground">{q.userTranscript}</p>
+                <div className="mb-3 border-2 border-black bg-neo-muted/20 p-4">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                    Your Answer
+                  </p>
+                  <p className="text-sm font-medium text-black">{q.userTranscript}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs font-medium text-muted-foreground">Feedback</p>
-                  <p className="text-sm text-foreground">{q.feedback}</p>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                    Feedback
+                  </p>
+                  <p className="text-sm font-medium text-black">{q.feedback}</p>
                 </div>
               </>
             ) : (
-              <div className="rounded-md bg-green-50 p-3">
-                <p className="mb-1 text-xs font-medium text-green-700">Model Answer</p>
-                <p className="text-sm text-green-900">{q.followUp || q.feedback}</p>
+              <div className="border-2 border-black bg-neo-secondary/30 p-4">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                  Model Answer
+                </p>
+                <p className="text-sm font-medium text-black">{q.followUp || q.feedback}</p>
               </div>
             )}
           </section>
         ))}
       </div>
 
-      <section className="rounded-lg border border-border bg-muted/30 p-5">
-        <h2 className="mb-2 text-lg font-semibold text-foreground">Overall Performance Summary</h2>
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Average Score:</span>
-          <span className={`text-xl font-bold ${scoreColor(session.averageScore)}`}>
+      <section className="border-4 border-black bg-neo-secondary/30 p-6 shadow-neo-sm">
+        <h2 className="mb-3 text-lg font-bold uppercase tracking-tight text-black">
+          Overall Performance Summary
+        </h2>
+        <div className="mb-3 flex items-center gap-3">
+          <span className="text-sm font-bold uppercase tracking-wider text-black/60">
+            Average Score:
+          </span>
+          <span
+            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(session.averageScore)} ${scoreBg(session.averageScore)}`}
+          >
             {session.averageScore.toFixed(1)}/10
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm font-medium text-black/80">
           You answered {session.questionCount} questions on {session.topic}. Your strongest answers
           demonstrated good conceptual understanding. Focus on providing more specific examples and
           quantifying your experiences to improve your scores.

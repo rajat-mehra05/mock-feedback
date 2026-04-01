@@ -1,5 +1,5 @@
-import { getOpenAIClient } from '@/services/openai';
-import { classifyOpenAIError, createTimeoutSignal } from '@/services/openaiErrors';
+import { getOpenAIClient } from '@/services/openai/openai';
+import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
 import { STT_MODEL, STT_PROMPT_HINT, STT_TIMEOUT_MS } from '@/constants/openai';
 
 /**
