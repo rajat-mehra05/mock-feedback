@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { Home } from './Home';
 import { db } from '@/db/sessions/sessions';
+import { makeSession } from '@/test/factories';
 import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
 
 test('user sees empty state and disabled Start button when no API key is set', async () => {
@@ -50,23 +51,7 @@ test('user sees session cards when sessions exist in the database', async () => 
   await deleteApiKey();
   await saveApiKey('sk-test');
 
-  await db.sessions.add({
-    id: 'test-1',
-    topic: 'React & Next.js',
-    createdAt: new Date('2026-03-30'),
-    duration: 720,
-    questionCount: 5,
-    averageScore: 8.0,
-    questions: [
-      {
-        id: 'q1',
-        questionText: 'What is React?',
-        userTranscript: 'A UI library.',
-        rating: 8,
-        feedback: 'Good.',
-      },
-    ],
-  });
+  await db.sessions.add(makeSession({ id: 'test-1', topic: 'React & Next.js', averageScore: 8.0 }));
 
   renderWithProviders(<Home />);
 

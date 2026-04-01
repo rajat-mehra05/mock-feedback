@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    };
+  }, []);
 
   async function handleSave() {
     if (!keyInput.trim()) return;
@@ -29,7 +36,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       await save(keyInput.trim());
       setStatus('saved');
       setKeyInput('');
-      setTimeout(() => setStatus('idle'), 2000);
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = setTimeout(() => {
+        setStatus('idle');
+        onOpenChange(false);
+      }, 1000);
     } catch {
       setStatus('error');
     }

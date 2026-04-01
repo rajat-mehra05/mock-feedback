@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import { SessionCard } from '@/components/SessionCard/SessionCard';
+import { Button } from '@/components/ui/button';
 import { useSessions } from '@/hooks/useSessions/useSessions';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
@@ -15,7 +17,12 @@ export function History() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">My Interview History</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">My Interview History</h1>
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>
+          Back to Home
+        </Button>
+      </div>
 
       <div
         role="region"
