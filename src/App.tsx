@@ -23,6 +23,18 @@ export default function App() {
     seedMockData();
   }, []);
 
+  // Fix @base-ui Select rendering aria-hidden inputs with tabindex="-1"
+  // which triggers axe "aria-hidden-focus" violation
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      document
+        .querySelectorAll<HTMLInputElement>('input[aria-hidden="true"][tabindex="-1"]')
+        .forEach((el) => el.removeAttribute('tabindex'));
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <ErrorBoundary>
       <BrowserRouter>
