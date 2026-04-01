@@ -85,7 +85,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
               <label htmlFor="topic-select" className="mb-1.5 block text-sm font-medium">
                 Interview Topic
               </label>
-              <Select required value={topic} onValueChange={(v) => setTopic(v ?? '')}>
+              <Select value={topic} onValueChange={(v) => setTopic(v ?? '')}>
                 <SelectTrigger id="topic-select" aria-required="true">
                   <SelectValue placeholder="Select a topic" />
                 </SelectTrigger>
