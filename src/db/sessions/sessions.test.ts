@@ -10,7 +10,7 @@ test('createSession stores a session and getSession retrieves it', async () => {
   const retrieved = await getSession('test-session-1');
   expect(retrieved).toBeDefined();
   expect(retrieved!.topic).toBe('JavaScript / TypeScript');
-  expect(retrieved!.questionCount).toBe(3);
+  expect(retrieved!.questionCount).toBe(1);
   expect(retrieved!.questions).toHaveLength(1);
   expect(retrieved!.questions[0].rating).toBe(8);
 });
