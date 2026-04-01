@@ -33,7 +33,11 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 outline-none"
+    >
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-foreground">Welcome to {APP_NAME}</h1>
