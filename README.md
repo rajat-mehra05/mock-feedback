@@ -32,85 +32,12 @@ npm install
 npm run dev
 ```
 
-## Scripts
-
-| Command                 | Description                   |
-| ----------------------- | ----------------------------- |
-| `npm run dev`           | Start dev server              |
-| `npm run build`         | Type-check + production build |
-| `npm run preview`       | Preview production build      |
-| `npm run lint`          | ESLint (includes jsx-a11y)    |
-| `npm run lint:fix`      | ESLint with auto-fix          |
-| `npm run format`        | Prettier write                |
-| `npm run format:check`  | Prettier check                |
-| `npm run test`          | Vitest unit/component tests   |
-| `npm run test:watch`    | Vitest in watch mode          |
-| `npm run test:coverage` | Vitest with coverage report   |
-| `npm run lighthouse`    | Lighthouse CI audit           |
-
 ## Interview Topics
 
 - JavaScript / TypeScript
 - React & Next.js
 - Node.js
 - Behavioral / STAR
-
-## Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-│   ├── ApiKeyGate/      # First-run API key prompt
-│   ├── ErrorBoundary/   # Root + session error boundaries
-│   ├── Layout/          # Header, nav, skip-to-content
-│   ├── SessionCard/     # Interview session card
-│   ├── SettingsModal/   # API key management modal
-│   ├── StartModal/      # Topic + question count selection
-│   └── ui/              # shadcn/ui primitives
-├── pages/               # Route-level components (lazy-loaded)
-│   ├── Home/            # Recent sessions + Start button
-│   ├── Session/         # Active interview UI
-│   │   ├── ConversationLog   # Q&A history display
-│   │   ├── MicCheckGate      # Mic permission + device check
-│   │   ├── RecordingTimer    # Elapsed time + max duration warning
-│   │   ├── SessionErrorDisplay
-│   │   ├── SessionHeader
-│   │   └── StatusIndicator   # State-aware status label
-│   ├── History/         # Past sessions grid + stats
-│   └── Feedback/        # Per-question ratings + feedback
-├── hooks/               # React hooks + context
-│   ├── ApiKeyContext/   # Shared API key state provider
-│   ├── useApiKey/       # API key consumer hook
-│   ├── useAudioRecorder/# MediaRecorder wrapper (start/stop/blob)
-│   ├── useInterviewSession/ # Interview state machine + side effects
-│   └── useSessions/     # Sessions data hook
-├── services/            # OpenAI API integration
-│   ├── openai.ts        # Client factory (cached, reads key from IDB)
-│   ├── openaiErrors.ts  # Error classification + timeout signals
-│   ├── llm.ts           # Question generation (chat completions)
-│   ├── stt.ts           # Speech-to-text (audio transcriptions)
-│   ├── tts.ts           # Text-to-speech (audio speech + playback)
-│   ├── feedback.ts      # Structured feedback generation
-│   └── feedbackParser.ts# JSON parsing + rating clamping
-├── lib/                 # Shared utilities
-│   ├── retry.ts         # Exponential backoff with abort support
-│   └── micCheck.ts      # Browser mic/MediaRecorder detection
-├── db/                  # IndexedDB layer (Dexie.js)
-│   ├── sessions/        # Session CRUD operations
-│   ├── apiKey/          # API key storage
-│   └── seed/            # Mock data for development
-├── constants/           # App-wide constants (no magic values)
-│   ├── openai.ts        # Model IDs, timeouts, system prompts
-│   ├── feedback.ts      # Feedback model config + prompt
-│   ├── interview.ts     # Retry config, TTS fallback timing
-│   ├── session.ts       # Recording limits, warning thresholds
-│   ├── topics.ts        # Topic list + labels
-│   └── copy.ts          # User-facing strings
-└── test/                # Test utilities + factories
-    ├── factories.ts     # Session/question factory helpers
-    ├── renderWithProviders.tsx
-    └── msw/             # Mock Service Worker handlers
-```
 
 ## Error Handling
 
@@ -131,9 +58,10 @@ src/
 
 ## Accessibility
 
-- WCAG 2.1 AA compliant
-- `eslint-plugin-jsx-a11y` enforced
-- Skip-to-content link, proper landmarks, ARIA labels, focus management
-- `prefers-reduced-motion` respected for all animations
-- `aria-live` regions for recording state, transcription status, and session progress
-- Lighthouse accessibility target: 100
+Accessibility has been a priority from the start. The app is designed to meet WCAG 2.1 AA standards — all interactive elements are fully keyboard-navigable, screen readers are kept informed of recording and session state changes, and animations respect the user's `prefers-reduced-motion` preference.
+
+## Contributing
+
+Contributions are welcome! Feel free to open an issue or submit a pull request — whether it's a bug fix, a new feature idea, or just a suggestion to improve the experience. This project is licensed under MIT, so fork away.
+
+If you have feedback or ideas on how to make the app better, don't hesitate to open an issue. All input is appreciated. All the best!
