@@ -36,7 +36,12 @@ export function Session() {
         ))}
       </section>
 
-      <div className="flex flex-col items-center gap-3" role="status" aria-live="polite" aria-label="Recording status">
+      <div
+        className="flex flex-col items-center gap-3"
+        role="status"
+        aria-live="polite"
+        aria-label="Recording status"
+      >
         <div className="flex h-4 w-4 rounded-full bg-red-500 motion-safe:animate-pulse" />
         <p className="text-xs text-muted-foreground">Recording your answer...</p>
         <p className="text-xs text-muted-foreground">{RECORDING_RULES}</p>

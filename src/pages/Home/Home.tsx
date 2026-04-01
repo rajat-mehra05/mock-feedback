@@ -24,9 +24,7 @@ export function Home() {
           <p className="text-sm text-muted-foreground">Loading sessions...</p>
         ) : recentSessions.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
-            <p className="text-muted-foreground">
-              {EMPTY_SESSIONS_MESSAGE}
-            </p>
+            <p className="text-muted-foreground">{EMPTY_SESSIONS_MESSAGE}</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -49,11 +47,7 @@ export function Home() {
           </button>
         </div>
 
-        {!hasKey && (
-          <p className="text-sm text-muted-foreground">
-            {NO_API_KEY_MESSAGE}
-          </p>
-        )}
+        {!hasKey && <p className="text-sm text-muted-foreground">{NO_API_KEY_MESSAGE}</p>}
       </div>
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />

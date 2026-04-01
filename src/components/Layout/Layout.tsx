@@ -18,8 +18,15 @@ export function Layout({ children }: { children: ReactNode }) {
       </a>
 
       <header className="border-b border-border">
-        <nav aria-label="Main navigation" className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link to="/" aria-label="Mock Feedback — Home" className="text-lg font-bold text-foreground">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4"
+        >
+          <Link
+            to="/"
+            aria-label="Mock Feedback — Home"
+            className="text-lg font-bold text-foreground"
+          >
             Mock Feedback
           </Link>
           <div className="flex items-center gap-2">
@@ -36,7 +43,11 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none"
+      >
         {children}
       </main>
 

@@ -12,7 +12,9 @@ test('user sees empty state and disabled Start button when no API key is set', a
 
   renderWithProviders(<Home />);
 
-  expect(await screen.findByText(/your past interview sessions will appear here/i)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/your past interview sessions will appear here/i),
+  ).toBeInTheDocument();
 
   const startButton = screen.getByRole('button', { name: /start new interview session/i });
   expect(startButton).toBeDisabled();
@@ -55,13 +57,15 @@ test('user sees session cards when sessions exist in the database', async () => 
     duration: 720,
     questionCount: 5,
     averageScore: 8.0,
-    questions: [{
-      id: 'q1',
-      questionText: 'What is React?',
-      userTranscript: 'A UI library.',
-      rating: 8,
-      feedback: 'Good.',
-    }],
+    questions: [
+      {
+        id: 'q1',
+        questionText: 'What is React?',
+        userTranscript: 'A UI library.',
+        rating: 8,
+        feedback: 'Good.',
+      },
+    ],
   });
 
   renderWithProviders(<Home />);

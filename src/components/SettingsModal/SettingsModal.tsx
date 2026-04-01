@@ -83,9 +83,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               ) : (
                 <span className="text-muted-foreground">No key configured</span>
               )}
-              {status === 'saved' && (
-                <span className="ml-2 text-green-600">Saved!</span>
-              )}
+              {status === 'saved' && <span className="ml-2 text-green-600">Saved!</span>}
               {status === 'error' && (
                 <span className="ml-2 text-destructive">Error saving key</span>
               )}
@@ -96,7 +94,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   Remove
                 </Button>
               )}
-              <Button size="sm" onClick={handleSave} disabled={!keyInput.trim() || status === 'saving'}>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={!keyInput.trim() || status === 'saving'}
+              >
                 {status === 'saving' ? 'Saving...' : 'Save'}
               </Button>
             </div>

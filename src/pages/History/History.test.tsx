@@ -26,7 +26,9 @@ test('user sees stats bar and session cards when sessions exist', async () => {
       duration: 600,
       questionCount: 5,
       averageScore: 7.0,
-      questions: [{ id: 'q1', questionText: 'Q?', userTranscript: 'A.', rating: 7, feedback: 'OK.' }],
+      questions: [
+        { id: 'q1', questionText: 'Q?', userTranscript: 'A.', rating: 7, feedback: 'OK.' },
+      ],
     },
     {
       id: 's2',
@@ -35,7 +37,9 @@ test('user sees stats bar and session cards when sessions exist', async () => {
       duration: 480,
       questionCount: 3,
       averageScore: 8.0,
-      questions: [{ id: 'q2', questionText: 'Q?', userTranscript: 'A.', rating: 8, feedback: 'Good.' }],
+      questions: [
+        { id: 'q2', questionText: 'Q?', userTranscript: 'A.', rating: 8, feedback: 'Good.' },
+      ],
     },
   ]);
 

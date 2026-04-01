@@ -10,7 +10,9 @@ import { seedMockData } from '@/db/seed/seed';
 const Home = lazy(() => import('@/pages/Home/Home').then((m) => ({ default: m.Home })));
 const Session = lazy(() => import('@/pages/Session/Session').then((m) => ({ default: m.Session })));
 const History = lazy(() => import('@/pages/History/History').then((m) => ({ default: m.History })));
-const Feedback = lazy(() => import('@/pages/Feedback/Feedback').then((m) => ({ default: m.Feedback })));
+const Feedback = lazy(() =>
+  import('@/pages/Feedback/Feedback').then((m) => ({ default: m.Feedback })),
+);
 
 function PageLoader() {
   return <p className="py-12 text-center text-muted-foreground">Loading...</p>;

@@ -7,7 +7,24 @@ import { makeSession } from '@/test/factories';
 test('user sees topic, date, duration, question count, score, and card links to feedback page', () => {
   render(
     <MemoryRouter>
-      <SessionCard session={makeSession({ id: 'card-test', topic: 'Node.js', duration: 480, questionCount: 3, averageScore: 7.0, questions: [{ id: 'q1', questionText: 'How does Node handle concurrency?', userTranscript: 'Event loop.', rating: 7, feedback: 'Good.' }] })} />
+      <SessionCard
+        session={makeSession({
+          id: 'card-test',
+          topic: 'Node.js',
+          duration: 480,
+          questionCount: 3,
+          averageScore: 7.0,
+          questions: [
+            {
+              id: 'q1',
+              questionText: 'How does Node handle concurrency?',
+              userTranscript: 'Event loop.',
+              rating: 7,
+              feedback: 'Good.',
+            },
+          ],
+        })}
+      />
     </MemoryRouter>,
   );
 

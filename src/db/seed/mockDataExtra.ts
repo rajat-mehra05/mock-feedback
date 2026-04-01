@@ -48,8 +48,7 @@ export const mockSessionsExtra: Session[] = [
     questions: [
       {
         id: 'q4-1',
-        questionText:
-          'How does Node.js handle concurrency despite being single-threaded?',
+        questionText: 'How does Node.js handle concurrency despite being single-threaded?',
         userTranscript:
           'Node uses an event-driven non-blocking I/O model. Heavy I/O operations are offloaded to the system kernel or the libuv thread pool, and the main thread processes callbacks when they complete.',
         rating: 8,
@@ -67,8 +66,7 @@ export const mockSessionsExtra: Session[] = [
       },
       {
         id: 'q4-3',
-        questionText:
-          'How would you handle errors in an Express middleware chain?',
+        questionText: 'How would you handle errors in an Express middleware chain?',
         userTranscript:
           'You create an error handling middleware with four parameters: err, req, res, next. You place it at the end of the middleware chain.',
         rating: 6,

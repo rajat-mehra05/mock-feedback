@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# Mock Feedback
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally, and you get detailed feedback with ratings.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend:** Vite + React 19 + TypeScript
+- **Styling:** Tailwind CSS v4 + shadcn/ui
+- **Storage:** IndexedDB (Dexie.js) — fully local, no backend
+- **Testing:** Vitest + React Testing Library
+- **CI:** GitHub Actions (lint + format + test + build)
+- **Pre-commit:** Husky + lint-staged
 
-## React Compiler
+## BYOK (Bring Your Own Key)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This app requires your own OpenAI API key. Your key is stored in IndexedDB on your device and is only sent to OpenAI directly from the browser. No keys are shipped, hardcoded, or proxied.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Command                 | Description                   |
+| ----------------------- | ----------------------------- |
+| `npm run dev`           | Start dev server              |
+| `npm run build`         | Type-check + production build |
+| `npm run preview`       | Preview production build      |
+| `npm run lint`          | ESLint (includes jsx-a11y)    |
+| `npm run lint:fix`      | ESLint with auto-fix          |
+| `npm run format`        | Prettier write                |
+| `npm run format:check`  | Prettier check                |
+| `npm run test`          | Vitest unit/component tests   |
+| `npm run test:watch`    | Vitest in watch mode          |
+| `npm run test:coverage` | Vitest with coverage report   |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
 ```
+src/
+├── components/          # Reusable UI components
+│   ├── ApiKeyGate/      # First-run API key prompt
+│   ├── ErrorBoundary/   # Root + session error boundaries
+│   ├── Layout/          # Header, nav, skip-to-content
+│   ├── SessionCard/     # Interview session card
+│   ├── SettingsModal/   # API key management modal
+│   ├── StartModal/      # Topic + question count selection
+│   └── ui/              # shadcn/ui primitives
+├── pages/               # Route-level components (lazy-loaded)
+│   ├── Home/            # Recent sessions + Start button
+│   ├── Session/         # Active interview UI
+│   ├── History/         # Past sessions grid + stats
+│   └── Feedback/        # Per-question ratings + feedback
+├── hooks/               # React hooks + context
+│   ├── ApiKeyContext/   # Shared API key state provider
+│   ├── useApiKey/       # API key consumer hook
+│   └── useSessions/     # Sessions data hook
+├── db/                  # IndexedDB layer (Dexie.js)
+│   ├── sessions/        # Session CRUD operations
+│   ├── apiKey/          # API key storage
+│   └── seed/            # Mock data for development
+├── constants/           # App-wide constants (no magic values)
+└── test/                # Test utilities + factories
+```
+
+## Accessibility
+
+- WCAG 2.1 AA compliant
+- `eslint-plugin-jsx-a11y` enforced
+- Skip-to-content link, proper landmarks, ARIA labels, focus management
+- `prefers-reduced-motion` respected for all animations
+- Lighthouse accessibility target: 100
