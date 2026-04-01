@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest';
 import { saveApiKey } from '@/db/apiKey/apiKey';
 
-vi.mock('@/services/openai', () => ({
+vi.mock('@/services/openai/openai', () => ({
   getOpenAIClient: vi.fn().mockResolvedValue({
     audio: {
       transcriptions: {
@@ -11,7 +11,7 @@ vi.mock('@/services/openai', () => ({
   }),
 }));
 
-const { transcribeAudio } = await import('@/services/stt');
+const { transcribeAudio } = await import('@/services/stt/stt');
 
 test('transcribeAudio returns transcript text and throws classified errors', async () => {
   await saveApiKey('sk-test');
@@ -22,7 +22,7 @@ test('transcribeAudio returns transcript text and throws classified errors', asy
   expect(transcript).toBe('Mocked transcript from STT.');
 
   // Error path — mock a 429 error
-  const { getOpenAIClient } = await import('@/services/openai');
+  const { getOpenAIClient } = await import('@/services/openai/openai');
   vi.mocked(getOpenAIClient).mockResolvedValueOnce({
     audio: {
       transcriptions: {

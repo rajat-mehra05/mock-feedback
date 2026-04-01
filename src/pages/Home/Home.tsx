@@ -1,59 +1,31 @@
 import { useState } from 'react';
 import { StartModal } from '@/components/StartModal/StartModal';
-import { SessionCard } from '@/components/SessionCard/SessionCard';
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
-import { useSessions } from '@/hooks/useSessions/useSessions';
-import { RECENT_SESSIONS_LIMIT } from '@/constants/session';
-import { EMPTY_SESSIONS_MESSAGE, NO_API_KEY_MESSAGE } from '@/constants/copy';
+import { NO_API_KEY_MESSAGE } from '@/constants/copy';
 
 export function Home() {
   const [startOpen, setStartOpen] = useState(false);
   const { hasKey } = useApiKey();
-  const { sessions, isLoading } = useSessions();
-
-  const recentSessions = sessions.slice(0, RECENT_SESSIONS_LIMIT);
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8">
-      <section className="w-full" aria-labelledby="recent-sessions-heading">
-        <h2 id="recent-sessions-heading" className="mb-4 text-lg font-semibold text-foreground">
-          Recent Sessions
-        </h2>
-
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading sessions...</p>
-        ) : recentSessions.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
-            <p className="text-muted-foreground">{EMPTY_SESSIONS_MESSAGE}</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recentSessions.map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
-          <button
-            onClick={() => setStartOpen(true)}
-            disabled={!hasKey}
-            aria-label="Start new interview session"
-            aria-describedby={!hasKey ? 'start-disabled-hint' : undefined}
-            className="flex h-28 w-28 items-center justify-center rounded-full bg-green-500 text-lg font-bold text-white shadow-lg transition-colors hover:bg-green-600 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 motion-safe:active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-500 disabled:hover:shadow-lg disabled:active:scale-100"
-          >
-            Start
-          </button>
-        </div>
-
-        {!hasKey && (
-          <p id="start-disabled-hint" className="text-sm text-muted-foreground">
-            {NO_API_KEY_MESSAGE}
-          </p>
-        )}
+    <div className="flex flex-1 flex-col items-center justify-center gap-6">
+      <div className="relative">
+        <button
+          onClick={() => setStartOpen(true)}
+          disabled={!hasKey}
+          aria-label="Start new interview session"
+          aria-describedby={!hasKey ? 'start-disabled-hint' : undefined}
+          className="flex h-32 w-32 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-xl font-bold uppercase tracking-wide text-black shadow-neo-md transition-all duration-100 hover:-translate-y-1 hover:shadow-neo-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-neo-md disabled:active:translate-x-0 disabled:active:translate-y-0"
+        >
+          Start
+        </button>
       </div>
+
+      {!hasKey && (
+        <p id="start-disabled-hint" className="text-sm font-bold text-black/60">
+          {NO_API_KEY_MESSAGE}
+        </p>
+      )}
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />
     </div>

@@ -44,7 +44,7 @@ test('score colors reflect performance levels: green for high, yellow for mid, r
       <SessionCard session={makeSession({ averageScore: 9.0 })} />
     </MemoryRouter>,
   );
-  expect(screen.getByText('9.0/10')).toHaveClass('text-green-600');
+  expect(screen.getByText('9.0/10')).toHaveClass('text-green-700');
   unmount();
 
   const { unmount: unmount2 } = render(
@@ -52,7 +52,7 @@ test('score colors reflect performance levels: green for high, yellow for mid, r
       <SessionCard session={makeSession({ averageScore: 6.5 })} />
     </MemoryRouter>,
   );
-  expect(screen.getByText('6.5/10')).toHaveClass('text-yellow-600');
+  expect(screen.getByText('6.5/10')).toHaveClass('text-yellow-700');
   unmount2();
 
   render(
@@ -60,5 +60,5 @@ test('score colors reflect performance levels: green for high, yellow for mid, r
       <SessionCard session={makeSession({ averageScore: 4.0 })} />
     </MemoryRouter>,
   );
-  expect(screen.getByText('4.0/10')).toHaveClass('text-red-600');
+  expect(screen.getByText('4.0/10')).toHaveClass('text-red-700');
 });

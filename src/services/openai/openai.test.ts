@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
-import { getOpenAIClient, clearOpenAIClient } from '@/services/openai';
+import { getOpenAIClient, clearOpenAIClient } from '@/services/openai/openai';
 
 test('getOpenAIClient throws without a key, returns cached client for same key, and refreshes on key change', async () => {
   await deleteApiKey();

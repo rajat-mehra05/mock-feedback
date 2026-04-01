@@ -3,35 +3,23 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { Home } from './Home';
-import { db } from '@/db/sessions/sessions';
-import { makeSession } from '@/test/factories';
 import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
 
-test('user sees empty state and disabled Start button when no API key is set', async () => {
-  await db.sessions.clear();
+test('user sees disabled Start button with hint when no API key is set, then opens modal after key is configured', async () => {
   await deleteApiKey();
-
-  renderWithProviders(<Home />);
-
-  expect(
-    await screen.findByText(/your past interview sessions will appear here/i),
-  ).toBeInTheDocument();
-
-  const startButton = screen.getByRole('button', { name: /start new interview session/i });
-  expect(startButton).toBeDisabled();
-
-  expect(screen.getByText(/configure your api key in settings/i)).toBeInTheDocument();
-});
-
-test('user can click Start to open modal when API key is configured', async () => {
-  await db.sessions.clear();
-  await deleteApiKey();
-  await saveApiKey('sk-test');
   const user = userEvent.setup();
 
   renderWithProviders(<Home />);
 
-  // Wait for API key to load and button to become enabled
+  // Start button visible but disabled
+  const startButton = screen.getByRole('button', { name: /start new interview session/i });
+  expect(startButton).toBeDisabled();
+  expect(screen.getByText(/configure your api key in settings/i)).toBeInTheDocument();
+
+  // Configure key — button becomes enabled
+  await saveApiKey('sk-test');
+  renderWithProviders(<Home />);
+
   await waitFor(() => {
     const buttons = screen.getAllByRole('button', { name: /start new interview session/i });
     const enabledButton = buttons.find((btn) => !btn.hasAttribute('disabled'));
@@ -44,17 +32,4 @@ test('user can click Start to open modal when API key is configured', async () =
 
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByText(/welcome to mock feedback/i)).toBeInTheDocument();
-});
-
-test('user sees session cards when sessions exist in the database', async () => {
-  await db.sessions.clear();
-  await deleteApiKey();
-  await saveApiKey('sk-test');
-
-  await db.sessions.add(makeSession({ id: 'test-1', topic: 'React & Next.js', averageScore: 8.0 }));
-
-  renderWithProviders(<Home />);
-
-  expect(await screen.findByText('React & Next.js')).toBeInTheDocument();
-  expect(screen.getByText('8.0/10')).toBeInTheDocument();
 });

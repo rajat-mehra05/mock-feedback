@@ -70,7 +70,7 @@ export function Session() {
           <button
             onClick={stop}
             aria-label="Stop interview"
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white shadow-lg transition-colors hover:bg-violet-700 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2 motion-safe:active:scale-95"
+            className="flex h-20 w-20 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-sm font-bold uppercase tracking-wide text-black shadow-neo transition-all duration-100 hover:-translate-y-0.5 hover:shadow-neo-md focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
           >
             Stop
           </button>

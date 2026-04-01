@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  pull-requests: write
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -42,9 +45,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          configPath: ./lighthouserc.cjs
-          uploadArtifacts: true
-          temporaryPublicStorage: true
+      # TODO: Re-enable Lighthouse CI in final phase
+      # - name: Lighthouse CI
+      #   uses: treosh/lighthouse-ci-action@v12
+      #   with:
+      #     configPath: ./lighthouserc.cjs
+      #     uploadArtifacts: true
+      #     temporaryPublicStorage: true

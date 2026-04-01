@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { classifyOpenAIError, createTimeoutSignal } from '@/services/openaiErrors';
+import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
 
 test('classifyOpenAIError maps status codes and error types to normalized errors', () => {
   // 401 → auth
