@@ -126,6 +126,16 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         streamRef.current = null;
       };
 
+      recorder.onerror = () => {
+        cleanupSilenceDetection();
+        chunksRef.current = [];
+        setAudioBlob(null);
+        setIsRecording(false);
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        setError('Recording failed unexpectedly.');
+      };
+
       recorder.start();
       setIsRecording(true);
 

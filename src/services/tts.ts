@@ -16,6 +16,7 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
   const client = await getOpenAIClient();
   const { signal: mergedSignal, cleanup } = createTimeoutSignal(TTS_TIMEOUT_MS, signal);
 
+  let arrayBuffer: ArrayBuffer;
   try {
     const response = await client.audio.speech.create(
       {
@@ -27,11 +28,14 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
       },
       { signal: mergedSignal },
     );
-
-    const arrayBuffer = await response.arrayBuffer();
-    await playAudioBuffer(arrayBuffer, mergedSignal);
+    arrayBuffer = await response.arrayBuffer();
   } catch (error) {
+    cleanup();
     throw classifyOpenAIError(error);
+  }
+
+  try {
+    await playAudioBuffer(arrayBuffer, mergedSignal);
   } finally {
     cleanup();
   }
@@ -56,7 +60,20 @@ async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promi
   source.connect(audioContext.destination);
 
   return new Promise<void>((resolve, reject) => {
+    const abortHandler = () => {
+      source.onended = null;
+      source.stop();
+      closeContext();
+      reject(new DOMException('Audio playback aborted', 'AbortError'));
+    };
+
+    const cleanupListeners = () => {
+      source.onended = null;
+      if (signal) signal.removeEventListener('abort', abortHandler);
+    };
+
     source.onended = () => {
+      cleanupListeners();
       closeContext();
       resolve();
     };
@@ -67,18 +84,15 @@ async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promi
         reject(new DOMException('Audio playback aborted', 'AbortError'));
         return;
       }
-      signal.addEventListener(
-        'abort',
-        () => {
-          source.onended = null;
-          source.stop();
-          closeContext();
-          reject(new DOMException('Audio playback aborted', 'AbortError'));
-        },
-        { once: true },
-      );
+      signal.addEventListener('abort', abortHandler, { once: true });
     }
 
-    source.start();
+    try {
+      source.start();
+    } catch (error) {
+      cleanupListeners();
+      closeContext();
+      reject(error);
+    }
   });
 }
