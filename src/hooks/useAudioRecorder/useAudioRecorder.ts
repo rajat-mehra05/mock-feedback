@@ -19,8 +19,8 @@ function getSupportedMimeType(): string {
 }
 
 interface SilenceDetectionRefs {
-  timer: React.RefObject<ReturnType<typeof setInterval> | null>;
-  audioCtx: React.RefObject<AudioContext | null>;
+  timer: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
+  audioCtx: React.MutableRefObject<AudioContext | null>;
 }
 
 function startSilenceDetection(
@@ -93,6 +93,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, [cleanupSilenceDetection]);
 
   const startRecording = useCallback(async () => {
+    // Guard against overlapping recording sessions
+    const existing = mediaRecorderRef.current;
+    if (existing && existing.state !== 'inactive') return;
+
     setError(null);
     setAudioBlob(null);
 

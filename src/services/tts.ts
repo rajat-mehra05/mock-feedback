@@ -70,6 +70,7 @@ async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promi
       signal.addEventListener(
         'abort',
         () => {
+          source.onended = null;
           source.stop();
           closeContext();
           reject(new DOMException('Audio playback aborted', 'AbortError'));
