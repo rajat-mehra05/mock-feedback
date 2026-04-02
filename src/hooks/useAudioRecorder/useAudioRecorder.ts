@@ -28,13 +28,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const vadRef = useRef<MicVAD | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cleanupVAD = useCallback(async () => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
     if (vadRef.current) {
       await vadRef.current.destroy();
       vadRef.current = null;
@@ -97,7 +92,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setIsRecording(true);
 
       // Neural VAD for speech detection — stops recording after speech ends
-      const stopRef = stopRecording;
       const vad = await MicVAD.new({
         baseAssetPath: '/vad/',
         onnxWASMBasePath: '/vad/',
@@ -106,7 +100,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         redemptionMs: SILENCE_TIMEOUT_SECONDS * 1000,
         onSpeechEnd: () => {
           // Speech ended and silence exceeded redemption period — stop recording
-          stopRef();
+          stopRecording();
         },
       });
       vadRef.current = vad;
