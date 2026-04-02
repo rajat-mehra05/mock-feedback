@@ -3,6 +3,7 @@ node_modules/
 
 # Build
 dist/
+public/vad/
 dist-ssr/
 *.tsbuildinfo
 

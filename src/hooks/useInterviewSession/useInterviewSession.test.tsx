@@ -47,7 +47,7 @@ vi.mock('@/services/feedback/feedback', () => ({
   }),
 }));
 vi.mock('@/db/sessions/sessions', () => ({
-  createSession: vi.fn().mockResolvedValue(undefined),
+  createSession: vi.fn().mockResolvedValue('mock-session-id'),
 }));
 
 const { useInterviewSession } = await import('./useInterviewSession');
@@ -78,7 +78,7 @@ beforeEach(async () => {
       questions: [{ rating: 8, feedback: 'Good.', modelAnswer: 'Model.' }],
       summary: 'Well done.',
     });
-  vi.mocked(createSession).mockReset().mockResolvedValue(undefined);
+  vi.mocked(createSession).mockReset().mockResolvedValue('mock-session-id');
 });
 
 test('full single-question interview: idle → generate → speak → record → feedback → completed', async () => {

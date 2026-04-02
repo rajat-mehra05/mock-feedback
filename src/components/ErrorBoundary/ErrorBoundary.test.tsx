@@ -1,9 +1,10 @@
+import type React from 'react';
 import { expect, test, vi } from 'vitest';
 import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary, SessionErrorFallback } from './ErrorBoundary';
 
-function ThrowingChild() {
+function ThrowingChild(): React.ReactNode {
   throw new Error('Boom');
 }
 
