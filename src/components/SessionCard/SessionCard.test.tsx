@@ -1,32 +1,30 @@
 import { expect, test, vi } from 'vitest';
-import { screen, render } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { SessionCard } from './SessionCard';
 import { makeSession } from '@/test/factories';
 
 test('user sees topic, date, duration, question count, score, and card links to feedback page', () => {
-  render(
-    <MemoryRouter>
-      <SessionCard
-        session={makeSession({
-          id: 'card-test',
-          topic: 'Node.js',
-          duration: 480,
-          questionCount: 3,
-          averageScore: 4.0,
-          questions: [
-            {
-              id: 'q1',
-              questionText: 'How does Node handle concurrency?',
-              userTranscript: 'Event loop.',
-              rating: 7,
-              feedback: 'Good.',
-            },
-          ],
-        })}
-      />
-    </MemoryRouter>,
+  renderWithProviders(
+    <SessionCard
+      session={makeSession({
+        id: 'card-test',
+        topic: 'Node.js',
+        duration: 480,
+        questionCount: 3,
+        averageScore: 4.0,
+        questions: [
+          {
+            id: 'q1',
+            questionText: 'How does Node handle concurrency?',
+            userTranscript: 'Event loop.',
+            rating: 7,
+            feedback: 'Good.',
+          },
+        ],
+      })}
+    />,
   );
 
   expect(screen.getAllByText('Node.js')[0]).toBeInTheDocument();
@@ -44,13 +42,11 @@ test('delete button calls onDelete and card handles all score tiers and empty qu
   const onDelete = vi.fn();
 
   // Green tier (>= 8) + delete behavior
-  const { unmount } = render(
-    <MemoryRouter>
-      <SessionCard
-        session={makeSession({ id: 'del-1', topic: 'React', averageScore: 9.0 })}
-        onDelete={onDelete}
-      />
-    </MemoryRouter>,
+  const { unmount } = renderWithProviders(
+    <SessionCard
+      session={makeSession({ id: 'del-1', topic: 'React', averageScore: 9.0 })}
+      onDelete={onDelete}
+    />,
   );
 
   await user.click(screen.getByRole('button', { name: /delete react session/i }));
@@ -58,11 +54,7 @@ test('delete button calls onDelete and card handles all score tiers and empty qu
   unmount();
 
   // Yellow tier (>= 6, < 8) + empty questions (firstQuestion fallback)
-  render(
-    <MemoryRouter>
-      <SessionCard session={makeSession({ averageScore: 7.0, questions: [] })} />
-    </MemoryRouter>,
-  );
+  renderWithProviders(<SessionCard session={makeSession({ averageScore: 7.0, questions: [] })} />);
 
   expect(screen.getByText('7.0/10')).toBeInTheDocument();
 });

@@ -106,13 +106,20 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         redemptionMs: SILENCE_TIMEOUT_SECONDS * 1000,
         onSpeechEnd: () => {
           // Speech ended and silence exceeded redemption period — stop recording
-          silenceTimerRef.current = null;
           stopRef();
         },
       });
       vadRef.current = vad;
     } catch (err) {
       await cleanupVAD();
+      const rec = mediaRecorderRef.current;
+      if (rec && rec.state !== 'inactive') {
+        rec.ondataavailable = null;
+        rec.onstop = null;
+        rec.onerror = null;
+        rec.stop();
+      }
+      mediaRecorderRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       const msg =

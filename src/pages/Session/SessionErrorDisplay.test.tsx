@@ -31,8 +31,13 @@ test('error display shows retry button for retryable errors and settings link fo
     />,
   );
   expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
-  expect(screen.getByText(/click/i)).toBeInTheDocument();
-  expect(screen.getByText(/settings/i)).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      (_content, element) =>
+        element?.tagName === 'P' &&
+        element.textContent === 'Click Settings in the header to update your API key.',
+    ),
+  ).toBeInTheDocument();
   unmountAuth();
 
   // Network error — no retry (non-retryable), no special links

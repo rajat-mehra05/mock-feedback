@@ -8,13 +8,16 @@ function ThrowingChild(): React.ReactNode {
   throw new Error('Boom');
 }
 
+const originalLocation = window.location;
+
 test('child throw triggers fallback, logs error, and reload button calls window.location.reload', async () => {
   const user = userEvent.setup();
   const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   const reloadMock = vi.fn();
   Object.defineProperty(window, 'location', {
-    value: { ...window.location, reload: reloadMock },
+    value: { ...originalLocation, reload: reloadMock },
     writable: true,
+    configurable: true,
   });
 
   render(
@@ -38,6 +41,11 @@ test('child throw triggers fallback, logs error, and reload button calls window.
   await user.click(screen.getByRole('button', { name: /reload/i }));
   expect(reloadMock).toHaveBeenCalledOnce();
 
+  Object.defineProperty(window, 'location', {
+    value: originalLocation,
+    writable: true,
+    configurable: true,
+  });
   vi.restoreAllMocks();
 });
 
@@ -61,8 +69,9 @@ test('SessionErrorFallback renders error UI with working Return Home and Try Aga
   const reloadMock = vi.fn();
   const hrefSetter = vi.fn();
   Object.defineProperty(window, 'location', {
-    value: { ...window.location, reload: reloadMock },
+    value: { ...originalLocation, reload: reloadMock },
     writable: true,
+    configurable: true,
   });
   Object.defineProperty(window.location, 'href', { set: hrefSetter, configurable: true });
 
@@ -78,5 +87,10 @@ test('SessionErrorFallback renders error UI with working Return Home and Try Aga
   await user.click(screen.getByRole('button', { name: /try again/i }));
   expect(reloadMock).toHaveBeenCalledOnce();
 
+  Object.defineProperty(window, 'location', {
+    value: originalLocation,
+    writable: true,
+    configurable: true,
+  });
   vi.restoreAllMocks();
 });

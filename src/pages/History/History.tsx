@@ -17,6 +17,14 @@ export function History() {
       : 0;
   const lastDate = sessions.length > 0 ? sessions[0].createdAt : null;
 
+  async function handleSessionDelete(id: string) {
+    try {
+      await removeSession(id);
+    } catch {
+      // removeSession triggers a refresh via useSessions — if it fails, the card stays visible
+    }
+  }
+
   async function handleDeleteAll() {
     if (!window.confirm('Delete all interview sessions? This cannot be undone.')) return;
     setIsDeleting(true);
@@ -88,7 +96,7 @@ export function History() {
             <SessionCard
               key={session.id}
               session={session}
-              onDelete={(id) => void removeSession(id)}
+              onDelete={(id) => void handleSessionDelete(id)}
             />
           ))}
         </div>
