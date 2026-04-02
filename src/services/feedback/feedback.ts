@@ -43,6 +43,7 @@ export async function generateFeedback(
     if (!raw) throw new Error('Empty response from feedback generation');
     return parseFeedbackJSON(raw);
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
     throw classifyOpenAIError(error);
   } finally {
     cleanup();

@@ -31,10 +31,20 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
     }
     const item = q as Record<string, unknown>;
     const rating = Math.max(1, Math.min(MAX_SCORE, Number(item.rating) || 1));
+    if (typeof item.feedback !== 'string') {
+      throw new Error(
+        `Failed to parse feedback JSON: question ${i} has invalid feedback type: ${typeof item.feedback}`,
+      );
+    }
+    if (typeof item.modelAnswer !== 'string') {
+      throw new Error(
+        `Failed to parse feedback JSON: question ${i} has invalid modelAnswer type: ${typeof item.modelAnswer}`,
+      );
+    }
     return {
       rating,
-      feedback: String(item.feedback ?? ''),
-      modelAnswer: String(item.modelAnswer ?? ''),
+      feedback: item.feedback,
+      modelAnswer: item.modelAnswer,
     };
   });
 

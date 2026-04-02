@@ -66,7 +66,7 @@ export function Session() {
           <SessionErrorDisplay error={state.error} onRetry={retry} />
         )}
 
-        {!['idle', 'completed', 'error'].includes(state.status) && (
+        {!['idle', 'completed', 'error', 'generating_feedback'].includes(state.status) && (
           <button
             onClick={stop}
             aria-label="Stop interview"

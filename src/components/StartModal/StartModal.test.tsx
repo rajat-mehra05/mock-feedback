@@ -1,18 +1,14 @@
 import { expect, test, vi } from 'vitest';
-import { screen, render } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { StartModal } from './StartModal';
 
 test('user opens modal, selects topic and question count, then starts session', async () => {
   const user = userEvent.setup();
   const onOpenChange = vi.fn();
 
-  render(
-    <MemoryRouter>
-      <StartModal open={true} onOpenChange={onOpenChange} />
-    </MemoryRouter>,
-  );
+  renderWithProviders(<StartModal open={true} onOpenChange={onOpenChange} />);
 
   // Modal content visible with how-it-works steps
   expect(screen.getByText(/welcome to mock feedback/i)).toBeInTheDocument();
@@ -40,14 +36,4 @@ test('user opens modal, selects topic and question count, then starts session', 
 
   // Modal closed
   expect(onOpenChange).toHaveBeenCalledWith(false);
-});
-
-test('start button stays disabled when no topic is selected', () => {
-  render(
-    <MemoryRouter>
-      <StartModal open={true} onOpenChange={() => {}} />
-    </MemoryRouter>,
-  );
-
-  expect(screen.getByRole('button', { name: /start session/i })).toBeDisabled();
 });

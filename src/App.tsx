@@ -20,7 +20,7 @@ function PageLoader() {
 
 export default function App() {
   useEffect(() => {
-    seedMockData();
+    void seedMockData();
   }, []);
 
   // Fix @base-ui Select rendering aria-hidden inputs with tabindex="-1"

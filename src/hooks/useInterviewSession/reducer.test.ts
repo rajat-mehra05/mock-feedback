@@ -103,6 +103,59 @@ test('STOP with no answers completes immediately', () => {
   expect(state.isPartial).toBe(true);
 });
 
+test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_READY backfills it', () => {
+  // Setup: get to user_recording with one question asked
+  let state = interviewReducer(initialState, {
+    type: 'START',
+    topic: 'react-nextjs',
+    topicLabel: 'React',
+    questionCount: 2,
+  });
+  state = interviewReducer(state, { type: 'QUESTION_READY', question: 'What is React?' });
+  state = interviewReducer(state, { type: 'TTS_DONE' });
+  expect(state.status).toBe('user_recording');
+  expect(state.pendingTranscriptions).toBe(0);
+
+  // ANSWER_RECORDED — adds placeholder to history, increments pending, moves to generating
+  state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
+  expect(state.status).toBe('generating');
+  expect(state.history).toHaveLength(1);
+  expect(state.history[0].question).toBe('What is React?');
+  expect(state.history[0].answer).toBe('');
+  expect(state.pendingTranscriptions).toBe(1);
+  expect(state.currentQuestion).toBeNull();
+
+  // Second question cycle
+  state = interviewReducer(state, { type: 'QUESTION_READY', question: 'Explain hooks' });
+  state = interviewReducer(state, { type: 'TTS_DONE' });
+
+  // Background transcript arrives for first question while second is being recorded
+  state = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
+    transcript: 'React is a UI library',
+  });
+  expect(state.history[0].answer).toBe('React is a UI library');
+  expect(state.pendingTranscriptions).toBe(0);
+  expect(state.status).toBe('user_recording');
+
+  // ANSWER_RECORDED for last question → generating_feedback
+  state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
+  expect(state.status).toBe('generating_feedback');
+  expect(state.history).toHaveLength(2);
+  expect(state.history[1].answer).toBe('');
+  expect(state.pendingTranscriptions).toBe(1);
+
+  // Transcript arrives for second question
+  state = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 1,
+    transcript: 'Hooks let you use state in functions',
+  });
+  expect(state.history[1].answer).toBe('Hooks let you use state in functions');
+  expect(state.pendingTranscriptions).toBe(0);
+});
+
 test('ERROR and RETRY cycle returns to the failed state', () => {
   let state = interviewReducer(initialState, {
     type: 'START',

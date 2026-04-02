@@ -26,6 +26,8 @@ export interface InterviewSessionState {
   sessionId: string | null;
   /** The status to retry from when RETRY is dispatched */
   retryFromStatus: InterviewState | null;
+  /** Number of in-flight background transcriptions */
+  pendingTranscriptions: number;
 }
 
 export type InterviewAction =
@@ -35,6 +37,8 @@ export type InterviewAction =
   | { type: 'TTS_FAILED'; question: string }
   | { type: 'TRANSCRIBING' }
   | { type: 'RECORDING_DONE'; transcript: string }
+  | { type: 'ANSWER_RECORDED' }
+  | { type: 'TRANSCRIPT_READY'; questionIndex: number; transcript: string }
   | { type: 'FEEDBACK_DONE'; sessionId: string }
   | { type: 'ERROR'; error: OpenAIServiceError; failedStatus: InterviewState }
   | { type: 'RETRY' }

@@ -16,6 +16,9 @@ test('user sees disabled Start button with hint when no API key is set, then ope
   expect(startButton).toBeDisabled();
   expect(screen.getByText(/configure your api key in settings/i)).toBeInTheDocument();
 
+  // Motivational content visible
+  expect(screen.getByText(/ready when you are/i)).toBeInTheDocument();
+
   // Configure key — button becomes enabled
   await saveApiKey('sk-test');
   renderWithProviders(<Home />);

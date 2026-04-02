@@ -58,7 +58,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              handleSave();
+              void handleSave();
             }}
           >
             <div className="flex gap-2">
@@ -91,7 +91,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
             </Button>
 
             {status === 'error' && (
-              <p className="text-sm font-bold text-neo-accent">
+              <p className="text-sm font-bold text-neo-accent" role="alert">
                 Failed to save key. Please try again.
               </p>
             )}

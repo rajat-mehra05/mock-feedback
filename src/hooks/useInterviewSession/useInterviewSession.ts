@@ -37,7 +37,7 @@ export function useInterviewSession() {
     if (s.aborted) return;
 
     if (state.status === 'generating') {
-      (async () => {
+      void (async () => {
         try {
           const question = await withRetry(
             (sig) => generateNextQuestion(state.topic, state.history, sig),
@@ -53,7 +53,7 @@ export function useInterviewSession() {
     }
 
     if (state.status === 'ai_speaking' && state.currentQuestion) {
-      (async () => {
+      void (async () => {
         try {
           await speakText(state.currentQuestion!, s);
           if (s.aborted) return;
@@ -66,11 +66,12 @@ export function useInterviewSession() {
     }
 
     if (state.status === 'user_recording' && !recorder.isRecording) {
-      recorder.startRecording();
+      void recorder.startRecording();
     }
 
     if (state.status === 'generating_feedback') {
-      (async () => {
+      if (state.pendingTranscriptions > 0) return; // wait for background transcriptions
+      void (async () => {
         try {
           // Speak closing message (non-blocking — continue even if TTS fails)
           try {
@@ -111,7 +112,7 @@ export function useInterviewSession() {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, state.currentQuestionIndex]);
+  }, [state.status, state.currentQuestionIndex, state.pendingTranscriptions]);
 
   // Surface recorder errors into session state
   useEffect(() => {
@@ -124,37 +125,33 @@ export function useInterviewSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.error]);
 
-  // audioBlob ready → transition to transcribing
+  // audioBlob ready → advance to next question immediately, transcribe in background
   useEffect(() => {
-    if (recorder.audioBlob && state.status === 'user_recording') {
-      dispatch({ type: 'TRANSCRIBING' });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recorder.audioBlob]);
-
-  // Transcribe when status is 'transcribing' and we have a blob
-  useEffect(() => {
-    if (state.status !== 'transcribing' || !recorder.audioBlob) return;
+    if (!recorder.audioBlob || state.status !== 'user_recording') return;
     const blob = recorder.audioBlob;
+    const questionIndex = state.history.length; // index this answer will occupy
+    recorder.clearBlob();
+    dispatch({ type: 'ANSWER_RECORDED' });
+
+    // Background transcription — doesn't block the interview flow
     const s = getSignal();
-    (async () => {
+    void (async () => {
       try {
         const transcript = await transcribeAudio(blob, s);
         if (s.aborted) return;
-        recorder.clearBlob();
-        dispatch({ type: 'RECORDING_DONE', transcript });
-      } catch (error) {
+        dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript });
+      } catch {
         if (s.aborted) return;
-        onError(error, 'transcribing');
+        dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript: '[transcription failed]' });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status]);
+  }, [recorder.audioBlob]);
 
   // Navigate to feedback on completion
   useEffect(() => {
     if (state.status === 'completed' && state.sessionId) {
-      navigate(`/history/${state.sessionId}`);
+      void navigate(`/history/${state.sessionId}`);
     }
   }, [state.status, state.sessionId, navigate]);
 
