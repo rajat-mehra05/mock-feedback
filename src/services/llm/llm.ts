@@ -44,6 +44,7 @@ export async function generateNextQuestion(
     if (!text) throw new Error('Empty response from LLM');
     return text.trim();
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
     throw classifyOpenAIError(error);
   } finally {
     cleanup();

@@ -33,8 +33,8 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
     const rating = Math.max(1, Math.min(MAX_SCORE, Number(item.rating) || 1));
     return {
       rating,
-      feedback: String(item.feedback ?? ''),
-      modelAnswer: String(item.modelAnswer ?? ''),
+      feedback: typeof item.feedback === 'string' ? item.feedback : '',
+      modelAnswer: typeof item.modelAnswer === 'string' ? item.modelAnswer : '',
     };
   });
 

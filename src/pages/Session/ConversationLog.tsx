@@ -36,7 +36,9 @@ export function ConversationLog({
             aria-label={`Your answer ${i + 1}`}
           >
             <p className="mb-1 text-xs font-medium text-muted-foreground">You</p>
-            <p className="text-sm text-foreground">{turn.answer}</p>
+            <p className="text-sm text-foreground">
+              {turn.answer || <span className="italic text-muted-foreground">Transcribing...</span>}
+            </p>
           </div>
         </div>
       ))}

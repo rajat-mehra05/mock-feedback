@@ -4,6 +4,33 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { saveApiKey } from '@/db/apiKey/apiKey';
 
+// --- Dynamic audioRecorder mock ---
+const recorderState = {
+  audioBlob: null as Blob | null,
+  isRecording: false,
+  error: null as string | null,
+};
+const recorderFns = {
+  startRecording: vi.fn(),
+  stopRecording: vi.fn(),
+  clearBlob: vi.fn(),
+};
+
+vi.mock('@/hooks/useAudioRecorder/useAudioRecorder', () => ({
+  useAudioRecorder: () => ({
+    ...recorderFns,
+    get audioBlob() {
+      return recorderState.audioBlob;
+    },
+    get isRecording() {
+      return recorderState.isRecording;
+    },
+    get error() {
+      return recorderState.error;
+    },
+  }),
+}));
+
 vi.mock('@/services/llm/llm', () => ({
   generateNextQuestion: vi.fn().mockResolvedValue('What is a closure?'),
 }));
@@ -19,18 +46,16 @@ vi.mock('@/services/feedback/feedback', () => ({
     summary: 'Well done.',
   }),
 }));
-vi.mock('@/hooks/useAudioRecorder/useAudioRecorder', () => ({
-  useAudioRecorder: () => ({
-    startRecording: vi.fn(),
-    stopRecording: vi.fn(),
-    clearBlob: vi.fn(),
-    audioBlob: null,
-    isRecording: false,
-    error: null,
-  }),
+vi.mock('@/db/sessions/sessions', () => ({
+  createSession: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { useInterviewSession } = await import('./useInterviewSession');
+const { generateNextQuestion } = await import('@/services/llm/llm');
+const { speakText } = await import('@/services/tts/tts');
+const { transcribeAudio } = await import('@/services/stt/stt');
+const { generateFeedback } = await import('@/services/feedback/feedback');
+const { createSession } = await import('@/db/sessions/sessions');
 
 function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
@@ -38,35 +63,84 @@ function wrapper({ children }: { children: ReactNode }) {
 
 beforeEach(async () => {
   await saveApiKey('sk-test');
-  vi.mocked((await import('@/services/llm/llm')).generateNextQuestion)
-    .mockReset()
-    .mockResolvedValue('What is a closure?');
-  vi.mocked((await import('@/services/tts/tts')).speakText)
-    .mockReset()
-    .mockResolvedValue(undefined);
-  vi.mocked((await import('@/services/stt/stt')).transcribeAudio)
-    .mockReset()
-    .mockResolvedValue('A closure captures variables.');
-  vi.mocked((await import('@/services/feedback/feedback')).generateFeedback)
+  recorderState.audioBlob = null;
+  recorderState.isRecording = false;
+  recorderState.error = null;
+  recorderFns.startRecording.mockClear();
+  recorderFns.stopRecording.mockClear();
+  recorderFns.clearBlob.mockClear();
+  vi.mocked(generateNextQuestion).mockReset().mockResolvedValue('What is a closure?');
+  vi.mocked(speakText).mockReset().mockResolvedValue(undefined);
+  vi.mocked(transcribeAudio).mockReset().mockResolvedValue('A closure captures variables.');
+  vi.mocked(generateFeedback)
     .mockReset()
     .mockResolvedValue({
       questions: [{ rating: 8, feedback: 'Good.', modelAnswer: 'Model.' }],
       summary: 'Well done.',
     });
+  vi.mocked(createSession).mockReset().mockResolvedValue(undefined);
 });
 
-test('hook starts in idle, generates a question, speaks it, and reaches user_recording', async () => {
-  const { result } = renderHook(() => useInterviewSession(), { wrapper });
+test('full single-question interview: idle → generate → speak → record → feedback → completed', async () => {
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
   expect(result.current.state.status).toBe('idle');
 
+  // Start session with 1 question
   act(() => {
     result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
   });
   expect(result.current.state.topic).toBe('react-nextjs');
 
+  // Generating → ai_speaking → user_recording
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
   expect(result.current.state.currentQuestion).toBe('What is a closure?');
   expect(result.current.state.currentQuestionIndex).toBe(1);
+
+  // Simulate audioBlob ready → triggers ANSWER_RECORDED + background transcription
+  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  rerender();
+
+  expect(recorderFns.clearBlob).toHaveBeenCalled();
+
+  // Transcription completes in background, then feedback generates
+  await waitFor(() =>
+    expect(result.current.state.history[0]?.answer).toBe('A closure captures variables.'),
+  );
+
+  // Feedback generates, session is saved, status → completed
+  await waitFor(() => expect(result.current.state.status).toBe('completed'));
+  expect(result.current.state.sessionId).toBeTruthy();
+  expect(createSession).toHaveBeenCalledOnce();
+});
+
+test('TTS failure sets ttsFallbackText and still reaches user_recording', async () => {
+  vi.mocked(speakText).mockRejectedValue(new Error('TTS unavailable'));
+
+  const { result } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
+  });
+
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+  expect(result.current.state.ttsFallbackText).toBe('What is a closure?');
+});
+
+test('transcription failure falls back to placeholder text', async () => {
+  vi.mocked(transcribeAudio).mockRejectedValue(new Error('STT down'));
+
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  rerender();
+
+  await waitFor(() => expect(result.current.state.pendingTranscriptions).toBe(0));
+  expect(result.current.state.history[0].answer).toBe('[transcription failed]');
 });
 
 test('stop with no answers transitions to completed with isPartial', () => {
@@ -79,8 +153,20 @@ test('stop with no answers transitions to completed with isPartial', () => {
   expect(result.current.state.isPartial).toBe(true);
 });
 
+test('stop while recording calls recorder.stopRecording', async () => {
+  const { result } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 3 }));
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.isRecording = true;
+  act(() => result.current.stop());
+
+  expect(recorderFns.stopRecording).toHaveBeenCalled();
+  expect(result.current.state.status).toBe('completed');
+});
+
 test('retry after error re-enters the failed status and resumes', async () => {
-  const { generateNextQuestion } = await import('@/services/llm/llm');
   vi.mocked(generateNextQuestion).mockRejectedValueOnce({
     type: 'network',
     message: 'offline',
@@ -100,4 +186,52 @@ test('retry after error re-enters the failed status and resumes', async () => {
 
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
   expect(result.current.state.currentQuestion).toBe('Retry question');
+});
+
+test('recorder error surfaces into session error state', async () => {
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 }));
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  // Simulate recorder error while in user_recording
+  recorderState.error = 'Microphone disconnected';
+  rerender();
+
+  await waitFor(() => expect(result.current.state.status).toBe('error'));
+  expect(result.current.state.error?.message).toBe('Microphone disconnected');
+});
+
+test('stopRecordingOnly delegates to recorder.stopRecording', async () => {
+  const { result } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 }));
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.isRecording = true;
+  act(() => result.current.stopRecordingOnly());
+
+  expect(recorderFns.stopRecording).toHaveBeenCalled();
+});
+
+test('feedback generation error transitions to error state', async () => {
+  vi.mocked(generateFeedback).mockRejectedValue({
+    type: 'network',
+    message: 'feedback failed',
+    retryable: false,
+  });
+
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  rerender();
+
+  await waitFor(() => expect(result.current.state.status).toBe('error'));
+  expect(result.current.state.error?.message).toBe('feedback failed');
+  expect(result.current.state.retryFromStatus).toBe('generating_feedback');
 });

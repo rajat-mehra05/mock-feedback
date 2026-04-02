@@ -31,6 +31,7 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
     arrayBuffer = await response.arrayBuffer();
   } catch (error) {
     cleanup();
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
     throw classifyOpenAIError(error);
   }
 
@@ -44,7 +45,7 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
 async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promise<void> {
   const audioContext = new AudioContext();
   const closeContext = () => {
-    if (audioContext.state !== 'closed') audioContext.close();
+    if (audioContext.state !== 'closed') void audioContext.close();
   };
 
   let audioBuffer: AudioBuffer;
@@ -92,7 +93,7 @@ async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promi
     } catch (error) {
       cleanupListeners();
       closeContext();
-      reject(error);
+      reject(error instanceof Error ? error : new Error('Failed to start audio playback'));
     }
   });
 }

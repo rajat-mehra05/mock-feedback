@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -44,6 +46,13 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: React Doctor
+        if: github.event_name == 'pull_request'
+        uses: millionco/react-doctor@main
+        with:
+          diff: master
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Re-enable Lighthouse CI in final phase
       # - name: Lighthouse CI

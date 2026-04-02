@@ -65,7 +65,10 @@ export function Feedback() {
         </div>
         <Select
           value={viewMode}
-          onValueChange={(v) => setViewMode((v ?? 'feedback') as 'feedback' | 'model-answers')}
+          onValueChange={(v) => {
+            const mode = v ?? 'feedback';
+            if (mode === 'feedback' || mode === 'model-answers') setViewMode(mode);
+          }}
         >
           <SelectTrigger className="w-48" aria-label="View mode">
             <SelectValue />

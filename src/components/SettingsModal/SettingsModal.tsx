@@ -66,7 +66,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSave();
+            void handleSave();
           }}
         >
           <div>
@@ -108,7 +108,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
             <div className="flex gap-2">
               {apiKey && (
-                <Button type="button" variant="destructive" size="sm" onClick={handleRemove}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => void handleRemove()}
+                >
                   Remove
                 </Button>
               )}

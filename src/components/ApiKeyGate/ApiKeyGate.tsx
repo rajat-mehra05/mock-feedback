@@ -58,7 +58,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              handleSave();
+              void handleSave();
             }}
           >
             <div className="flex gap-2">

@@ -14,6 +14,7 @@ export const initialState: InterviewSessionState = {
   isPartial: false,
   sessionId: null,
   retryFromStatus: null,
+  pendingTranscriptions: 0,
 };
 
 export function interviewReducer(
@@ -64,6 +65,29 @@ export function interviewReducer(
         status: isLast ? 'generating_feedback' : 'generating',
         history: newHistory,
         currentQuestion: null,
+      };
+    }
+
+    case 'ANSWER_RECORDED': {
+      const newHistory = [...state.history, { question: state.currentQuestion!, answer: '' }];
+      const isLast = newHistory.length >= state.targetQuestionCount;
+      return {
+        ...state,
+        status: isLast ? 'generating_feedback' : 'generating',
+        history: newHistory,
+        currentQuestion: null,
+        pendingTranscriptions: state.pendingTranscriptions + 1,
+      };
+    }
+
+    case 'TRANSCRIPT_READY': {
+      const updatedHistory = state.history.map((turn, i) =>
+        i === action.questionIndex ? { ...turn, answer: action.transcript } : turn,
+      );
+      return {
+        ...state,
+        history: updatedHistory,
+        pendingTranscriptions: state.pendingTranscriptions - 1,
       };
     }
 

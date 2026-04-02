@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { MicVAD } from '@ricky0123/vad-web';
 import { AUDIO_MIME_TYPES } from '@/constants/openai';
-import { SILENCE_TIMEOUT_SECONDS, SILENCE_RMS_THRESHOLD } from '@/constants/session';
+import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
 
 interface UseAudioRecorderReturn {
   startRecording: () => Promise<void>;
@@ -18,50 +19,6 @@ function getSupportedMimeType(): string {
   return '';
 }
 
-interface SilenceDetectionRefs {
-  timer: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
-  audioCtx: React.MutableRefObject<AudioContext | null>;
-}
-
-function startSilenceDetection(
-  stream: MediaStream,
-  refs: SilenceDetectionRefs,
-  onSilence: () => void,
-) {
-  const ctx = new AudioContext();
-  refs.audioCtx.current = ctx;
-  const source = ctx.createMediaStreamSource(stream);
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 512;
-  source.connect(analyser);
-
-  const dataArray = new Float32Array(analyser.fftSize);
-  let silentSince: number | null = null;
-  let hasSpoken = false;
-
-  refs.timer.current = setInterval(() => {
-    analyser.getFloatTimeDomainData(dataArray);
-    const rms = Math.sqrt(dataArray.reduce((sum, v) => sum + v * v, 0) / dataArray.length);
-
-    if (rms >= SILENCE_RMS_THRESHOLD) {
-      hasSpoken = true;
-      silentSince = null;
-      return;
-    }
-
-    if (!hasSpoken) return;
-
-    if (!silentSince) {
-      silentSince = Date.now();
-      return;
-    }
-
-    if (Date.now() - silentSince >= SILENCE_TIMEOUT_SECONDS * 1000) {
-      onSilence();
-    }
-  }, 200);
-}
-
 export function useAudioRecorder(): UseAudioRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -70,27 +27,27 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const vadRef = useRef<MicVAD | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const cleanupSilenceDetection = useCallback(() => {
+  const cleanupVAD = useCallback(async () => {
     if (silenceTimerRef.current) {
-      clearInterval(silenceTimerRef.current);
+      clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (vadRef.current) {
+      await vadRef.current.destroy();
+      vadRef.current = null;
     }
   }, []);
 
   const stopRecording = useCallback(() => {
-    cleanupSilenceDetection();
+    void cleanupVAD();
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state === 'recording') {
       recorder.stop();
     }
-  }, [cleanupSilenceDetection]);
+  }, [cleanupVAD]);
 
   const startRecording = useCallback(async () => {
     // Guard against overlapping recording sessions
@@ -127,7 +84,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       };
 
       recorder.onerror = () => {
-        cleanupSilenceDetection();
+        void cleanupVAD();
         chunksRef.current = [];
         setAudioBlob(null);
         setIsRecording(false);
@@ -139,13 +96,23 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       recorder.start();
       setIsRecording(true);
 
-      startSilenceDetection(
-        stream,
-        { timer: silenceTimerRef, audioCtx: audioContextRef },
-        stopRecording,
-      );
+      // Neural VAD for speech detection — stops recording after speech ends
+      const stopRef = stopRecording;
+      const vad = await MicVAD.new({
+        baseAssetPath: '/vad/',
+        onnxWASMBasePath: '/vad/',
+        getStream: () => Promise.resolve(stream),
+        startOnLoad: true,
+        redemptionMs: SILENCE_TIMEOUT_SECONDS * 1000,
+        onSpeechEnd: () => {
+          // Speech ended and silence exceeded redemption period — stop recording
+          silenceTimerRef.current = null;
+          stopRef();
+        },
+      });
+      vadRef.current = vad;
     } catch (err) {
-      cleanupSilenceDetection();
+      await cleanupVAD();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       const msg =
@@ -154,12 +121,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
           : 'Failed to start recording.';
       setError(msg);
     }
-  }, [stopRecording, cleanupSilenceDetection]);
+  }, [stopRecording, cleanupVAD]);
 
   // Release all resources on unmount
   useEffect(() => {
     return () => {
-      cleanupSilenceDetection();
+      void cleanupVAD();
       const recorder = mediaRecorderRef.current;
       if (recorder && recorder.state === 'recording') {
         recorder.stop();
@@ -167,7 +134,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [cleanupSilenceDetection]);
+  }, [cleanupVAD]);
 
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 

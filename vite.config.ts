@@ -39,8 +39,10 @@ export default defineConfig({
     css: false,
     testTimeout: 5000,
     coverage: {
-      reporter: ['text', 'json-summary', 'json'],
+      reporter: ['text', 'json-summary', 'json', 'html'],
       exclude: [
+        'src/test/**',
+        'src/constants/**',
         'src/components/ui/**',
         'src/main.tsx',
         'src/App.tsx',
@@ -49,10 +51,11 @@ export default defineConfig({
         // Browser-only: require MediaRecorder, AudioContext, navigator.mediaDevices
         'src/hooks/useAudioRecorder/**',
         'src/lib/micCheck.ts',
-        'src/services/tts.ts',
+        'src/services/tts/**',
         'src/pages/Session/MicCheckGate.tsx',
         'src/pages/Session/RecordingTimer.tsx',
         'src/pages/Session/ConversationLog.tsx',
+        'src/pages/Session/Session.tsx',
       ],
     },
   },

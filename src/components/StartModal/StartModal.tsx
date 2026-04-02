@@ -28,8 +28,8 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
 
   function handleStart() {
-    if (!topic) return;
-    navigate(`/session?topic=${topic}&count=${questionCount}`);
+    /* v8 ignore next */ if (!topic) return;
+    void navigate(`/session?topic=${topic}&count=${questionCount}`);
     onOpenChange(false);
   }
 

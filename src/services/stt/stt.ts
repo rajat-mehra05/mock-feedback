@@ -18,6 +18,7 @@ export async function transcribeAudio(blob: Blob, signal?: AbortSignal): Promise
     );
     return response.text;
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
     throw classifyOpenAIError(error);
   } finally {
     cleanup();

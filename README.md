@@ -4,12 +4,13 @@ AI-powered mock interviewer that helps developers practice technical interviews.
 
 ## Tech Stack
 
-- **Frontend:** Vite + React 19 + TypeScript
+- **Frontend:** Vite 8 + React 19 + TypeScript 5.9
 - **Styling:** Tailwind CSS v4 + shadcn/ui
 - **AI / Voice:** OpenAI (GPT-4o Mini for LLM + STT, gpt-4o-mini-tts for TTS)
+- **Voice Activity Detection:** @ricky0123/vad-web (Silero VAD neural model via ONNX/WebAssembly)
 - **Storage:** IndexedDB (Dexie.js) — fully local, no backend
 - **Testing:** Vitest + React Testing Library + MSW
-- **CI:** GitHub Actions (lint + format + test + build)
+- **CI:** GitHub Actions (lint + format + unit tests + build)
 - **Pre-commit:** Husky + lint-staged
 
 ## BYOK (Bring Your Own Key)
@@ -21,8 +22,8 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 1. Configure your OpenAI API key (first-run gate)
 2. Click **Start** → select a topic and question count
 3. AI asks questions via text-to-speech
-4. You answer verbally — mic records → audio sent to OpenAI STT
-5. After all questions, AI generates structured feedback (rating + commentary per question)
+4. You answer verbally — mic records, neural VAD auto-detects when you stop speaking
+5. After all questions, AI generates structured feedback (rating + commentary per question + overall summary)
 6. Feedback saved to IndexedDB, viewable anytime from History
 
 ## Getting Started
@@ -31,6 +32,19 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 npm install
 npm run dev
 ```
+
+## Scripts
+
+| Command                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `npm run dev`           | Start Vite dev server               |
+| `npm run build`         | TypeScript check + production build |
+| `npm run lint`          | ESLint check                        |
+| `npm run format:check`  | Prettier check                      |
+| `npm run test`          | Run Vitest unit/component tests     |
+| `npm run test:watch`    | Vitest in watch mode                |
+| `npm run test:coverage` | Vitest with coverage report         |
+| `npm run lighthouse`    | Run Lighthouse CI locally           |
 
 ## Interview Topics
 
@@ -52,7 +66,9 @@ npm run dev
 
 - Browser compatibility check (MediaRecorder API) before session start
 - Mic device detection and permission gating
+- Neural voice activity detection (Silero VAD) — auto-stops recording after 3 seconds of silence
 - Max recording duration: 4 minutes per answer (with 30s warning)
+- Transcription runs in the background — no "transcribing..." wait between questions
 - Supported formats: WebM/Opus (Chrome/Firefox), MP4/AAC (Safari)
 - All in-flight API calls cancelled via AbortController on navigation/stop
 
@@ -62,6 +78,4 @@ Accessibility has been a priority from the start. The app is designed to meet WC
 
 ## Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request — whether it's a bug fix, a new feature idea, or just a suggestion to improve the experience. This project is licensed under MIT, so fork away.
-
-If you have feedback or ideas on how to make the app better, don't hesitate to open an issue. All input is appreciated. All the best!
+Contributions are welcome! Feel free to open an issue or submit a pull request — whether it's a bug fix, a new feature idea, or just a suggestion to improve the experience. All input is appreciated.

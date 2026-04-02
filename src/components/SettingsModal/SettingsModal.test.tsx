@@ -1,13 +1,13 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { SettingsModal } from './SettingsModal';
-import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
+import * as apiKeyDb from '@/db/apiKey/apiKey';
 
 test('user saves a new key, sees confirmation, then removes the key', async () => {
-  await deleteApiKey();
-  await saveApiKey('sk-existing');
+  await apiKeyDb.deleteApiKey();
+  await apiKeyDb.saveApiKey('sk-existing');
   const user = userEvent.setup();
 
   renderWithProviders(<SettingsModal open={true} onOpenChange={() => {}} />);
@@ -35,4 +35,24 @@ test('user saves a new key, sees confirmation, then removes the key', async () =
   // Remove the key
   await user.click(screen.getByRole('button', { name: /remove/i }));
   await waitFor(() => expect(screen.getByText(/no key configured/i)).toBeInTheDocument());
+});
+
+test('user sees error message when saving key fails', async () => {
+  await apiKeyDb.deleteApiKey();
+  await apiKeyDb.saveApiKey('sk-existing');
+  const user = userEvent.setup();
+  vi.spyOn(apiKeyDb, 'saveApiKey').mockRejectedValueOnce(new Error('DB write failed'));
+
+  renderWithProviders(<SettingsModal open={true} onOpenChange={() => {}} />);
+
+  expect(await screen.findByText(/key configured/i)).toBeInTheDocument();
+
+  const input = screen.getByLabelText(/openai api key/i);
+  await user.type(input, 'sk-bad-key');
+  await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+  // Error feedback shown
+  await waitFor(() => expect(screen.getByText(/error saving key/i)).toBeInTheDocument());
+
+  vi.restoreAllMocks();
 });

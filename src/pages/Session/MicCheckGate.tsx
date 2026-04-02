@@ -64,7 +64,7 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
   }
 
   useEffect(() => {
-    runChecks();
+    void runChecks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,7 +85,7 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
           variant="outline"
           onClick={() => {
             setStatus('checking');
-            runChecks();
+            void runChecks();
           }}
         >
           Retry

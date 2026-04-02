@@ -1,12 +1,12 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { ApiKeyGate } from './ApiKeyGate';
-import { deleteApiKey, saveApiKey } from '@/db/apiKey/apiKey';
+import * as apiKeyDb from '@/db/apiKey/apiKey';
 
 test('new user sees key prompt, enters key, toggles visibility, saves, and sees children', async () => {
-  await deleteApiKey();
+  await apiKeyDb.deleteApiKey();
   const user = userEvent.setup();
 
   renderWithProviders(
@@ -47,8 +47,8 @@ test('new user sees key prompt, enters key, toggles visibility, saves, and sees 
 });
 
 test('returning user with saved key goes straight to children', async () => {
-  await deleteApiKey();
-  await saveApiKey('sk-existing-key');
+  await apiKeyDb.deleteApiKey();
+  await apiKeyDb.saveApiKey('sk-existing-key');
 
   renderWithProviders(
     <ApiKeyGate>
@@ -58,4 +58,26 @@ test('returning user with saved key goes straight to children', async () => {
 
   expect(await screen.findByText('App Content')).toBeInTheDocument();
   expect(screen.queryByText(/welcome to mock feedback/i)).not.toBeInTheDocument();
+});
+
+test('user sees error message when saving key fails', async () => {
+  await apiKeyDb.deleteApiKey();
+  const user = userEvent.setup();
+  vi.spyOn(apiKeyDb, 'saveApiKey').mockRejectedValueOnce(new Error('DB write failed'));
+
+  renderWithProviders(
+    <ApiKeyGate>
+      <div>App Content</div>
+    </ApiKeyGate>,
+  );
+
+  const input = await screen.findByLabelText(/openai api key/i);
+  await user.type(input, 'sk-bad-key');
+  await user.click(screen.getByRole('button', { name: /save & continue/i }));
+
+  // Error message shown, children still hidden
+  expect(await screen.findByText(/failed to save key/i)).toBeInTheDocument();
+  expect(screen.queryByText('App Content')).not.toBeInTheDocument();
+
+  vi.restoreAllMocks();
 });

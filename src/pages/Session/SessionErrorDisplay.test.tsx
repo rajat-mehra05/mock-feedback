@@ -23,7 +23,7 @@ test('error display shows retry button for retryable errors and settings link fo
   expect(onRetry).toHaveBeenCalledOnce();
   unmount();
 
-  // Auth error shows Update API Key link, no retry button
+  // Auth error shows Settings prompt text, no retry button
   const { unmount: unmountAuth } = render(
     <SessionErrorDisplay
       error={{ type: 'auth', message: 'Invalid key.', retryable: false } as OpenAIServiceError}
@@ -31,7 +31,8 @@ test('error display shows retry button for retryable errors and settings link fo
     />,
   );
   expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: /update api key/i })).toBeInTheDocument();
+  expect(screen.getByText(/click/i)).toBeInTheDocument();
+  expect(screen.getByText(/settings/i)).toBeInTheDocument();
   unmountAuth();
 
   // Network error — no retry (non-retryable), no special links

@@ -37,7 +37,12 @@ export function History() {
         </h1>
         <div className="flex gap-2">
           {sessions.length > 0 && (
-            <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={isDeleting}>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleDeleteAll()}
+              disabled={isDeleting}
+            >
               {isDeleting ? 'Deleting...' : 'Delete All'}
             </Button>
           )}
@@ -80,7 +85,11 @@ export function History() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} onDelete={removeSession} />
+            <SessionCard
+              key={session.id}
+              session={session}
+              onDelete={(id) => void removeSession(id)}
+            />
           ))}
         </div>
       )}

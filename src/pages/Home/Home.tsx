@@ -8,7 +8,7 @@ export function Home() {
   const { hasKey } = useApiKey();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-10">
       <div className="relative">
         <button
           onClick={() => setStartOpen(true)}
@@ -26,6 +26,10 @@ export function Home() {
           {NO_API_KEY_MESSAGE}
         </p>
       )}
+
+      <p className="rounded-md border-2 border-black bg-neo-muted/20 px-6 py-4 text-center text-base font-bold text-black/70">
+        Ready when you are — hit Start and show them what you&apos;ve got!
+      </p>
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />
     </div>
