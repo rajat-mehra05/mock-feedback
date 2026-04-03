@@ -18,12 +18,11 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 
 ## How It Works
 
-1. Configure your OpenAI API key (first-run gate)
-2. Click **Start** → select a topic, target role level, and question count
-3. AI asks questions via text-to-speech, calibrated to your chosen level
-4. You answer verbally — mic records, auto-detects when you stop speaking
-5. After all questions, AI generates structured feedback (rating + commentary per question + overall summary)
-6. Feedback saved to IndexedDB, viewable anytime from History
+1. Click **Start** → enter your OpenAI API key (first time only), select a topic, target role level, and question count
+2. AI asks questions via text-to-speech, calibrated to your chosen level
+3. You answer verbally — mic records, auto-detects when you stop speaking
+4. After all questions, AI generates structured feedback (rating + commentary per question + overall summary)
+5. Feedback saved to IndexedDB, viewable anytime from History
 
 ## Interview Topics
 

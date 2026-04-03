@@ -1,7 +1,6 @@
 export const APP_NAME = 'Mock Feedback';
 
 export const EMPTY_SESSIONS_MESSAGE = 'Your past interview sessions will appear here';
-export const NO_API_KEY_MESSAGE = 'Configure your API key in Settings to get started';
 export const API_KEY_DESCRIPTION =
   'This app requires your own OpenAI API key. Your key stays on your device and is only sent to OpenAI.';
 export const OPENAI_API_KEYS_URL = 'https://platform.openai.com/api-keys';

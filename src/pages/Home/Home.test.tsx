@@ -1,33 +1,23 @@
 import { expect, test } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { Home } from './Home';
-import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
 
-test('user sees disabled Start button with hint when no API key is set, then opens modal after key is configured', async () => {
-  await deleteApiKey();
+test('user sees hero content and clicks Start to open the session modal', async () => {
   const user = userEvent.setup();
 
-  const { unmount } = renderWithProviders(<Home />);
-
-  // Start button visible but disabled
-  const startButton = screen.getByRole('button', { name: /start new interview session/i });
-  expect(startButton).toBeDisabled();
-  expect(screen.getByText(/configure your api key in settings/i)).toBeInTheDocument();
+  renderWithProviders(<Home />);
 
   // Hero content visible
   expect(screen.getByRole('heading', { name: /nail your next/i })).toBeInTheDocument();
 
-  // Configure key — remount so the hook picks up the new key
-  await saveApiKey('sk-test');
-  unmount();
-  renderWithProviders(<Home />);
+  // Start button is always enabled (no API key gate)
+  const startButton = screen.getByRole('button', { name: /start new interview session/i });
+  expect(startButton).toBeEnabled();
 
-  const enabledButton = await screen.findByRole('button', { name: /start new interview session/i });
-  await waitFor(() => expect(enabledButton).toBeEnabled());
-  await user.click(enabledButton);
-
+  // Click Start — modal opens
+  await user.click(startButton);
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  expect(screen.getByText(/welcome to mock feedback/i)).toBeInTheDocument();
+  expect(screen.getByText(/start a session/i)).toBeInTheDocument();
 });

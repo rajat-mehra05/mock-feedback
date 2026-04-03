@@ -1,13 +1,8 @@
-import { type ReactNode, lazy, Suspense, useState, useRef, useCallback, useEffect } from 'react';
+import { type ReactNode, useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const SettingsModal = lazy(() =>
-  import('@/components/SettingsModal/SettingsModal').then((m) => ({
-    default: m.SettingsModal,
-  })),
-);
+import { SettingsModal } from '@/components/SettingsModal/SettingsModal';
 
 export function Layout({ children }: { children: ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -149,11 +144,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {settingsOpen && (
-        <Suspense fallback={null}>
-          <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-        </Suspense>
-      )}
+      {settingsOpen && <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />}
     </div>
   );
 }

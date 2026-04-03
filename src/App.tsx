@@ -3,7 +3,6 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Agentation } from 'agentation';
 import { ApiKeyProvider } from '@/hooks/ApiKeyContext/ApiKeyContext';
 import { Layout } from '@/components/Layout/Layout';
-import { ApiKeyGate } from '@/components/ApiKeyGate/ApiKeyGate';
 import { ErrorBoundary, SessionErrorFallback } from '@/components/ErrorBoundary/ErrorBoundary';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -70,9 +69,7 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <ApiKeyProvider>
-          <ApiKeyGate>
-            <AppRoutes />
-          </ApiKeyGate>
+          <AppRoutes />
         </ApiKeyProvider>
       </BrowserRouter>
       {import.meta.env.DEV && <Agentation />}

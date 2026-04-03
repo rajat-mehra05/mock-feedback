@@ -63,11 +63,9 @@ test('mobile Settings button opens SettingsModal', async () => {
   const settingsItem = menuItems.find((el) => el.textContent === 'Settings')!;
   await user.click(settingsItem);
 
-  // Dropdown closes
-  expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument();
-
-  // SettingsModal opens (it has an "OpenAI API Key" label)
-  expect(await screen.findByLabelText(/openai api key/i)).toBeInTheDocument();
+  // SettingsModal opens (dialog makes rest of page aria-hidden, so check the dialog itself)
+  expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/openai api key/i)).toBeInTheDocument();
 });
 
 test('skip-to-content link and landmarks are accessible', () => {
