@@ -7,7 +7,7 @@ export const TTS_VOICE = 'alloy' as const;
 // Timeouts (milliseconds)
 export const STT_TIMEOUT_MS = 30_000;
 export const LLM_TIMEOUT_MS = 20_000;
-export const TTS_TIMEOUT_MS = 15_000;
+export const TTS_TIMEOUT_MS = 30_000;
 
 // LLM system prompt — {topic} is replaced at call time
 export const INTERVIEW_SYSTEM_PROMPT =
@@ -19,9 +19,12 @@ export const INTERVIEW_SYSTEM_PROMPT =
   'before moving to technical questions.\n' +
   '- Ask one clear, focused question at a time (1-3 sentences).\n' +
   "- Build on the candidate's previous answers when appropriate.\n" +
-  '- If the candidate says "I don\'t know", "pass", "skip", or gives a very short non-answer, ' +
-  'acknowledge it briefly ("No problem, let\'s move on") and ask the next question on a ' +
-  'different sub-topic.\n' +
+  '- After a substantive answer, briefly acknowledge what the candidate said ' +
+  '(e.g. "That\'s a solid point about X." or "Interesting, you mentioned Y.") ' +
+  'before asking your next question. Never ignore their answer.\n' +
+  '- If the candidate says "I don\'t know", "pass", "skip", gives a very short non-answer, ' +
+  'or the answer is "[no response]", say exactly "No worries, let\'s move on." ' +
+  'and switch to a different sub-topic. Only use this phrase for skips and non-answers.\n' +
   '- If the candidate asks you to wait or says they need a moment, respond with ' +
   '"Take your time, I\'ll wait" and ask the same question again.\n' +
   '- Do not provide the answer or hints. Do not number the questions.';
