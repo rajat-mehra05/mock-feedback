@@ -25,6 +25,7 @@ export function Spinner({ className, message, centered }: SpinnerProps) {
       />
       {message && (
         <p
+          aria-hidden="true"
           className={cn(
             'font-bold uppercase tracking-wider text-black/60',
             centered ? 'text-base' : 'text-sm',

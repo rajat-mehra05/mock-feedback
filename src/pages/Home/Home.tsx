@@ -12,7 +12,7 @@ const FEATURES = [
   {
     icon: Mic,
     title: 'Voice-First',
-    desc: 'Speak naturally. Neural VAD detects when you stop.',
+    desc: 'Speak naturally. Auto-detects when you stop.',
     color: 'bg-neo-accent',
   },
   {
@@ -92,7 +92,7 @@ export function Home() {
             </p>
           )}
 
-          <p className="max-w-[240px] text-center text-sm font-bold text-black/50">
+          <p className="max-w-[240px] text-center text-sm font-bold text-black/60">
             Pick a topic, turn on your mic, and go.
           </p>
         </div>
@@ -119,7 +119,7 @@ export function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-4 text-center text-sm font-bold text-black/50">
+      <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-4 text-center text-sm font-bold text-black/60">
         <span>Fully Open source ❤️</span>
         <span aria-hidden="true" className="text-black/20">
           |

@@ -30,19 +30,19 @@ test('mobile hamburger opens dropdown with History and Settings, then closes on 
   const closeButton = screen.getByRole('button', { name: /close menu/i });
   expect(closeButton).toHaveAttribute('aria-expanded', 'true');
 
-  // Dropdown has History link pointing to /history
-  // There are two "History" elements (desktop + mobile), so grab the mobile one via getAllByRole
-  const historyLinks = screen.getAllByRole('link', { name: /history/i });
-  const mobileHistoryLink = historyLinks.find((el) => !el.classList.contains('group/button'))!;
-  expect(mobileHistoryLink).toHaveAttribute('href', '/history');
+  // Dropdown has menu with menuitem roles
+  const menu = screen.getByRole('menu');
+  expect(menu).toBeInTheDocument();
 
-  // Dropdown has a Settings button (mobile-specific one has w-full class)
-  const allSettingsButtons = screen.getAllByText(/^settings$/i);
-  const mobileSettingsButton = allSettingsButtons.find((el) => el.classList.contains('w-full'))!;
-  expect(mobileSettingsButton).toBeInTheDocument();
+  const menuItems = screen.getAllByRole('menuitem');
+  const historyItem = menuItems.find((el) => el.textContent === 'History')!;
+  expect(historyItem).toHaveAttribute('href', '/history');
+
+  const settingsItem = menuItems.find((el) => el.textContent === 'Settings')!;
+  expect(settingsItem).toBeInTheDocument();
 
   // Click mobile History — dropdown should close
-  await user.click(mobileHistoryLink);
+  await user.click(historyItem);
   expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument();
 });
 
@@ -58,10 +58,10 @@ test('mobile Settings button opens SettingsModal', async () => {
   // Open mobile menu
   await user.click(screen.getByRole('button', { name: /open menu/i }));
 
-  // Click the mobile Settings button (the one with w-full class)
-  const allSettingsButtons = screen.getAllByText(/^settings$/i);
-  const mobileSettingsButton = allSettingsButtons.find((el) => el.classList.contains('w-full'))!;
-  await user.click(mobileSettingsButton);
+  // Click the mobile Settings menuitem
+  const menuItems = screen.getAllByRole('menuitem');
+  const settingsItem = menuItems.find((el) => el.textContent === 'Settings')!;
+  await user.click(settingsItem);
 
   // Dropdown closes
   expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument();

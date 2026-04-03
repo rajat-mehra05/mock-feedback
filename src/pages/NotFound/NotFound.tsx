@@ -6,8 +6,7 @@ export function NotFound() {
   return (
     <main
       className="flex flex-col items-center justify-center px-4 py-16 text-center"
-      role="main"
-      aria-labelledby="not-found-heading"
+      aria-label="404 — Page not found"
     >
       {/* Giant 404 with neo-brutal style */}
       <div className="relative mb-6">
@@ -34,10 +33,7 @@ export function NotFound() {
 
       {/* Interview-themed copy */}
       <div className="mb-8 max-w-lg space-y-4">
-        <h2
-          id="not-found-heading"
-          className="text-2xl font-bold uppercase tracking-wide sm:text-3xl"
-        >
+        <h2 className="text-2xl font-bold uppercase tracking-wide sm:text-3xl">
           This wasn&apos;t on the syllabus
         </h2>
         <p className="text-lg text-muted-foreground">

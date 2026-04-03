@@ -23,7 +23,7 @@ test('parseFeedbackJSON extracts valid feedback, clamps ratings, and handles edg
   expect(fenced.questions).toHaveLength(1);
   expect(fenced.questions[0].rating).toBe(7);
 
-  // Ratings clamped: > 10 → 10, < 1 → 1
+  // Ratings clamped: > 10 → 10, < 0 → 0
   const clamped = parseFeedbackJSON(
     JSON.stringify({
       questions: [
@@ -34,7 +34,7 @@ test('parseFeedbackJSON extracts valid feedback, clamps ratings, and handles edg
     }),
   );
   expect(clamped.questions[0].rating).toBe(10);
-  expect(clamped.questions[1].rating).toBe(1);
+  expect(clamped.questions[1].rating).toBe(0);
 
   // Missing required field throws
   expect(() => parseFeedbackJSON('{"notQuestions": []}')).toThrow(/missing.*questions/i);

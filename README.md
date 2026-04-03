@@ -93,7 +93,7 @@ npm run dev
 
 - Browser compatibility check (MediaRecorder API) before session start
 - Mic device detection and permission gating
-- Native silence detection via Web Audio API `AnalyserNode` (RMS amplitude) — auto-stops recording after 4 seconds of silence
+- Native silence detection via Web Audio API `AnalyserNode` (RMS amplitude) — auto-stops recording after 6 seconds of silence
 - Max recording duration: 4 minutes per answer (with 30s warning)
 - Transcription runs in the background — no "transcribing..." wait between questions
 - Supported formats: WebM/Opus (Chrome/Firefox), MP4/AAC (Safari)

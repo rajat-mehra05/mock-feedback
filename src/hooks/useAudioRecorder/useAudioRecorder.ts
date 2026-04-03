@@ -154,6 +154,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         err instanceof DOMException && err.name === 'NotAllowedError'
           ? 'Microphone access is required. Please allow microphone access in your browser settings.'
           : 'Failed to start recording.';
+      setIsRecording(false);
       setError(msg);
     }
   }, [stopRecording, cleanupSilenceDetector]);

@@ -74,7 +74,15 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
     setPhase('permission');
 
     // Fast-path: check permission state before calling getUserMedia
-    const permissionState = await checkMicPermission();
+    let permissionState: string | null;
+    try {
+      permissionState = await checkMicPermission();
+    } catch {
+      if (!mountedRef.current || token !== requestIdRef.current) return;
+      setErrorMessage(MIC_PERMISSION_MESSAGE);
+      setStatus('failed');
+      return;
+    }
     if (!mountedRef.current || token !== requestIdRef.current) return;
 
     if (permissionState === 'denied') {
