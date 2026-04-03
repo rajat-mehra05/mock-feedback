@@ -25,24 +25,13 @@ export function ConversationLog({
   return (
     <section className="w-full max-w-2xl space-y-3" aria-label="Interview conversation">
       {history.map((turn, i) => (
-        <div key={i} className="space-y-2">
-          <div
-            className="rounded-lg border border-border bg-muted/50 p-3"
-            aria-label={`Question ${i + 1}`}
-          >
-            <p className="mb-1 text-xs font-medium text-muted-foreground">AI Interviewer</p>
-            <p className="text-sm text-foreground">{turn.question}</p>
-          </div>
-          <div
-            className="rounded-lg border border-border bg-primary/5 p-3"
-            aria-label={`Your answer ${i + 1}`}
-            aria-live="polite"
-          >
-            <p className="mb-1 text-xs font-medium text-muted-foreground">You</p>
-            <p className="text-sm text-foreground">
-              {turn.answer || <span className="italic text-muted-foreground">Transcribing...</span>}
-            </p>
-          </div>
+        <div
+          key={i}
+          className="rounded-lg border border-border bg-muted/50 p-3"
+          aria-label={`Question ${i + 1}`}
+        >
+          <p className="mb-1 text-xs font-medium text-muted-foreground">AI Interviewer</p>
+          <p className="text-sm text-foreground">{turn.question}</p>
         </div>
       ))}
       {displayedQuestion && (

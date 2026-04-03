@@ -70,7 +70,7 @@ test('TTS failure sets fallback text and continues to user_recording', () => {
   expect(state.ttsFallbackText).toBe('What is the event loop?');
 });
 
-test('STOP mid-session with answers moves to generating_feedback', () => {
+test('STOP mid-session with answers moves to generating_feedback and resets pendingTranscriptions', () => {
   const stateWithAnswers: InterviewSessionState = {
     ...initialState,
     status: 'user_recording',
@@ -84,11 +84,13 @@ test('STOP mid-session with answers moves to generating_feedback', () => {
       { question: 'Q2', answer: 'A2' },
     ],
     startedAt: Date.now(),
+    pendingTranscriptions: 2,
   };
 
   const stopped = interviewReducer(stateWithAnswers, { type: 'STOP' });
   expect(stopped.status).toBe('generating_feedback');
   expect(stopped.isPartial).toBe(true);
+  expect(stopped.pendingTranscriptions).toBe(0);
 });
 
 test('STOP with no answers completes immediately', () => {

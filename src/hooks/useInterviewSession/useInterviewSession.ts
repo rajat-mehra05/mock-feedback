@@ -36,17 +36,22 @@ export function useInterviewSession() {
     const s = getSignal();
     if (s.aborted) return;
 
+    // Local controller prevents duplicate async work when the effect re-runs
+    // (e.g. pendingTranscriptions changes while status is still 'generating')
+    const localController = new AbortController();
+    const effectSignal = AbortSignal.any([s, localController.signal]);
+
     if (state.status === 'generating') {
       void (async () => {
         try {
           const question = await withRetry(
-            (sig) => generateNextQuestion(state.topic, state.history, sig),
-            { ...RETRY_OPTS, signal: s },
+            (sig) => generateNextQuestion(state.topic, state.history, sig, state.candidateName),
+            { ...RETRY_OPTS, signal: effectSignal },
           );
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
           dispatch({ type: 'QUESTION_READY', question });
         } catch (error) {
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
           onError(error, 'generating');
         }
       })();
@@ -55,11 +60,11 @@ export function useInterviewSession() {
     if (state.status === 'ai_speaking' && state.currentQuestion) {
       void (async () => {
         try {
-          await speakText(state.currentQuestion!, s);
-          if (s.aborted) return;
+          await speakText(state.currentQuestion!, effectSignal);
+          if (effectSignal.aborted) return;
           dispatch({ type: 'TTS_DONE' });
         } catch {
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
           dispatch({ type: 'TTS_FAILED', question: state.currentQuestion! });
         }
       })();
@@ -69,19 +74,33 @@ export function useInterviewSession() {
       void recorder.startRecording();
     }
 
+    if (state.status === 'skipping') {
+      const timer = setTimeout(() => {
+        if (effectSignal.aborted) return;
+        dispatch({ type: 'SKIP_DONE' });
+      }, 1500);
+      return () => {
+        clearTimeout(timer);
+        localController.abort();
+      };
+    }
+
     if (state.status === 'generating_feedback') {
-      if (state.pendingTranscriptions > 0) return; // wait for background transcriptions
+      if (state.pendingTranscriptions > 0) {
+        localController.abort();
+        return; // wait for background transcriptions
+      }
       void (async () => {
         try {
           // Speak closing message (non-blocking — continue even if TTS fails)
           try {
-            await speakText(INTERVIEW_CLOSING_MESSAGE, s);
+            await speakText(INTERVIEW_CLOSING_MESSAGE, effectSignal);
           } catch {
             // TTS failure is non-blocking
           }
-          if (s.aborted) return;
-          const result = await generateFeedback(state.topic, state.history, s);
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
+          const result = await generateFeedback(state.topic, state.history, effectSignal);
+          if (effectSignal.aborted) return;
           const sessionId = crypto.randomUUID();
           const elapsed = state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : 0;
           const avg =
@@ -103,14 +122,16 @@ export function useInterviewSession() {
               followUp: result.questions[i]?.modelAnswer,
             })),
           });
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
           dispatch({ type: 'FEEDBACK_DONE', sessionId });
         } catch (error) {
-          if (s.aborted) return;
+          if (effectSignal.aborted) return;
           onError(error, 'generating_feedback');
         }
       })();
     }
+
+    return () => localController.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.status, state.currentQuestionIndex, state.pendingTranscriptions]);
 
@@ -118,19 +139,29 @@ export function useInterviewSession() {
   useEffect(() => {
     if (recorder.error && state.status === 'user_recording') {
       onError(
-        { type: 'unknown', message: recorder.error, retryable: false } as OpenAIServiceError,
+        { type: 'unknown', message: recorder.error, retryable: true } as OpenAIServiceError,
         'user_recording',
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.error]);
 
-  // audioBlob ready → advance to next question immediately, transcribe in background
+  // Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <3KB
+  const MIN_BLOB_SIZE = 5000;
+
+  // audioBlob ready → check if it contains real speech, then advance
   useEffect(() => {
     if (!recorder.audioBlob || state.status !== 'user_recording') return;
     const blob = recorder.audioBlob;
-    const questionIndex = state.history.length; // index this answer will occupy
     recorder.clearBlob();
+
+    // Skip STT for silent/empty blobs — prevents Whisper hallucination
+    if (blob.size < MIN_BLOB_SIZE) {
+      dispatch({ type: 'SKIP_NO_RESPONSE' });
+      return;
+    }
+
+    const questionIndex = state.history.length; // index this answer will occupy
     dispatch({ type: 'ANSWER_RECORDED' });
 
     // Background transcription — doesn't block the interview flow
@@ -166,11 +197,13 @@ export function useInterviewSession() {
       topic: config.topic,
       topicLabel: config.topicLabel,
       questionCount: config.questionCount,
+      candidateName: config.candidateName,
     });
   }, []);
 
   const stop = useCallback(() => {
     abortRef.current.abort();
+    abortRef.current = new AbortController();
     if (recorder.isRecording) recorder.stopRecording();
     dispatch({ type: 'STOP' });
   }, [recorder]);

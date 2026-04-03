@@ -1,12 +1,17 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SettingsModal } from '@/components/SettingsModal/SettingsModal';
-import { StartModal } from '@/components/StartModal/StartModal';
+
+const SettingsModal = lazy(() =>
+  import('@/components/SettingsModal/SettingsModal').then((m) => ({
+    default: m.SettingsModal,
+  })),
+);
 
 export function Layout({ children }: { children: ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen flex-col bg-background neo-grid-pattern">
@@ -33,15 +38,9 @@ export function Layout({ children }: { children: ReactNode }) {
               Mock Feedback
             </span>
           </Link>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setHowItWorksOpen(true)}
-              aria-haspopup="dialog"
-            >
-              How it works
-            </Button>
+
+          {/* Desktop nav */}
+          <div className="hidden items-center gap-1 md:flex">
             <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/history" />}>
               History
             </Button>
@@ -54,6 +53,41 @@ export function Layout({ children }: { children: ReactNode }) {
               Settings
             </Button>
           </div>
+
+          {/* Mobile hamburger + dropdown */}
+          <div className="relative md:hidden">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </Button>
+
+            {mobileMenuOpen && (
+              <div className="absolute right-0 top-full z-50 mt-2 w-44 flex-col border-4 border-black bg-neo-cream shadow-neo-md">
+                <Link
+                  to="/history"
+                  className="block px-4 py-3 text-sm font-bold uppercase tracking-wide hover:bg-neo-secondary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  History
+                </Link>
+                <hr className="border-t-2 border-black" />
+                <button
+                  className="w-full px-4 py-3 text-left text-sm font-bold uppercase tracking-wide hover:bg-neo-secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setSettingsOpen(true);
+                  }}
+                >
+                  Settings
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
       </header>
 
@@ -65,8 +99,11 @@ export function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <StartModal open={howItWorksOpen} onOpenChange={setHowItWorksOpen} />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+        </Suspense>
+      )}
     </div>
   );
 }

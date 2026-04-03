@@ -5,6 +5,7 @@ export type InterviewState =
   | 'ai_speaking'
   | 'user_recording'
   | 'transcribing'
+  | 'skipping'
   | 'generating'
   | 'generating_feedback'
   | 'completed'
@@ -28,10 +29,17 @@ export interface InterviewSessionState {
   retryFromStatus: InterviewState | null;
   /** Number of in-flight background transcriptions */
   pendingTranscriptions: number;
+  candidateName: string;
 }
 
 export type InterviewAction =
-  | { type: 'START'; topic: string; topicLabel: string; questionCount: number }
+  | {
+      type: 'START';
+      topic: string;
+      topicLabel: string;
+      questionCount: number;
+      candidateName?: string;
+    }
   | { type: 'QUESTION_READY'; question: string }
   | { type: 'TTS_DONE' }
   | { type: 'TTS_FAILED'; question: string }
@@ -42,10 +50,13 @@ export type InterviewAction =
   | { type: 'FEEDBACK_DONE'; sessionId: string }
   | { type: 'ERROR'; error: OpenAIServiceError; failedStatus: InterviewState }
   | { type: 'RETRY' }
-  | { type: 'STOP' };
+  | { type: 'STOP' }
+  | { type: 'SKIP_NO_RESPONSE' }
+  | { type: 'SKIP_DONE' };
 
 export interface InterviewConfig {
   topic: string;
   topicLabel: string;
   questionCount: number;
+  candidateName?: string;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -38,7 +39,7 @@ export function Feedback() {
   }, [id]);
 
   if (isLoading) {
-    return <p className="py-8 text-center font-bold text-black/60">Loading feedback...</p>;
+    return <Spinner message="Loading feedback..." />;
   }
 
   if (!session) {

@@ -97,7 +97,7 @@ test('full single-question interview: idle → generate → speak → record →
   expect(result.current.state.currentQuestionIndex).toBe(1);
 
   // Simulate audioBlob ready → triggers ANSWER_RECORDED + background transcription
-  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/webm' });
   rerender();
 
   expect(recorderFns.clearBlob).toHaveBeenCalled();
@@ -136,11 +136,29 @@ test('transcription failure falls back to placeholder text', async () => {
   });
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
 
-  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/webm' });
   rerender();
 
   await waitFor(() => expect(result.current.state.pendingTranscriptions).toBe(0));
   expect(result.current.state.history[0].answer).toBe('[transcription failed]');
+});
+
+test('small audio blob skips STT and transitions through skipping state', async () => {
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 3 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  // Simulate a tiny blob (silence-only) — below MIN_BLOB_SIZE threshold
+  recorderState.audioBlob = new Blob([new Uint8Array(100)], { type: 'audio/webm' });
+  rerender();
+
+  // Should transition to skipping (no STT call made)
+  await waitFor(() => expect(result.current.state.status).toBe('skipping'));
+  expect(result.current.state.history[0].answer).toBe('[no response]');
+  expect(transcribeAudio).not.toHaveBeenCalled();
 });
 
 test('stop with no answers transitions to completed with isPartial', () => {
@@ -164,6 +182,33 @@ test('stop while recording calls recorder.stopRecording', async () => {
 
   expect(recorderFns.stopRecording).toHaveBeenCalled();
   expect(result.current.state.status).toBe('completed');
+});
+
+test('stop after answering a question generates feedback and completes', async () => {
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 3 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  // Answer one question
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/webm' });
+  rerender();
+
+  // Wait for next question cycle (Q2 generating → ai_speaking → user_recording)
+  await waitFor(() => expect(result.current.state.currentQuestionIndex).toBe(2));
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  // Stop early — should trigger feedback generation (not hang)
+  act(() => result.current.stop());
+
+  expect(result.current.state.status).toBe('generating_feedback');
+  expect(result.current.state.isPartial).toBe(true);
+
+  await waitFor(() => expect(result.current.state.status).toBe('completed'));
+  expect(result.current.state.sessionId).toBeTruthy();
+  expect(generateFeedback).toHaveBeenCalled();
 });
 
 test('retry after error re-enters the failed status and resumes', async () => {
@@ -228,7 +273,7 @@ test('feedback generation error transitions to error state', async () => {
   });
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
 
-  recorderState.audioBlob = new Blob(['audio'], { type: 'audio/webm' });
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/webm' });
   rerender();
 
   await waitFor(() => expect(result.current.state.status).toBe('error'));

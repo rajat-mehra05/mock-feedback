@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SessionCard } from '@/components/SessionCard/SessionCard';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { useSessions } from '@/hooks/useSessions/useSessions';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
@@ -39,10 +40,8 @@ export function History() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase tracking-tight text-black">
-          My Interview History
-        </h1>
+      <div className="space-y-3">
+        <h1 className="text-3xl font-bold uppercase tracking-tight text-black">Past Sessions</h1>
         <div className="flex gap-2">
           {sessions.length > 0 && (
             <Button
@@ -82,7 +81,7 @@ export function History() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm font-bold text-black/60">Loading sessions...</p>
+        <Spinner message="Loading sessions..." />
       ) : sessions.length === 0 ? (
         <div className="border-4 border-dashed border-black bg-neo-muted/20 p-12 text-center">
           <p className="text-lg font-bold text-black">No interviews yet</p>

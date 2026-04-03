@@ -9,16 +9,11 @@ export const STT_TIMEOUT_MS = 30_000;
 export const LLM_TIMEOUT_MS = 20_000;
 export const TTS_TIMEOUT_MS = 15_000;
 
-// STT prompt hint for technical term accuracy
-export const STT_PROMPT_HINT =
-  'React, useState, useEffect, Next.js, Node.js, TypeScript, async/await, ' +
-  'JavaScript, closure, prototype, event loop, middleware, REST, GraphQL, ' +
-  'webpack, Vite, SSR, SSG, ISR, hydration, reconciliation, virtual DOM';
-
 // LLM system prompt — {topic} is replaced at call time
 export const INTERVIEW_SYSTEM_PROMPT =
-  'You are a senior software developer with 10+ years of experience conducting a ' +
-  '{topic} technical interview.\n\n' +
+  'You are a Staff Engineer at Meta with 10+ years of full-stack experience spanning ' +
+  'frontend frameworks, backend services, databases, and cloud infrastructure. ' +
+  'You are conducting a {topic} technical interview.\n\n' +
   'Rules:\n' +
   '- Start with a warm intro question like "Tell me about your experience with {topic}" ' +
   'before moving to technical questions.\n' +
@@ -37,7 +32,7 @@ export const LLM_MAX_TOKENS = 300;
 
 // TTS instructions for voice tone
 export const TTS_INSTRUCTIONS =
-  'Speak in a calm, professional tone like a senior engineer conducting a technical ' +
+  'Speak in a calm, friendly tone like a staff engineer conducting a technical ' +
   'interview. Use natural pacing with brief pauses between sentences. Do not rush.';
 
 // TTS response format

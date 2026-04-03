@@ -15,6 +15,7 @@ export const initialState: InterviewSessionState = {
   sessionId: null,
   retryFromStatus: null,
   pendingTranscriptions: 0,
+  candidateName: '',
 };
 
 export function interviewReducer(
@@ -30,6 +31,7 @@ export function interviewReducer(
         topicLabel: action.topicLabel,
         targetQuestionCount: action.questionCount,
         startedAt: Date.now(),
+        candidateName: action.candidateName ?? '',
       };
 
     case 'QUESTION_READY':
@@ -116,9 +118,37 @@ export function interviewReducer(
 
     case 'STOP': {
       if (state.history.length > 0) {
-        return { ...state, status: 'generating_feedback', isPartial: true };
+        // Reset pendingTranscriptions — in-flight transcriptions are aborted by stop()
+        // and will never dispatch TRANSCRIPT_READY, so we clear the counter to unblock feedback.
+        return {
+          ...state,
+          status: 'generating_feedback',
+          isPartial: true,
+          pendingTranscriptions: 0,
+        };
       }
       return { ...state, status: 'completed', isPartial: true };
+    }
+
+    case 'SKIP_NO_RESPONSE': {
+      const newHistory = [
+        ...state.history,
+        { question: state.currentQuestion!, answer: '[no response]' },
+      ];
+      return {
+        ...state,
+        status: 'skipping',
+        history: newHistory,
+        currentQuestion: null,
+      };
+    }
+
+    case 'SKIP_DONE': {
+      const isLast = state.history.length >= state.targetQuestionCount;
+      return {
+        ...state,
+        status: isLast ? 'generating_feedback' : 'generating',
+      };
     }
 
     default:

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { OpenAIServiceError } from '@/services/types';
 
@@ -38,6 +39,9 @@ export function SessionErrorDisplay({ error, onRetry }: SessionErrorDisplayProps
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
         )}
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>
+          Restart Interview
+        </Button>
       </div>
     </div>
   );

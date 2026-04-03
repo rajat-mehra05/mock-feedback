@@ -1,8 +1,13 @@
 import { expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { SessionErrorDisplay } from './SessionErrorDisplay';
 import type { OpenAIServiceError } from '@/services/types';
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return <MemoryRouter>{children}</MemoryRouter>;
+}
 
 test('error display shows retry button for retryable errors and settings link for auth errors', async () => {
   const user = userEvent.setup();
@@ -16,6 +21,7 @@ test('error display shows retry button for retryable errors and settings link fo
       }
       onRetry={onRetry}
     />,
+    { wrapper: Wrapper },
   );
   const retryButton = screen.getByRole('button', { name: /retry/i });
   expect(retryButton).toBeInTheDocument();
@@ -29,6 +35,7 @@ test('error display shows retry button for retryable errors and settings link fo
       error={{ type: 'auth', message: 'Invalid key.', retryable: false } as OpenAIServiceError}
       onRetry={vi.fn()}
     />,
+    { wrapper: Wrapper },
   );
   expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
   expect(
@@ -48,6 +55,7 @@ test('error display shows retry button for retryable errors and settings link fo
       }
       onRetry={vi.fn()}
     />,
+    { wrapper: Wrapper },
   );
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.getByText(/connection lost/i)).toBeInTheDocument();

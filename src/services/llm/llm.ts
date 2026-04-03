@@ -17,9 +17,13 @@ export async function generateNextQuestion(
   topic: string,
   history: ConversationTurn[],
   signal?: AbortSignal,
+  candidateName?: string,
 ): Promise<string> {
   const client = await getOpenAIClient();
-  const systemPrompt = INTERVIEW_SYSTEM_PROMPT.replace('{topic}', topic);
+  let systemPrompt = INTERVIEW_SYSTEM_PROMPT.replace('{topic}', topic);
+  if (candidateName) {
+    systemPrompt += `\n- The candidate's name is ${candidateName}. Address them by name occasionally.`;
+  }
   const { signal: mergedSignal, cleanup } = createTimeoutSignal(LLM_TIMEOUT_MS, signal);
 
   const messages: Array<{ role: 'system' | 'assistant' | 'user'; content: string }> = [
