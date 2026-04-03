@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { APP_NAME, API_KEY_DESCRIPTION, OPENAI_API_KEYS_URL } from '@/constants/copy';
 
@@ -13,7 +14,7 @@ export function ApiKeyGate({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background neo-grid-pattern">
-        <p className="font-bold text-black">Loading...</p>
+        <Spinner />
       </div>
     );
   }

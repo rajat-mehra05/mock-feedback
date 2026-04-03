@@ -11,10 +11,14 @@ import {
 /**
  * Speaks the given text aloud using OpenAI TTS.
  * Resolves when audio finishes playing, rejects on abort or error.
+ *
+ * The network timeout (TTS_TIMEOUT_MS) only guards the API call and response
+ * download. Playback is governed only by the caller's abort signal so that
+ * long questions are never cut off mid-speech.
  */
 export async function speakText(text: string, signal?: AbortSignal): Promise<void> {
   const client = await getOpenAIClient();
-  const { signal: mergedSignal, cleanup } = createTimeoutSignal(TTS_TIMEOUT_MS, signal);
+  const { signal: networkSignal, cleanup } = createTimeoutSignal(TTS_TIMEOUT_MS, signal);
 
   let arrayBuffer: ArrayBuffer;
   try {
@@ -26,7 +30,7 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
         instructions: TTS_INSTRUCTIONS,
         response_format: TTS_RESPONSE_FORMAT,
       },
-      { signal: mergedSignal },
+      { signal: networkSignal },
     );
     arrayBuffer = await response.arrayBuffer();
   } catch (error) {
@@ -35,11 +39,12 @@ export async function speakText(text: string, signal?: AbortSignal): Promise<voi
     throw classifyOpenAIError(error);
   }
 
-  try {
-    await playAudioBuffer(arrayBuffer, mergedSignal);
-  } finally {
-    cleanup();
-  }
+  // Network phase complete — clear the timeout so it doesn't fire during playback
+  cleanup();
+
+  // Playback is only cancellable via the caller's signal (e.g. user clicks Stop),
+  // not the network timeout, so long questions play to completion.
+  await playAudioBuffer(arrayBuffer, signal);
 }
 
 async function playAudioBuffer(buffer: ArrayBuffer, signal?: AbortSignal): Promise<void> {

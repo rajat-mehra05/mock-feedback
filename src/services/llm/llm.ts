@@ -9,6 +9,15 @@ import {
 } from '@/constants/openai';
 import type { ConversationTurn } from '@/services/types';
 
+/** Sanitize user-provided name before interpolating into a prompt. */
+function sanitizeCandidateName(name: string): string {
+  return name
+    .trim()
+    .slice(0, 50)
+    .replace(/[\n\r\t]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s'.,-]/gu, '');
+}
+
 /**
  * Generates the next interview question based on topic and conversation history.
  * Empty history means it's the first question — the system prompt alone drives it.
@@ -17,9 +26,16 @@ export async function generateNextQuestion(
   topic: string,
   history: ConversationTurn[],
   signal?: AbortSignal,
+  candidateName?: string,
 ): Promise<string> {
   const client = await getOpenAIClient();
-  const systemPrompt = INTERVIEW_SYSTEM_PROMPT.replace('{topic}', topic);
+  let systemPrompt = INTERVIEW_SYSTEM_PROMPT.replace('{topic}', topic);
+  if (candidateName) {
+    const safeName = sanitizeCandidateName(candidateName);
+    if (safeName) {
+      systemPrompt += `\n- The candidate's name is ${safeName}. Address them by name occasionally.`;
+    }
+  }
   const { signal: mergedSignal, cleanup } = createTimeoutSignal(LLM_TIMEOUT_MS, signal);
 
   const messages: Array<{ role: 'system' | 'assistant' | 'user'; content: string }> = [

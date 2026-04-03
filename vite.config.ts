@@ -3,7 +3,6 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -46,8 +45,6 @@ export default defineConfig({
         'src/components/ui/**',
         'src/main.tsx',
         'src/App.tsx',
-        'src/db/seed/mockData.ts',
-        'src/db/seed/mockDataExtra.ts',
         // Browser-only: require MediaRecorder, AudioContext, navigator.mediaDevices
         'src/hooks/useAudioRecorder/**',
         'src/lib/micCheck.ts',

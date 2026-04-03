@@ -1,6 +1,6 @@
 import { getOpenAIClient } from '@/services/openai/openai';
 import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
-import { STT_MODEL, STT_PROMPT_HINT, STT_TIMEOUT_MS } from '@/constants/openai';
+import { STT_MODEL, STT_TIMEOUT_MS } from '@/constants/openai';
 
 /**
  * Transcribes an audio blob using OpenAI's STT model.
@@ -13,7 +13,7 @@ export async function transcribeAudio(blob: Blob, signal?: AbortSignal): Promise
 
   try {
     const response = await client.audio.transcriptions.create(
-      { model: STT_MODEL, file, prompt: STT_PROMPT_HINT },
+      { model: STT_MODEL, file },
       { signal: mergedSignal },
     );
     return response.text;

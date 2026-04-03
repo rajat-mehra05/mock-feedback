@@ -9,28 +9,23 @@ test('user sees disabled Start button with hint when no API key is set, then ope
   await deleteApiKey();
   const user = userEvent.setup();
 
-  renderWithProviders(<Home />);
+  const { unmount } = renderWithProviders(<Home />);
 
   // Start button visible but disabled
   const startButton = screen.getByRole('button', { name: /start new interview session/i });
   expect(startButton).toBeDisabled();
   expect(screen.getByText(/configure your api key in settings/i)).toBeInTheDocument();
 
-  // Motivational content visible
-  expect(screen.getByText(/ready when you are/i)).toBeInTheDocument();
+  // Hero content visible
+  expect(screen.getByRole('heading', { name: /nail your next/i })).toBeInTheDocument();
 
-  // Configure key — button becomes enabled
+  // Configure key — remount so the hook picks up the new key
   await saveApiKey('sk-test');
+  unmount();
   renderWithProviders(<Home />);
 
-  await waitFor(() => {
-    const buttons = screen.getAllByRole('button', { name: /start new interview session/i });
-    const enabledButton = buttons.find((btn) => !btn.hasAttribute('disabled'));
-    expect(enabledButton).toBeDefined();
-  });
-
-  const buttons = screen.getAllByRole('button', { name: /start new interview session/i });
-  const enabledButton = buttons.find((btn) => !btn.hasAttribute('disabled'))!;
+  const enabledButton = await screen.findByRole('button', { name: /start new interview session/i });
+  await waitFor(() => expect(enabledButton).toBeEnabled());
   await user.click(enabledButton);
 
   expect(screen.getByRole('dialog')).toBeInTheDocument();

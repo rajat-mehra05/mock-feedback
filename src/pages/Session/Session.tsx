@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT } from '@/constants/topics';
 import { useInterviewSession } from '@/hooks/useInterviewSession/useInterviewSession';
@@ -16,14 +17,15 @@ export function Session() {
   const count =
     Number.isFinite(rawCount) && rawCount > 0 ? rawCount : Number(DEFAULT_QUESTION_COUNT);
   const topicLabel = TOPIC_LABELS[topic] ?? topic;
+  const candidateName = searchParams.get('name') ?? '';
   const { state, start, stop, retry, stopRecordingOnly } = useInterviewSession();
   const startedRef = useRef(false);
 
   const handleMicReady = useCallback(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    start({ topic, topicLabel, questionCount: count });
-  }, [start, topic, topicLabel, count]);
+    start({ topic, topicLabel, questionCount: count, candidateName: candidateName || undefined });
+  }, [start, topic, topicLabel, count, candidateName]);
 
   const handleMaxRecording = useCallback(() => {
     stopRecordingOnly();
@@ -55,7 +57,11 @@ export function Session() {
           ttsFallbackText={state.ttsFallbackText}
         />
 
-        <StatusIndicator status={state.status} />
+        <StatusIndicator
+          status={state.status}
+          questionIndex={state.currentQuestionIndex}
+          isPartial={state.isPartial}
+        />
 
         <RecordingTimer
           isActive={state.status === 'user_recording'}
@@ -66,7 +72,18 @@ export function Session() {
           <SessionErrorDisplay error={state.error} onRetry={retry} />
         )}
 
-        {!['idle', 'completed', 'error', 'generating_feedback'].includes(state.status) && (
+        {state.status === 'completed' && state.isPartial && !state.sessionId && (
+          <Link
+            to="/"
+            className="inline-block border-4 border-black bg-neo-accent px-6 py-3 text-sm font-bold uppercase tracking-wide text-black shadow-neo transition-all duration-100 hover:-translate-y-0.5 hover:shadow-neo-md focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+          >
+            Back to Home
+          </Link>
+        )}
+
+        {!['idle', 'completed', 'error', 'generating_feedback', 'skipping'].includes(
+          state.status,
+        ) && (
           <button
             onClick={stop}
             aria-label="Stop interview"

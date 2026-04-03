@@ -3,7 +3,6 @@ node_modules/
 
 # Build
 dist/
-public/vad/
 dist-ssr/
 *.tsbuildinfo
 
@@ -34,3 +33,7 @@ npm-debug.log*
 
 # OS
 .DS_Store
+
+# Project docs (not for PR)
+BugsAndFixes.md
+PLAN.md

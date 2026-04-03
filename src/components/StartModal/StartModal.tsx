@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { TOPICS, QUESTION_COUNTS, DEFAULT_QUESTION_COUNT } from '@/constants/topics';
 
 interface StartModalProps {
@@ -26,10 +27,13 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
+  const [name, setName] = useState('');
 
   function handleStart() {
     /* v8 ignore next */ if (!topic) return;
-    void navigate(`/session?topic=${topic}&count=${questionCount}`);
+    const params = new URLSearchParams({ topic, count: questionCount });
+    if (name.trim()) params.set('name', name.trim());
+    void navigate(`/session?${params.toString()}`);
     onOpenChange(false);
   }
 
@@ -81,6 +85,25 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="name-input"
+                className="mb-1.5 block text-sm font-bold uppercase tracking-wider"
+              >
+                Your Name{' '}
+                <span className="font-medium normal-case tracking-normal text-black/40">
+                  (optional)
+                </span>
+              </label>
+              <Input
+                id="name-input"
+                type="text"
+                placeholder="e.g. Rajat"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
             <div>
               <label
                 htmlFor="topic-select"

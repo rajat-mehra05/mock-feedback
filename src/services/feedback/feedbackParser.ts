@@ -30,7 +30,7 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
       throw new Error(`Failed to parse feedback JSON: question ${i} is not an object`);
     }
     const item = q as Record<string, unknown>;
-    const rating = Math.max(1, Math.min(MAX_SCORE, Number(item.rating) || 1));
+    const rating = Math.max(0, Math.min(MAX_SCORE, Number(item.rating) || 0));
     if (typeof item.feedback !== 'string') {
       throw new Error(
         `Failed to parse feedback JSON: question ${i} has invalid feedback type: ${typeof item.feedback}`,
