@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
-import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT } from '@/constants/topics';
+import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT, toValidTopic } from '@/constants/topics';
 import { useInterviewSession } from '@/hooks/useInterviewSession/useInterviewSession';
 import { SessionHeader } from './SessionHeader';
 import { ConversationLog } from './ConversationLog';
@@ -12,7 +12,7 @@ import { MicCheckGate } from './MicCheckGate';
 
 export function Session() {
   const [searchParams] = useSearchParams();
-  const topic = searchParams.get('topic') ?? 'javascript-typescript';
+  const topic = toValidTopic(searchParams.get('topic'));
   const rawCount = Number(searchParams.get('count'));
   const count =
     Number.isFinite(rawCount) && rawCount > 0 ? rawCount : Number(DEFAULT_QUESTION_COUNT);
