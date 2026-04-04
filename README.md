@@ -1,6 +1,12 @@
 # Mock Feedback
 
-AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally, and you get detailed feedback with ratings — all calibrated to your target seniority level.
+AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally, and you get detailed feedback with ratings.
+
+## Why I Built This
+
+I wanted to get better at explaining technical concepts out loud, the way you have to in real interviews. This app lets me practice that and get honest feedback on both my answers and how I communicate them.
+
+Most mock interview tools I found were paid, and I couldn't customize them to focus on what I actually needed to work on. So I made this open source. You can tweak the prompts, add your own topics, or change how feedback works. Make it yours.
 
 ## Tech Stack
 
@@ -18,11 +24,12 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 
 ## How It Works
 
-1. Click **Start** → enter your OpenAI API key (first time only), select a topic, target role level, and question count
-2. AI asks questions via text-to-speech, calibrated to your chosen level
-3. You answer verbally — mic records, auto-detects when you stop speaking
-4. After all questions, AI generates structured feedback (rating + commentary per question + overall summary)
-5. Feedback saved to IndexedDB, viewable anytime from History
+1. Click **Start** → enter your OpenAI API key (first time only), select a topic and question count
+2. Grant microphone access when prompted
+3. AI asks questions via text-to-speech
+4. You answer verbally — mic records and auto-detects when you stop speaking
+5. After all questions, AI generates structured feedback (rating + commentary per question + overall summary)
+6. Feedback saved to IndexedDB, viewable anytime from History
 
 ## Interview Topics
 
