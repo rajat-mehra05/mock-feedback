@@ -36,6 +36,9 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   if (!isLoading && !hasKey && !showKeyInput) {
     setShowKeyInput(true);
   }
+  if (!isLoading && hasKey && showKeyInput) {
+    setShowKeyInput(false);
+  }
 
   const [topic, setTopic] = useState('');
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);

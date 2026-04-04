@@ -37,15 +37,16 @@ export function ApiKeyInput({ inputId, onSaved, placeholder = 'sk-...' }: ApiKey
           type={showKey ? 'text' : 'password'}
           placeholder={placeholder}
           value={keyInput}
-          onChange={(e) => setKeyInput(e.target.value)}
-          disabled={status === 'saved'}
+          onChange={(e) => {
+            setKeyInput(e.target.value);
+            if (status === 'saved' || status === 'error') setStatus('idle');
+          }}
         />
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => setShowKey(!showKey)}
-          disabled={status === 'saved'}
           aria-label={showKey ? 'Hide API key' : 'Show API key'}
         >
           {showKey ? 'Hide' : 'Show'}

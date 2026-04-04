@@ -47,4 +47,26 @@ test('parseFeedbackJSON extracts valid feedback, clamps ratings, and handles edg
     JSON.stringify({ questions: [{ rating: 6, feedback: 'ok', modelAnswer: 'm' }] }),
   );
   expect(noSummary.summary).toBe('');
+
+  // Question that is not an object throws
+  expect(() => parseFeedbackJSON(JSON.stringify({ questions: [null] }))).toThrow(
+    /question 0 is not an object/,
+  );
+  expect(() => parseFeedbackJSON(JSON.stringify({ questions: ['string'] }))).toThrow(
+    /question 0 is not an object/,
+  );
+
+  // Non-string feedback throws
+  expect(() =>
+    parseFeedbackJSON(
+      JSON.stringify({ questions: [{ rating: 5, feedback: 123, modelAnswer: 'm' }] }),
+    ),
+  ).toThrow(/invalid feedback type/i);
+
+  // Non-string modelAnswer throws
+  expect(() =>
+    parseFeedbackJSON(
+      JSON.stringify({ questions: [{ rating: 5, feedback: 'ok', modelAnswer: 999 }] }),
+    ),
+  ).toThrow(/invalid modelAnswer type/i);
 });
