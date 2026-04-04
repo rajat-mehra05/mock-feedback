@@ -31,53 +31,12 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 - Node.js
 - Behavioral / STAR
 
-## Target Role Levels
-
-Questions, follow-ups, and feedback scoring are calibrated to the selected level:
-
-| Level         | Focus                                                                |
-| ------------- | -------------------------------------------------------------------- |
-| **Junior**    | Fundamentals, definitions, basic usage patterns                      |
-| **Mid-Level** | Practical experience, trade-off awareness, "how would you" questions |
-| **Senior**    | Deep understanding, architectural thinking, edge case identification |
-| **Staff**     | Cross-domain expertise, technical leadership, decisions at scale     |
-
-## Interview Style
-
-| Style      | Behavior                                                                                                                                                                                                |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Normal** | Supportive and professional. Moves on after a weak answer.                                                                                                                                              |
-| **Brutal** | Pushes back on shallow or vague answers — asks you to go deeper, explain internals, or justify trade-offs. Does not grill unprovoked; only escalates when depth is lacking for the selected role level. |
-
-## Scoring
-
-Each answer is rated 1–10 by GPT-4o Mini against the selected role level. A basic answer scores higher in a Junior session than in a Staff session.
-
-| Score | Tier                    |
-| ----- | ----------------------- |
-| 8–10  | Excellent (green)       |
-| 6–7.9 | Satisfactory (yellow)   |
-| < 6   | Needs improvement (red) |
-
 ## Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
-
-## Scripts
-
-| Command                 | Description                         |
-| ----------------------- | ----------------------------------- |
-| `npm run dev`           | Start Vite dev server               |
-| `npm run build`         | TypeScript check + production build |
-| `npm run lint`          | ESLint check                        |
-| `npm run format:check`  | Prettier check                      |
-| `npm run test`          | Run Vitest unit/component tests     |
-| `npm run test:watch`    | Vitest in watch mode                |
-| `npm run test:coverage` | Vitest with coverage report         |
-| `npm run lighthouse`    | Run Lighthouse CI locally           |
 
 ## Error Handling
 

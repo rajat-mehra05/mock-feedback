@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -44,6 +44,13 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
   const [name, setName] = useState('');
 
+  const handleKeySaved = useCallback(() => {
+    // Defer focus until after the key panel unmounts on the next render
+    requestAnimationFrame(() => {
+      document.getElementById('topic-select')?.focus();
+    });
+  }, []);
+
   function handleStart() {
     /* v8 ignore next */ if (!topic || !hasKey) return;
     const params = new URLSearchParams({ topic, count: questionCount });
@@ -72,7 +79,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
                 OpenAI API Key
               </label>
               <p className="text-sm font-medium text-black/60">{API_KEY_DESCRIPTION}</p>
-              <ApiKeyInput inputId="start-api-key" />
+              <ApiKeyInput inputId="start-api-key" onSaved={handleKeySaved} />
             </div>
           )}
 

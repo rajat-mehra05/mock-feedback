@@ -68,7 +68,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-2 md:flex">
             <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/history" />}>
               History
             </Button>

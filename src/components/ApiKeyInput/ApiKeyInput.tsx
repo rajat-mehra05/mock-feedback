@@ -37,6 +37,9 @@ export function ApiKeyInput({ inputId, onSaved, placeholder = 'sk-...' }: ApiKey
           type={showKey ? 'text' : 'password'}
           placeholder={placeholder}
           value={keyInput}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           onChange={(e) => {
             setKeyInput(e.target.value);
             if (status === 'saved' || status === 'error') setStatus('idle');
