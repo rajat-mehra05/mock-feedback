@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Agentation } from 'agentation';
 import { ApiKeyProvider } from '@/hooks/ApiKeyContext/ApiKeyContext';
 import { Layout } from '@/components/Layout/Layout';
@@ -72,6 +73,7 @@ export default function App() {
           <AppRoutes />
         </ApiKeyProvider>
       </BrowserRouter>
+      <Analytics />
       {import.meta.env.DEV && <Agentation />}
     </ErrorBoundary>
   );
