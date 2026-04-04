@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Mic, Brain, BarChart3, Zap } from 'lucide-react';
 import { StartModal } from '@/components/StartModal/StartModal';
-import { useApiKey } from '@/hooks/useApiKey/useApiKey';
-import { NO_API_KEY_MESSAGE } from '@/constants/copy';
 
 function preloadSession() {
   void import('@/pages/Session/Session');
@@ -37,7 +35,6 @@ const FEATURES = [
 
 export function Home() {
   const [startOpen, setStartOpen] = useState(false);
-  const { hasKey } = useApiKey();
 
   return (
     <div className="flex flex-1 flex-col gap-16 py-4 sm:gap-20">
@@ -75,22 +72,11 @@ export function Home() {
             onClick={() => setStartOpen(true)}
             onMouseEnter={preloadSession}
             onFocus={preloadSession}
-            disabled={!hasKey}
             aria-label="Start new interview session"
-            aria-describedby={!hasKey ? 'start-disabled-hint' : undefined}
-            className="group relative flex h-40 w-40 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-2xl font-black uppercase tracking-wide text-black shadow-neo-lg transition-all duration-150 hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-neo-lg sm:h-48 sm:w-48 sm:text-3xl"
+            className="group relative flex h-40 w-40 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-2xl font-black uppercase tracking-wide text-black shadow-neo-lg transition-all duration-150 hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none sm:h-48 sm:w-48 sm:text-3xl"
           >
             <span className="transition-transform duration-150 group-hover:scale-110">Start</span>
           </button>
-
-          {!hasKey && (
-            <p
-              id="start-disabled-hint"
-              className="max-w-[200px] text-center text-sm font-bold text-black/60"
-            >
-              {NO_API_KEY_MESSAGE}
-            </p>
-          )}
 
           <p className="max-w-[240px] text-center text-sm font-bold text-black/60">
             Pick a topic, turn on your mic, and go.

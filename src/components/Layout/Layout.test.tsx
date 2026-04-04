@@ -63,11 +63,65 @@ test('mobile Settings button opens SettingsModal', async () => {
   const settingsItem = menuItems.find((el) => el.textContent === 'Settings')!;
   await user.click(settingsItem);
 
-  // Dropdown closes
-  expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument();
+  // SettingsModal opens (dialog makes rest of page aria-hidden, so check the dialog itself)
+  expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/openai api key/i)).toBeInTheDocument();
+});
 
-  // SettingsModal opens (it has an "OpenAI API Key" label)
-  expect(await screen.findByLabelText(/openai api key/i)).toBeInTheDocument();
+test('mobile menu supports ArrowDown, ArrowUp, and Escape keyboard navigation', async () => {
+  const user = userEvent.setup();
+
+  renderWithProviders(
+    <Layout>
+      <p>Page content</p>
+    </Layout>,
+  );
+
+  // Open mobile menu
+  await user.click(screen.getByRole('button', { name: /open menu/i }));
+
+  const menuItems = screen.getAllByRole('menuitem');
+  const [historyItem, settingsItem] = menuItems;
+
+  // First item is focused on open
+  expect(historyItem).toHaveFocus();
+
+  // ArrowDown moves to next item
+  await user.keyboard('{ArrowDown}');
+  expect(settingsItem).toHaveFocus();
+
+  // ArrowDown wraps to first item
+  await user.keyboard('{ArrowDown}');
+  expect(historyItem).toHaveFocus();
+
+  // ArrowUp wraps to last item
+  await user.keyboard('{ArrowUp}');
+  expect(settingsItem).toHaveFocus();
+
+  // ArrowUp moves to previous item
+  await user.keyboard('{ArrowUp}');
+  expect(historyItem).toHaveFocus();
+
+  // Escape closes the menu and returns focus to the toggle button
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /open menu/i })).toHaveFocus();
+});
+
+test('desktop Settings button opens SettingsModal', async () => {
+  const user = userEvent.setup();
+
+  renderWithProviders(
+    <Layout>
+      <p>Page content</p>
+    </Layout>,
+  );
+
+  // The desktop Settings button (not inside the mobile menu)
+  const desktopSettingsButton = screen.getByRole('button', { name: /settings/i });
+  await user.click(desktopSettingsButton);
+
+  expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
 });
 
 test('skip-to-content link and landmarks are accessible', () => {

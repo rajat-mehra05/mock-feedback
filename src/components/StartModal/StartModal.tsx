@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -17,6 +17,9 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { TOPICS, QUESTION_COUNTS, DEFAULT_QUESTION_COUNT } from '@/constants/topics';
+import { useApiKey } from '@/hooks/useApiKey/useApiKey';
+import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
+import { API_KEY_DESCRIPTION } from '@/constants/copy';
 
 interface StartModalProps {
   open: boolean;
@@ -25,12 +28,31 @@ interface StartModalProps {
 
 export function StartModal({ open, onOpenChange }: StartModalProps) {
   const navigate = useNavigate();
+  const { hasKey, isLoading } = useApiKey();
+  const [showKeyInput, setShowKeyInput] = useState(false);
+
+  // Adjust state when loading completes — React supports setState during render when guarded
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (!isLoading && !hasKey && !showKeyInput) {
+    setShowKeyInput(true);
+  }
+  if (!isLoading && hasKey && showKeyInput) {
+    setShowKeyInput(false);
+  }
+
   const [topic, setTopic] = useState('');
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
   const [name, setName] = useState('');
 
+  const handleKeySaved = useCallback(() => {
+    // Defer focus until after the key panel unmounts on the next render
+    requestAnimationFrame(() => {
+      document.getElementById('topic-select')?.focus();
+    });
+  }, []);
+
   function handleStart() {
-    /* v8 ignore next */ if (!topic) return;
+    /* v8 ignore next */ if (!topic || !hasKey) return;
     const params = new URLSearchParams({ topic, count: questionCount });
     if (name.trim()) params.set('name', name.trim());
     void navigate(`/session?${params.toString()}`);
@@ -41,48 +63,25 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Welcome to Mock Feedback!</DialogTitle>
+          <DialogTitle>Start a Session</DialogTitle>
           <DialogDescription>
-            Practice technical interviews with an AI interviewer.
+            Configure your interview session and begin practicing.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="space-y-3 border-4 border-black bg-neo-muted/20 p-4 shadow-neo-sm">
-            <h3 className="text-sm font-bold uppercase tracking-wider">How it works</h3>
-            <ol className="space-y-2 text-sm font-medium text-black/80">
-              <li className="flex gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-accent text-xs font-bold">
-                  1
-                </span>
-                Choose a topic and number of questions
-              </li>
-              <li className="flex gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-secondary text-xs font-bold">
-                  2
-                </span>
-                The AI interviewer asks you a question via voice
-              </li>
-              <li className="flex gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-muted text-xs font-bold">
-                  3
-                </span>
-                Speak your answer — your response is transcribed
-              </li>
-              <li className="flex gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-accent text-xs font-bold">
-                  4
-                </span>
-                The AI asks follow-up questions based on your answers
-              </li>
-              <li className="flex gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-black bg-neo-secondary text-xs font-bold">
-                  5
-                </span>
-                Get detailed feedback with ratings for each answer
-              </li>
-            </ol>
-          </div>
+          {showKeyInput && (
+            <div className="space-y-3 border-4 border-black bg-neo-muted/20 p-4 shadow-neo-sm">
+              <label
+                htmlFor="start-api-key"
+                className="block text-sm font-bold uppercase tracking-wider"
+              >
+                OpenAI API Key
+              </label>
+              <p className="text-sm font-medium text-black/60">{API_KEY_DESCRIPTION}</p>
+              <ApiKeyInput inputId="start-api-key" onSaved={handleKeySaved} />
+            </div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -150,7 +149,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
             </div>
           </div>
 
-          <Button className="w-full" size="lg" onClick={handleStart} disabled={!topic}>
+          <Button className="w-full" size="lg" onClick={handleStart} disabled={!topic || !hasKey}>
             Start Session
           </Button>
         </div>
