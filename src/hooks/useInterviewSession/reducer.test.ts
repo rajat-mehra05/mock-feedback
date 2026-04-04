@@ -182,3 +182,40 @@ test('ERROR and RETRY cycle returns to the failed state', () => {
   expect(state.error).toBeNull();
   expect(state.retryFromStatus).toBeNull();
 });
+
+test('SKIP_NO_RESPONSE records [no response] and transitions through skipping → SKIP_DONE', () => {
+  let state = interviewReducer(initialState, {
+    type: 'START',
+    topic: 'react-nextjs',
+    topicLabel: 'React',
+    questionCount: 3,
+  });
+  state = interviewReducer(state, { type: 'QUESTION_READY', question: 'What is React?' });
+  state = interviewReducer(state, { type: 'TTS_DONE' });
+
+  // SKIP_NO_RESPONSE → skipping with [no response] in history
+  state = interviewReducer(state, { type: 'SKIP_NO_RESPONSE' });
+  expect(state.status).toBe('skipping');
+  expect(state.history).toHaveLength(1);
+  expect(state.history[0].answer).toBe('[no response]');
+  expect(state.currentQuestion).toBeNull();
+
+  // SKIP_DONE (not last) → generating
+  state = interviewReducer(state, { type: 'SKIP_DONE' });
+  expect(state.status).toBe('generating');
+
+  // Fast-forward to last question (Q2 skip would be identical to Q1)
+  state = { ...state, history: [...state.history, { question: 'Q2', answer: '[no response]' }] };
+  state = interviewReducer(state, { type: 'QUESTION_READY', question: 'Q3' });
+  state = interviewReducer(state, { type: 'TTS_DONE' });
+  state = interviewReducer(state, { type: 'SKIP_NO_RESPONSE' });
+
+  // SKIP_DONE on last question → generating_feedback
+  state = interviewReducer(state, { type: 'SKIP_DONE' });
+  expect(state.status).toBe('generating_feedback');
+});
+
+test('unknown action type returns state unchanged', () => {
+  const state = interviewReducer(initialState, { type: 'BOGUS' } as never);
+  expect(state).toBe(initialState);
+});
