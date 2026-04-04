@@ -57,7 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
         >
           <Link to="/" aria-label="Mock Feedback — Home" className="flex items-center gap-2">
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt=""
               aria-hidden="true"
               className="h-9 w-9 border-2 border-black object-cover shadow-[3px_3px_0px_0px_#000]"

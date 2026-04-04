@@ -1,8 +1,9 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { db, createSession } from '@/db/sessions/sessions';
 import { makeSession } from '@/test/factories';
 import { useSessions } from './useSessions';
+import * as sessionsModule from '@/db/sessions/sessions';
 
 test('useSessions loads sessions, removes one, and removes all', async () => {
   await db.sessions.clear();
@@ -31,4 +32,15 @@ test('useSessions loads sessions, removes one, and removes all', async () => {
 
   await result.current.removeAll();
   await waitFor(() => expect(result.current.sessions).toHaveLength(0));
+});
+
+test('useSessions handles getAllSessions failure gracefully', async () => {
+  vi.spyOn(sessionsModule, 'getAllSessions').mockRejectedValueOnce(new Error('DB corrupted'));
+
+  const { result } = renderHook(() => useSessions());
+
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  expect(result.current.sessions).toEqual([]);
+
+  vi.restoreAllMocks();
 });

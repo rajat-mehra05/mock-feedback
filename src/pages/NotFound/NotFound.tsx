@@ -54,31 +54,29 @@ export function NotFound() {
               <td className="pr-4 py-1 uppercase tracking-wide text-muted-foreground">
                 Navigation
               </td>
-              <td className="py-1 font-black text-neo-accent">0 / 10</td>
+              <td className="py-1 font-black text-red-700">0 / 10</td>
             </tr>
             <tr>
               <td className="pr-4 py-1 uppercase tracking-wide text-muted-foreground">
                 Confidence
               </td>
-              <td className="py-1 font-black text-neo-secondary">10 / 10</td>
+              <td className="py-1 font-black text-green-700">10 / 10</td>
             </tr>
             <tr>
               <td className="pr-4 py-1 uppercase tracking-wide text-muted-foreground">
                 Route Awareness
               </td>
-              <td className="py-1 font-black text-neo-accent">Needs Work</td>
+              <td className="py-1 font-black text-red-700">Needs Work</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {/* CTA */}
-      <Link to="/" aria-label="Go back to the home page">
-        <Button size="lg" className="gap-2 text-base">
-          <Home className="size-5" aria-hidden="true" />
-          Back to Home
-        </Button>
-      </Link>
+      <Button size="lg" className="gap-2 text-base" nativeButton={false} render={<Link to="/" />}>
+        <Home className="size-5" aria-hidden="true" />
+        Back to Home
+      </Button>
     </main>
   );
 }

@@ -45,4 +45,17 @@ test('generateFeedback returns parsed feedback from OpenAI and throws classified
   await expect(generateFeedback('React', [{ question: 'Q', answer: 'A' }])).rejects.toMatchObject({
     type: 'not_found',
   });
+
+  // Empty response from LLM
+  server.use(
+    http.post(`${BASE_URL}/chat/completions`, () => {
+      return HttpResponse.json({
+        choices: [{ message: { content: '' } }],
+      });
+    }),
+  );
+
+  await expect(generateFeedback('React', [{ question: 'Q', answer: 'A' }])).rejects.toMatchObject({
+    type: 'unknown',
+  });
 });
