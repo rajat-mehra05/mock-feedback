@@ -31,13 +31,11 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const { hasKey, isLoading } = useApiKey();
   const [showKeyInput, setShowKeyInput] = useState(false);
 
-  // Adjust state when loading completes — React supports setState during render when guarded
-  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  // Show key input only for new users (no key when modal first loads).
+  // Once shown, it stays mounted so the user sees the "Saved" confirmation
+  // and can continue filling the rest of the form without an abrupt layout shift.
   if (!isLoading && !hasKey && !showKeyInput) {
     setShowKeyInput(true);
-  }
-  if (!isLoading && hasKey && showKeyInput) {
-    setShowKeyInput(false);
   }
 
   const [topic, setTopic] = useState('');
@@ -45,7 +43,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const [name, setName] = useState('');
 
   const handleKeySaved = useCallback(() => {
-    // Defer focus until after the key panel unmounts on the next render
+    // Guide focus to the next field after key is saved
     requestAnimationFrame(() => {
       document.getElementById('topic-select')?.focus();
     });

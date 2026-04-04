@@ -23,8 +23,9 @@ test('first-time user sees API key input, saves key, sees Saved confirmation, th
   await user.type(keyInput, 'sk-test-key');
   await user.click(screen.getByRole('button', { name: /^save$/i }));
 
-  // API key section hides after key is saved
-  await waitFor(() => expect(screen.queryByLabelText(/openai api key/i)).not.toBeInTheDocument());
+  // API key section stays mounted but button shows "Saved"
+  await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeInTheDocument());
+  expect(screen.getByLabelText(/openai api key/i)).toBeInTheDocument();
 
   // Still disabled — no topic selected yet
   expect(startButton).toBeDisabled();
