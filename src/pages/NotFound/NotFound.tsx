@@ -73,12 +73,10 @@ export function NotFound() {
       </div>
 
       {/* CTA */}
-      <Link to="/" aria-label="Back to Home">
-        <Button size="lg" className="gap-2 text-base">
-          <Home className="size-5" aria-hidden="true" />
-          Back to Home
-        </Button>
-      </Link>
+      <Button size="lg" className="gap-2 text-base" nativeButton={false} render={<Link to="/" />}>
+        <Home className="size-5" aria-hidden="true" />
+        Back to Home
+      </Button>
     </main>
   );
 }
