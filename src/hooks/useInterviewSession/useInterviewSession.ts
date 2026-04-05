@@ -43,15 +43,21 @@ export function useInterviewSession() {
     const effectSignal = AbortSignal.any([s, localController.signal]);
 
     if (state.status === 'generating') {
+      // Skip LLM call if we've already reached the target — reducer will finalize
+      if (state.history.length >= state.targetQuestionCount) {
+        dispatch({ type: 'QUESTION_READY', question: '', isRepeat: false });
+        return () => localController.abort();
+      }
       void (async () => {
         try {
-          const question = await withRetry(
+          const raw = await withRetry(
             (sig) =>
               generateNextQuestion(state.topicLabel, state.history, sig, state.candidateName),
             { ...RETRY_OPTS, signal: effectSignal },
           );
           if (effectSignal.aborted) return;
-          const isRepeat = question.includes(REPEAT_QUESTION_PHRASE);
+          const isRepeat = raw.includes(REPEAT_QUESTION_PHRASE);
+          const question = isRepeat ? raw.replace(REPEAT_QUESTION_PHRASE, '').trim() : raw;
           dispatch({ type: 'QUESTION_READY', question, isRepeat });
         } catch (error) {
           if (effectSignal.aborted) return;

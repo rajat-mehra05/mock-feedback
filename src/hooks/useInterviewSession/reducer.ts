@@ -36,6 +36,11 @@ export function interviewReducer(
 
     case 'QUESTION_READY': {
       const adjustedHistory = action.isRepeat ? state.history.slice(0, -1) : state.history;
+      // If a repeat discards a turn that had a pending transcription, cancel it
+      const adjustedPending =
+        action.isRepeat && state.pendingTranscriptions > 0
+          ? state.pendingTranscriptions - 1
+          : state.pendingTranscriptions;
       const effectiveCount = adjustedHistory.length;
       // If this isn't a repeat and we've already reached the target, finalize
       if (!action.isRepeat && effectiveCount >= state.targetQuestionCount) {
@@ -45,6 +50,7 @@ export function interviewReducer(
           history: adjustedHistory,
           currentQuestion: null,
           ttsFallbackText: null,
+          pendingTranscriptions: adjustedPending,
         };
       }
       return {
@@ -55,6 +61,7 @@ export function interviewReducer(
           ? state.currentQuestionIndex
           : state.currentQuestionIndex + 1,
         history: adjustedHistory,
+        pendingTranscriptions: adjustedPending,
         ttsFallbackText: null,
       };
     }
@@ -97,6 +104,10 @@ export function interviewReducer(
     }
 
     case 'TRANSCRIPT_READY': {
+      // Ignore stale transcriptions for turns that were discarded (e.g. repeat questions)
+      if (action.questionIndex >= state.history.length) {
+        return state;
+      }
       const updatedHistory = state.history.map((turn, i) =>
         i === action.questionIndex ? { ...turn, answer: action.transcript } : turn,
       );
