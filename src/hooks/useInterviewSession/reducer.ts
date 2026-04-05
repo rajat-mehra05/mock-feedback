@@ -36,11 +36,15 @@ export function interviewReducer(
 
     case 'QUESTION_READY': {
       const adjustedHistory = action.isRepeat ? state.history.slice(0, -1) : state.history;
-      // If a repeat discards a turn that had a pending transcription, cancel it
-      const adjustedPending =
-        action.isRepeat && state.pendingTranscriptions > 0
-          ? state.pendingTranscriptions - 1
-          : state.pendingTranscriptions;
+      // Only cancel the pending transcription if the discarded turn still has an empty
+      // placeholder answer — if TRANSCRIPT_READY already backfilled it, it already decremented.
+      const discardedTurnStillPending =
+        action.isRepeat &&
+        state.history.length > 0 &&
+        state.history[state.history.length - 1].answer === '';
+      const adjustedPending = discardedTurnStillPending
+        ? state.pendingTranscriptions - 1
+        : state.pendingTranscriptions;
       const effectiveCount = adjustedHistory.length;
       // If this isn't a repeat and we've already reached the target, finalize
       if (!action.isRepeat && effectiveCount >= state.targetQuestionCount) {
