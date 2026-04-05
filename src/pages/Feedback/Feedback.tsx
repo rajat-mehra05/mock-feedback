@@ -156,11 +156,16 @@ export function Feedback() {
           <span className="text-sm font-bold uppercase tracking-wider text-black/60">
             Average Score:
           </span>
-          <span
-            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(session.averageScore)} ${scoreBg(session.averageScore)}`}
-          >
-            {Math.round(session.averageScore)}/10
-          </span>
+          {(() => {
+            const roundedScore = Math.round(session.averageScore);
+            return (
+              <span
+                className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(roundedScore)} ${scoreBg(roundedScore)}`}
+              >
+                {roundedScore}/10
+              </span>
+            );
+          })()}
         </div>
         <p className="text-sm font-medium text-black/80">
           You answered {session.questionCount} questions on {session.topic}. Your strongest answers

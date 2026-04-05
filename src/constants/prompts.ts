@@ -1,10 +1,15 @@
-/** Sanitize user-provided name before interpolating into a prompt. */
-export function sanitizeCandidateName(name: string): string {
-  return name
+/** Sanitize user-provided string before interpolating into a prompt. */
+function sanitizePromptInput(value: string, maxLen: number): string {
+  return value
     .trim()
-    .slice(0, 50)
+    .slice(0, maxLen)
     .replace(/[\n\r\t]/g, ' ')
-    .replace(/[^\p{L}\p{N}\s'.,-]/gu, '');
+    .replace(/[^\p{L}\p{N}\s'&/:+-]/gu, '');
+}
+
+/** Sanitize candidate name — letters, numbers, spaces, hyphens, apostrophes only. */
+export function sanitizeCandidateName(name: string): string {
+  return sanitizePromptInput(name, 50).replace(/[^a-zA-Z\p{L}\s'-]/gu, '');
 }
 
 // ---------------------------------------------------------------------------
@@ -20,13 +25,13 @@ const INTERVIEW_BEHAVIOR = `\
 - If the candidate gives a partial or weak answer, ask one follow-up to probe deeper before moving to a new topic.
 - Do not repeat or rephrase a question you have already asked. Each question must explore a new concept.`;
 
-/** Sentinel phrase the LLM is instructed to use when re-asking a question. */
-export const REPEAT_QUESTION_PHRASE = "Take your time, I'll wait";
+/** Machine token the LLM emits when re-asking a question after a wait request. */
+export const REPEAT_QUESTION_PHRASE = '<REPEAT_QUESTION>';
 
 const INTERVIEW_EDGE_CASES = `\
 - If the candidate says "I don't know", "pass", or "skip", say "No worries, let's move on." and switch to a different sub-topic.
 - If the answer is "[no response]", the candidate was silent and the system already handled it. Do NOT say "No worries" — just ask the next question directly.
-- If the candidate asks you to wait or says they need a moment, respond with "${REPEAT_QUESTION_PHRASE}" and ask the same question again.`;
+- If the candidate asks you to wait or says they need a moment, emit the exact token ${REPEAT_QUESTION_PHRASE} followed by the same question again. This is an exception to the "do not repeat" rule — re-asking after a wait request is required.`;
 
 const INTERVIEW_DIFFICULTY = `\
 Difficulty Progression:
@@ -50,18 +55,19 @@ interface InterviewPromptParams {
 }
 
 export function buildInterviewPrompt({ topic, candidateName }: InterviewPromptParams): string {
+  const safeTopic = sanitizePromptInput(topic, 100);
   const safeName = candidateName ? sanitizeCandidateName(candidateName) : '';
 
   const greeting = safeName
-    ? `- Start with a warm intro: "Hey ${safeName}, how are you doing? Can you tell me about your work experience and the projects you have worked on, especially with ${topic}?"`
-    : `- Start with a warm intro: "Hey there, how are you doing? Tell me about your work experience and the projects you have worked on, especially with ${topic}."`;
+    ? `- Start with a warm intro: "Hey ${safeName}, how are you doing? Can you tell me about your work experience and the projects you have worked on, especially with ${safeTopic}?"`
+    : `- Start with a warm intro: "Hey there, how are you doing? Tell me about your work experience and the projects you have worked on, especially with ${safeTopic}."`;
 
   const nameRule = safeName
     ? `\n- The candidate's name is ${safeName}. Address them by name occasionally.`
     : '';
 
   return `${INTERVIEW_ROLE}
-You are conducting a ${topic} technical interview.
+You are conducting a ${safeTopic} technical interview.
 
 Rules:
 ${greeting}
@@ -114,14 +120,16 @@ In the summary, include:
 - Actionable advice for the candidate's next interview`;
 
 const FEEDBACK_OUTPUT_FORMAT = `\
-Respond ONLY with valid JSON matching this exact schema: { "questions": [{ "rating": number, "feedback": string, "confidence": "high" | "medium" | "low", "modelAnswer": string }], "summary": string }`;
+Respond ONLY with valid JSON matching this exact schema: { "questions": [{ "rating": number, "feedback": string, "confidence": "high" | "medium" | "low", "modelAnswer": string }], "summary": string }
+The "questions" array MUST contain exactly one feedback object per input question-answer pair, in the same order they were provided. Do not drop, reorder, or add entries — the array length must equal the number of input pairs and each element corresponds to the same-index input pair.`;
 
 interface FeedbackPromptParams {
   topic: string;
 }
 
 export function buildFeedbackPrompt({ topic }: FeedbackPromptParams): string {
-  return `${feedbackRole(topic)}
+  const safeTopic = sanitizePromptInput(topic, 100);
+  return `${feedbackRole(safeTopic)}
 
 ${FEEDBACK_TASK}
 

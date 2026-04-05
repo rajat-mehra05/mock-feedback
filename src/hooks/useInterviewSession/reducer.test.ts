@@ -52,10 +52,18 @@ test('interview reducer transitions through the complete happy path', () => {
   state = interviewReducer(state, { type: 'TTS_DONE' });
   state = interviewReducer(state, { type: 'TRANSCRIBING' });
 
-  // RECORDING_DONE (last question) → generating_feedback
+  // RECORDING_DONE (last question) → generating (finalization deferred to QUESTION_READY)
   state = interviewReducer(state, { type: 'RECORDING_DONE', transcript: 'Hooks are functions' });
-  expect(state.status).toBe('generating_feedback');
+  expect(state.status).toBe('generating');
   expect(state.history).toHaveLength(2);
+
+  // QUESTION_READY with isRepeat: false finalizes when history >= targetQuestionCount
+  state = interviewReducer(state, {
+    type: 'QUESTION_READY',
+    isRepeat: false,
+    question: 'Unused next question',
+  });
+  expect(state.status).toBe('generating_feedback');
 
   // FEEDBACK_DONE → completed
   state = interviewReducer(state, { type: 'FEEDBACK_DONE', sessionId: 'session-123' });
@@ -161,9 +169,9 @@ test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_R
   expect(state.pendingTranscriptions).toBe(0);
   expect(state.status).toBe('user_recording');
 
-  // ANSWER_RECORDED for last question → generating_feedback
+  // ANSWER_RECORDED for last question → generating (finalization deferred to QUESTION_READY)
   state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
-  expect(state.status).toBe('generating_feedback');
+  expect(state.status).toBe('generating');
   expect(state.history).toHaveLength(2);
   expect(state.history[1].answer).toBe('');
   expect(state.pendingTranscriptions).toBe(1);
@@ -237,6 +245,36 @@ test('SKIP_NO_RESPONSE records [no response] and transitions through skipping �
   // SKIP_DONE on last question → generating_feedback
   state = interviewReducer(state, { type: 'SKIP_DONE' });
   expect(state.status).toBe('generating_feedback');
+});
+
+test('QUESTION_READY with isRepeat keeps currentQuestionIndex unchanged and removes last history entry', () => {
+  let state = interviewReducer(initialState, {
+    type: 'START',
+    topic: 'react-nextjs',
+    topicLabel: 'React & Next.js',
+    questionCount: 3,
+  });
+  state = interviewReducer(state, {
+    type: 'QUESTION_READY',
+    isRepeat: false,
+    question: 'What is JSX?',
+  });
+  state = interviewReducer(state, { type: 'TTS_DONE' });
+  // Simulate "wait" answer recorded
+  state = interviewReducer(state, { type: 'RECORDING_DONE', transcript: 'Wait a moment' });
+  expect(state.history).toHaveLength(1);
+  expect(state.currentQuestionIndex).toBe(1);
+
+  // QUESTION_READY with isRepeat: question and index stay the same, "wait" turn removed
+  state = interviewReducer(state, {
+    type: 'QUESTION_READY',
+    isRepeat: true,
+    question: 'What is JSX?',
+  });
+  expect(state.status).toBe('ai_speaking');
+  expect(state.currentQuestion).toBe('What is JSX?');
+  expect(state.currentQuestionIndex).toBe(1);
+  expect(state.history).toHaveLength(0);
 });
 
 test('unknown action type returns state unchanged', () => {

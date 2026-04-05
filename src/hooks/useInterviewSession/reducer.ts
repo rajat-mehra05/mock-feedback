@@ -34,7 +34,19 @@ export function interviewReducer(
         candidateName: action.candidateName ?? '',
       };
 
-    case 'QUESTION_READY':
+    case 'QUESTION_READY': {
+      const adjustedHistory = action.isRepeat ? state.history.slice(0, -1) : state.history;
+      const effectiveCount = adjustedHistory.length;
+      // If this isn't a repeat and we've already reached the target, finalize
+      if (!action.isRepeat && effectiveCount >= state.targetQuestionCount) {
+        return {
+          ...state,
+          status: 'generating_feedback',
+          history: adjustedHistory,
+          currentQuestion: null,
+          ttsFallbackText: null,
+        };
+      }
       return {
         ...state,
         status: 'ai_speaking',
@@ -42,10 +54,10 @@ export function interviewReducer(
         currentQuestionIndex: action.isRepeat
           ? state.currentQuestionIndex
           : state.currentQuestionIndex + 1,
-        // Remove the "wait" turn from history so it doesn't count toward targetQuestionCount
-        history: action.isRepeat ? state.history.slice(0, -1) : state.history,
+        history: adjustedHistory,
         ttsFallbackText: null,
       };
+    }
 
     case 'TTS_DONE':
       return { ...state, status: 'user_recording', ttsFallbackText: null };
@@ -65,10 +77,9 @@ export function interviewReducer(
         ...state.history,
         { question: state.currentQuestion!, answer: action.transcript },
       ];
-      const isLast = newHistory.length >= state.targetQuestionCount;
       return {
         ...state,
-        status: isLast ? 'generating_feedback' : 'generating',
+        status: 'generating',
         history: newHistory,
         currentQuestion: null,
       };
@@ -76,10 +87,9 @@ export function interviewReducer(
 
     case 'ANSWER_RECORDED': {
       const newHistory = [...state.history, { question: state.currentQuestion!, answer: '' }];
-      const isLast = newHistory.length >= state.targetQuestionCount;
       return {
         ...state,
-        status: isLast ? 'generating_feedback' : 'generating',
+        status: 'generating',
         history: newHistory,
         currentQuestion: null,
         pendingTranscriptions: state.pendingTranscriptions + 1,

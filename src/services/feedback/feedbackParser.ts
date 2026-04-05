@@ -43,8 +43,12 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
         `Failed to parse feedback JSON: question ${i} has invalid modelAnswer type: ${typeof item.modelAnswer}`,
       );
     }
-    const confidence = VALID_CONFIDENCE.has(item.confidence as ConfidenceLevel)
-      ? (item.confidence as ConfidenceLevel)
+    const normalizedConfidence =
+      typeof item.confidence === 'string'
+        ? (item.confidence.toLowerCase() as ConfidenceLevel)
+        : undefined;
+    const confidence = VALID_CONFIDENCE.has(normalizedConfidence as ConfidenceLevel)
+      ? normalizedConfidence!
       : 'medium';
 
     return {

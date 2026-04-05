@@ -51,7 +51,7 @@ export function useInterviewSession() {
             { ...RETRY_OPTS, signal: effectSignal },
           );
           if (effectSignal.aborted) return;
-          const isRepeat = question.toLowerCase().includes(REPEAT_QUESTION_PHRASE.toLowerCase());
+          const isRepeat = question.includes(REPEAT_QUESTION_PHRASE);
           dispatch({ type: 'QUESTION_READY', question, isRepeat });
         } catch (error) {
           if (effectSignal.aborted) return;
