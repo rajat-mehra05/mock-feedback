@@ -40,7 +40,7 @@ export type InterviewAction =
       questionCount: number;
       candidateName?: string;
     }
-  | { type: 'QUESTION_READY'; question: string }
+  | { type: 'QUESTION_READY'; question: string; isRepeat: boolean }
   | { type: 'TTS_DONE' }
   | { type: 'TTS_FAILED'; question: string }
   | { type: 'TRANSCRIBING' }

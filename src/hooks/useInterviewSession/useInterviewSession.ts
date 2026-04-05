@@ -10,6 +10,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder/useAudioRecorder';
 import { withRetry } from '@/lib/retry';
 import { RETRY_MAX_ATTEMPTS, RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS } from '@/constants/interview';
 import { INTERVIEW_CLOSING_MESSAGE } from '@/constants/openai';
+import { REPEAT_QUESTION_PHRASE } from '@/constants/prompts';
 import { createSession } from '@/db/sessions/sessions';
 import type { OpenAIServiceError } from '@/services/types';
 
@@ -42,14 +43,22 @@ export function useInterviewSession() {
     const effectSignal = AbortSignal.any([s, localController.signal]);
 
     if (state.status === 'generating') {
+      // Skip LLM call if we've already reached the target — reducer will finalize
+      if (state.history.length >= state.targetQuestionCount) {
+        dispatch({ type: 'QUESTION_READY', question: '', isRepeat: false });
+        return () => localController.abort();
+      }
       void (async () => {
         try {
-          const question = await withRetry(
-            (sig) => generateNextQuestion(state.topic, state.history, sig, state.candidateName),
+          const raw = await withRetry(
+            (sig) =>
+              generateNextQuestion(state.topicLabel, state.history, sig, state.candidateName),
             { ...RETRY_OPTS, signal: effectSignal },
           );
           if (effectSignal.aborted) return;
-          dispatch({ type: 'QUESTION_READY', question });
+          const isRepeat = raw.includes(REPEAT_QUESTION_PHRASE);
+          const question = isRepeat ? raw.replace(REPEAT_QUESTION_PHRASE, '').trim() : raw;
+          dispatch({ type: 'QUESTION_READY', question, isRepeat });
         } catch (error) {
           if (effectSignal.aborted) return;
           onError(error, 'generating');
@@ -99,7 +108,7 @@ export function useInterviewSession() {
             // TTS failure is non-blocking
           }
           if (effectSignal.aborted) return;
-          const result = await generateFeedback(state.topic, state.history, effectSignal);
+          const result = await generateFeedback(state.topicLabel, state.history, effectSignal);
           if (effectSignal.aborted) return;
           const sessionId = crypto.randomUUID();
           const elapsed = state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : 0;
@@ -119,6 +128,7 @@ export function useInterviewSession() {
               userTranscript: turn.answer,
               rating: result.questions[i]?.rating ?? 0,
               feedback: result.questions[i]?.feedback ?? '',
+              confidence: result.questions[i]?.confidence ?? 'medium',
               followUp: result.questions[i]?.modelAnswer,
             })),
           });
@@ -146,8 +156,8 @@ export function useInterviewSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.error]);
 
-  // Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <3KB
-  const MIN_BLOB_SIZE = 5000;
+  // Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <1KB
+  const MIN_BLOB_SIZE = 2000;
 
   // audioBlob ready → check if it contains real speech, then advance
   useEffect(() => {

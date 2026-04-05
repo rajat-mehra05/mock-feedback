@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { ConfidenceLevel } from '@/services/types';
 
 export interface Question {
   id: string;
@@ -6,6 +7,7 @@ export interface Question {
   userTranscript: string;
   rating: number;
   feedback: string;
+  confidence?: ConfidenceLevel;
   followUp?: string;
 }
 

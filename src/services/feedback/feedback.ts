@@ -6,8 +6,8 @@ import {
   FEEDBACK_TIMEOUT_MS,
   FEEDBACK_TEMPERATURE,
   FEEDBACK_MAX_TOKENS,
-  FEEDBACK_SYSTEM_PROMPT,
 } from '@/constants/feedback';
+import { buildFeedbackPrompt } from '@/constants/prompts';
 import type { ConversationTurn, FeedbackResult } from '@/services/types';
 
 /**
@@ -19,7 +19,7 @@ export async function generateFeedback(
   signal?: AbortSignal,
 ): Promise<FeedbackResult> {
   const client = await getOpenAIClient();
-  const systemPrompt = FEEDBACK_SYSTEM_PROMPT.replace('{topic}', topic);
+  const systemPrompt = buildFeedbackPrompt({ topic });
   const { signal: mergedSignal, cleanup } = createTimeoutSignal(FEEDBACK_TIMEOUT_MS, signal);
 
   const userContent = turns

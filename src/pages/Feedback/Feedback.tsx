@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getSession, type Session } from '@/db/sessions/sessions';
+import type { ConfidenceLevel } from '@/services/types';
 
 function scoreColor(score: number): string {
   if (score >= 8) return 'text-green-700';
@@ -22,6 +23,16 @@ function scoreBg(score: number): string {
   if (score >= 8) return 'bg-green-200 border-black';
   if (score >= 6) return 'bg-yellow-200 border-black';
   return 'bg-red-200 border-black';
+}
+
+const CONFIDENCE_CONFIG: Record<ConfidenceLevel, { label: string; style: string }> = {
+  high: { label: 'High Confidence', style: 'bg-green-100 text-green-800 border-green-800' },
+  medium: { label: 'Medium Confidence', style: 'bg-yellow-100 text-yellow-800 border-yellow-800' },
+  low: { label: 'Low Confidence', style: 'bg-red-100 text-red-800 border-red-800' },
+};
+
+function getConfidence(level: ConfidenceLevel | undefined) {
+  return CONFIDENCE_CONFIG[level ?? 'medium'];
 }
 
 export function Feedback() {
@@ -82,51 +93,59 @@ export function Feedback() {
       </div>
 
       <div className="space-y-6">
-        {session.questions.map((q, i) => (
-          <section
-            key={q.id}
-            className="border-4 border-black bg-white p-6 shadow-neo-sm"
-            aria-label={`Question ${i + 1}`}
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-black/60">
-                Question {i + 1}
-              </h3>
-              <Badge
-                className={`${scoreBg(q.rating)} border-2`}
-                aria-label={`Rating: ${q.rating} out of 10`}
-              >
-                <span className={`font-bold ${scoreColor(q.rating)}`}>{q.rating}/10</span>
-              </Badge>
-            </div>
-
-            <p className="mb-4 text-lg font-bold text-black">{q.questionText}</p>
-
-            {viewMode === 'feedback' ? (
-              <>
-                <div className="mb-3 border-2 border-black bg-neo-muted/20 p-4">
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
-                    Your Answer
-                  </p>
-                  <p className="text-sm font-medium text-black">{q.userTranscript}</p>
+        {session.questions.map((q, i) => {
+          const conf = getConfidence(q.confidence);
+          return (
+            <section
+              key={q.id}
+              className="border-4 border-black bg-white p-6 shadow-neo-sm"
+              aria-label={`Question ${i + 1}`}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-black/60">
+                  Question {i + 1}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Badge className={`${conf.style} border`} aria-label={conf.label}>
+                    <span className="text-xs font-bold">{conf.label}</span>
+                  </Badge>
+                  <Badge
+                    className={`${scoreBg(q.rating)} border-2`}
+                    aria-label={`Rating: ${q.rating} out of 10`}
+                  >
+                    <span className={`font-bold ${scoreColor(q.rating)}`}>{q.rating}/10</span>
+                  </Badge>
                 </div>
-                <div>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
-                    Feedback
-                  </p>
-                  <p className="text-sm font-medium text-black">{q.feedback}</p>
-                </div>
-              </>
-            ) : (
-              <div className="border-2 border-black bg-neo-secondary/30 p-4">
-                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
-                  Model Answer
-                </p>
-                <p className="text-sm font-medium text-black">{q.followUp || q.feedback}</p>
               </div>
-            )}
-          </section>
-        ))}
+
+              <p className="mb-4 text-lg font-bold text-black">{q.questionText}</p>
+
+              {viewMode === 'feedback' ? (
+                <>
+                  <div className="mb-3 border-2 border-black bg-neo-muted/20 p-4">
+                    <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                      Your Answer
+                    </p>
+                    <p className="text-sm font-medium text-black">{q.userTranscript}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                      Feedback
+                    </p>
+                    <p className="text-sm font-medium text-black">{q.feedback}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="border-2 border-black bg-neo-secondary/30 p-4">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
+                    Model Answer
+                  </p>
+                  <p className="text-sm font-medium text-black">{q.followUp || q.feedback}</p>
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
 
       <section className="border-4 border-black bg-neo-secondary/30 p-6 shadow-neo-sm">
@@ -137,11 +156,16 @@ export function Feedback() {
           <span className="text-sm font-bold uppercase tracking-wider text-black/60">
             Average Score:
           </span>
-          <span
-            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(session.averageScore)} ${scoreBg(session.averageScore)}`}
-          >
-            {session.averageScore.toFixed(1)}/10
-          </span>
+          {(() => {
+            const roundedScore = Math.round(session.averageScore);
+            return (
+              <span
+                className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(roundedScore)} ${scoreBg(roundedScore)}`}
+              >
+                {roundedScore}/10
+              </span>
+            );
+          })()}
         </div>
         <p className="text-sm font-medium text-black/80">
           You answered {session.questionCount} questions on {session.topic}. Your strongest answers

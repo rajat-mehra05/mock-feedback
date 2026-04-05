@@ -66,7 +66,7 @@ export function History() {
         </div>
         <div className="border-4 border-black bg-neo-muted p-4 text-center shadow-neo-sm">
           <p className="text-3xl font-bold text-black">
-            {avgScore > 0 ? avgScore.toFixed(1) : '—'}
+            {avgScore > 0 ? Math.round(avgScore) : '—'}
           </p>
           <p className="text-xs font-bold uppercase tracking-widest text-black/70">Avg Score</p>
         </div>

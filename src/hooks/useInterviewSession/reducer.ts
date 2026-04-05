@@ -34,14 +34,41 @@ export function interviewReducer(
         candidateName: action.candidateName ?? '',
       };
 
-    case 'QUESTION_READY':
+    case 'QUESTION_READY': {
+      const adjustedHistory = action.isRepeat ? state.history.slice(0, -1) : state.history;
+      // Only cancel the pending transcription if the discarded turn still has an empty
+      // placeholder answer — if TRANSCRIPT_READY already backfilled it, it already decremented.
+      const discardedTurnStillPending =
+        action.isRepeat &&
+        state.history.length > 0 &&
+        state.history[state.history.length - 1].answer === '';
+      const adjustedPending = discardedTurnStillPending
+        ? state.pendingTranscriptions - 1
+        : state.pendingTranscriptions;
+      const effectiveCount = adjustedHistory.length;
+      // If this isn't a repeat and we've already reached the target, finalize
+      if (!action.isRepeat && effectiveCount >= state.targetQuestionCount) {
+        return {
+          ...state,
+          status: 'generating_feedback',
+          history: adjustedHistory,
+          currentQuestion: null,
+          ttsFallbackText: null,
+          pendingTranscriptions: adjustedPending,
+        };
+      }
       return {
         ...state,
         status: 'ai_speaking',
         currentQuestion: action.question,
-        currentQuestionIndex: state.currentQuestionIndex + 1,
+        currentQuestionIndex: action.isRepeat
+          ? state.currentQuestionIndex
+          : state.currentQuestionIndex + 1,
+        history: adjustedHistory,
+        pendingTranscriptions: adjustedPending,
         ttsFallbackText: null,
       };
+    }
 
     case 'TTS_DONE':
       return { ...state, status: 'user_recording', ttsFallbackText: null };
@@ -61,10 +88,9 @@ export function interviewReducer(
         ...state.history,
         { question: state.currentQuestion!, answer: action.transcript },
       ];
-      const isLast = newHistory.length >= state.targetQuestionCount;
       return {
         ...state,
-        status: isLast ? 'generating_feedback' : 'generating',
+        status: 'generating',
         history: newHistory,
         currentQuestion: null,
       };
@@ -72,10 +98,9 @@ export function interviewReducer(
 
     case 'ANSWER_RECORDED': {
       const newHistory = [...state.history, { question: state.currentQuestion!, answer: '' }];
-      const isLast = newHistory.length >= state.targetQuestionCount;
       return {
         ...state,
-        status: isLast ? 'generating_feedback' : 'generating',
+        status: 'generating',
         history: newHistory,
         currentQuestion: null,
         pendingTranscriptions: state.pendingTranscriptions + 1,
@@ -83,6 +108,10 @@ export function interviewReducer(
     }
 
     case 'TRANSCRIPT_READY': {
+      // Ignore stale transcriptions for turns that were discarded (e.g. repeat questions)
+      if (action.questionIndex >= state.history.length) {
+        return state;
+      }
       const updatedHistory = state.history.map((turn, i) =>
         i === action.questionIndex ? { ...turn, answer: action.transcript } : turn,
       );

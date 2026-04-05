@@ -12,7 +12,7 @@ export const TOPIC_LABELS: Record<string, string> = {
   behavioral: 'Behavioral / STAR',
 };
 
-export const QUESTION_COUNTS = [3, 5, 7, 10] as const;
+export const QUESTION_COUNTS = [5, 7, 10] as const;
 
 export const DEFAULT_QUESTION_COUNT = '5';
 

@@ -19,9 +19,12 @@ export interface OpenAIServiceError {
   retryable: boolean;
 }
 
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
 export interface QuestionFeedback {
   rating: number;
   feedback: string;
+  confidence: ConfidenceLevel;
   modelAnswer: string;
 }
 
