@@ -42,7 +42,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   await screen.findByText('JavaScript / TypeScript');
   const stats = screen.getByRole('region', { name: /interview statistics/i });
   expect(within(stats).getByText('2')).toBeInTheDocument();
-  expect(within(stats).getByText('7.5')).toBeInTheDocument();
+  expect(within(stats).getByText('8')).toBeInTheDocument();
 
   // Session cards
   expect(screen.getAllByText('JavaScript / TypeScript')[0]).toBeInTheDocument();

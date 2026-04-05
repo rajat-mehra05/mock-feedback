@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { AUDIO_MIME_TYPES } from '@/constants/openai';
 import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
 
-/** RMS threshold below which audio is considered silence (0–1 scale). */
-const SILENCE_THRESHOLD = 0.03;
+/** RMS threshold below which audio is considered silence (0–1 scale).
+ * Set above typical laptop fan / ambient noise levels (~0.01-0.04). */
+const SILENCE_THRESHOLD = 0.06;
 /** How often (ms) we sample the audio level to check for silence. */
 const POLL_INTERVAL_MS = 200;
 
@@ -113,6 +114,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       let speechDetected = false;
       const recordingStartedAt = Date.now();
 
+      let pollCount = 0;
       silenceTimerRef.current = setInterval(() => {
         analyser.getFloatTimeDomainData(dataArray);
 
@@ -123,18 +125,23 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         }
         const rms = Math.sqrt(sumSquares / dataArray.length);
 
+        if (import.meta.env.DEV && ++pollCount % 5 === 0) {
+          const silentFor = silentSince ? ((Date.now() - silentSince) / 1000).toFixed(1) : '0';
+          console.debug(
+            `[silence-detect] rms=${rms.toFixed(4)} threshold=${SILENCE_THRESHOLD} speechDetected=${speechDetected} silentFor=${silentFor}s`,
+          );
+        }
+
         if (rms > SILENCE_THRESHOLD) {
           speechDetected = true;
           silentSince = null;
         } else if (speechDetected) {
-          // Only start counting silence after speech has been detected
           if (silentSince === null) {
             silentSince = Date.now();
           } else if (Date.now() - silentSince >= SILENCE_TIMEOUT_SECONDS * 1000) {
             stopRecording();
           }
         } else if (Date.now() - recordingStartedAt >= SILENCE_TIMEOUT_SECONDS * 1000) {
-          // No speech detected at all — stop recording after timeout
           stopRecording();
         }
       }, POLL_INTERVAL_MS);

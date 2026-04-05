@@ -30,7 +30,7 @@ test('user sees topic, date, duration, question count, score, and card links to 
   expect(screen.getAllByText('Node.js')[0]).toBeInTheDocument();
   expect(screen.getByText('3 questions')).toBeInTheDocument();
   expect(screen.getByText('8m 0s')).toBeInTheDocument();
-  expect(screen.getByText('4.0/10')).toBeInTheDocument();
+  expect(screen.getByText('4/10')).toBeInTheDocument();
   expect(screen.getByText(/how does node handle concurrency/i)).toBeInTheDocument();
 
   const link = screen.getByRole('link');
@@ -56,5 +56,5 @@ test('delete button calls onDelete and card handles all score tiers and empty qu
   // Yellow tier (>= 6, < 8) + empty questions (firstQuestion fallback)
   renderWithProviders(<SessionCard session={makeSession({ averageScore: 7.0, questions: [] })} />);
 
-  expect(screen.getByText('7.0/10')).toBeInTheDocument();
+  expect(screen.getByText('7/10')).toBeInTheDocument();
 });

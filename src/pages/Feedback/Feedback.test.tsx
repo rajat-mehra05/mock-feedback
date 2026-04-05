@@ -39,6 +39,7 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           questionText: 'What is the virtual DOM?',
           userTranscript: 'An in-memory representation of the real DOM.',
           rating: 9,
+          confidence: 'high',
           feedback: 'Excellent answer covering the diffing process.',
         },
         {
@@ -46,6 +47,7 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           questionText: 'Explain React hooks rules.',
           userTranscript: 'Must be called at top level.',
           rating: 7,
+          confidence: 'medium',
           feedback: 'Good but could mention the ESLint plugin.',
         },
         {
@@ -53,6 +55,7 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           questionText: 'What is prop drilling?',
           userTranscript: 'Passing props through many layers.',
           rating: 4,
+          confidence: 'low',
           feedback: 'Too brief. Discuss Context API or state management alternatives.',
         },
       ],
@@ -68,7 +71,7 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
 
   // Ratings visible — covers all three scoreColor branches (green >=8, yellow >=6, red <6)
   expect(screen.getByText('9/10')).toBeInTheDocument();
-  expect(screen.getByText('7/10')).toBeInTheDocument();
+  expect(screen.getAllByText('7/10').length).toBeGreaterThanOrEqual(1);
   expect(screen.getByText('4/10')).toBeInTheDocument();
 
   // User transcripts visible
@@ -78,9 +81,14 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
   // Feedback text visible
   expect(screen.getByText(/excellent answer/i)).toBeInTheDocument();
 
-  // Overall summary
+  // Confidence badges visible — covers all three tiers
+  expect(screen.getByText('High Confidence')).toBeInTheDocument();
+  expect(screen.getByText('Medium Confidence')).toBeInTheDocument();
+  expect(screen.getByText('Low Confidence')).toBeInTheDocument();
+
+  // Overall summary — average of 9+7+4 = 6.67, rounds to 7, same as Q2's rating
   expect(screen.getByText(/overall performance summary/i)).toBeInTheDocument();
-  expect(screen.getByText('7.0/10')).toBeInTheDocument();
+  expect(screen.getAllByText('7/10').length).toBeGreaterThanOrEqual(2);
 
   // Back link at bottom of page
   const backButtons = screen.getAllByRole('button', { name: /back to history/i });

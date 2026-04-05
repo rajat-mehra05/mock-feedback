@@ -1,41 +1,21 @@
 import { getOpenAIClient } from '@/services/openai/openai';
 import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
-import {
-  LLM_MODEL,
-  LLM_TIMEOUT_MS,
-  LLM_TEMPERATURE,
-  LLM_MAX_TOKENS,
-  INTERVIEW_SYSTEM_PROMPT,
-} from '@/constants/openai';
+import { LLM_MODEL, LLM_TIMEOUT_MS, LLM_TEMPERATURE, LLM_MAX_TOKENS } from '@/constants/openai';
+import { buildInterviewPrompt } from '@/constants/prompts';
 import type { ConversationTurn } from '@/services/types';
-
-/** Sanitize user-provided name before interpolating into a prompt. */
-function sanitizeCandidateName(name: string): string {
-  return name
-    .trim()
-    .slice(0, 50)
-    .replace(/[\n\r\t]/g, ' ')
-    .replace(/[^\p{L}\p{N}\s'.,-]/gu, '');
-}
 
 /**
  * Generates the next interview question based on topic and conversation history.
  * Empty history means it's the first question — the system prompt alone drives it.
  */
 export async function generateNextQuestion(
-  topic: string,
+  topicLabel: string,
   history: ConversationTurn[],
   signal?: AbortSignal,
   candidateName?: string,
 ): Promise<string> {
   const client = await getOpenAIClient();
-  let systemPrompt = INTERVIEW_SYSTEM_PROMPT.replace('{topic}', topic);
-  if (candidateName) {
-    const safeName = sanitizeCandidateName(candidateName);
-    if (safeName) {
-      systemPrompt += `\n- The candidate's name is ${safeName}. Address them by name occasionally.`;
-    }
-  }
+  const systemPrompt = buildInterviewPrompt({ topic: topicLabel, candidateName });
   const { signal: mergedSignal, cleanup } = createTimeoutSignal(LLM_TIMEOUT_MS, signal);
 
   const messages: Array<{ role: 'system' | 'assistant' | 'user'; content: string }> = [

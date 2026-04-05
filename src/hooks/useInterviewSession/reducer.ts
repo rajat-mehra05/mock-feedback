@@ -39,7 +39,11 @@ export function interviewReducer(
         ...state,
         status: 'ai_speaking',
         currentQuestion: action.question,
-        currentQuestionIndex: state.currentQuestionIndex + 1,
+        currentQuestionIndex: action.isRepeat
+          ? state.currentQuestionIndex
+          : state.currentQuestionIndex + 1,
+        // Remove the "wait" turn from history so it doesn't count toward targetQuestionCount
+        history: action.isRepeat ? state.history.slice(0, -1) : state.history,
         ttsFallbackText: null,
       };
 

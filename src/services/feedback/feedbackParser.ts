@@ -1,5 +1,7 @@
 import { MAX_SCORE } from '@/constants/session';
-import type { FeedbackResult, QuestionFeedback } from '@/services/types';
+import type { ConfidenceLevel, FeedbackResult, QuestionFeedback } from '@/services/types';
+
+const VALID_CONFIDENCE = new Set<ConfidenceLevel>(['high', 'medium', 'low']);
 
 export function parseFeedbackJSON(raw: string): FeedbackResult {
   // Strip markdown code fences if present
@@ -41,9 +43,14 @@ export function parseFeedbackJSON(raw: string): FeedbackResult {
         `Failed to parse feedback JSON: question ${i} has invalid modelAnswer type: ${typeof item.modelAnswer}`,
       );
     }
+    const confidence = VALID_CONFIDENCE.has(item.confidence as ConfidenceLevel)
+      ? (item.confidence as ConfidenceLevel)
+      : 'medium';
+
     return {
       rating,
       feedback: item.feedback,
+      confidence,
       modelAnswer: item.modelAnswer,
     };
   });

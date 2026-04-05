@@ -75,7 +75,7 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
                 <span
                   className={`text-lg font-bold leading-tight ${scoreColor(session.averageScore)}`}
                 >
-                  {session.averageScore.toFixed(1)}/10
+                  {Math.round(session.averageScore)}/10
                 </span>
               </div>
             </div>

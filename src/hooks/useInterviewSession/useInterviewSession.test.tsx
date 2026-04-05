@@ -75,7 +75,7 @@ beforeEach(async () => {
   vi.mocked(generateFeedback)
     .mockReset()
     .mockResolvedValue({
-      questions: [{ rating: 8, feedback: 'Good.', modelAnswer: 'Model.' }],
+      questions: [{ rating: 8, feedback: 'Good.', confidence: 'high', modelAnswer: 'Model.' }],
       summary: 'Well done.',
     });
   vi.mocked(createSession).mockReset().mockResolvedValue('mock-session-id');
