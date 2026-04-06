@@ -24,7 +24,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   await db.sessions.bulkAdd([
     makeSession({
       id: 's1',
-      topic: 'JavaScript / TypeScript',
+      topic: 'JavaScript & TypeScript',
       createdAt: new Date('2026-03-28Z'),
       averageScore: 7.0,
     }),
@@ -39,13 +39,13 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   renderWithProviders(<History />);
 
   // Wait for session data to load, then check stats
-  await screen.findByText('JavaScript / TypeScript');
+  await screen.findByText('JavaScript & TypeScript');
   const stats = screen.getByRole('region', { name: /interview statistics/i });
   expect(within(stats).getByText('2')).toBeInTheDocument();
   expect(within(stats).getByText('8')).toBeInTheDocument();
 
   // Session cards
-  expect(screen.getAllByText('JavaScript / TypeScript')[0]).toBeInTheDocument();
+  expect(screen.getAllByText('JavaScript & TypeScript')[0]).toBeInTheDocument();
   expect(screen.getAllByText('Node.js')[0]).toBeInTheDocument();
 
   // Go to Home button always visible

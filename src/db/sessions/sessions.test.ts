@@ -20,7 +20,7 @@ test('full session CRUD lifecycle: create, read, list ordering, update, and dele
   // Read single session
   const session = await getSession('older');
   expect(session).toBeDefined();
-  expect(session!.topic).toBe('JavaScript / TypeScript');
+  expect(session!.topic).toBe('JavaScript & TypeScript');
   expect(session!.questions).toHaveLength(1);
 
   // Read non-existent session returns undefined
@@ -38,7 +38,7 @@ test('full session CRUD lifecycle: create, read, list ordering, update, and dele
   const updated = await getSession('older');
   expect(updated!.averageScore).toBe(9.2);
   expect(updated!.duration).toBe(900);
-  expect(updated!.topic).toBe('JavaScript / TypeScript');
+  expect(updated!.topic).toBe('JavaScript & TypeScript');
 
   // Delete removes the session
   await deleteSession('middle');

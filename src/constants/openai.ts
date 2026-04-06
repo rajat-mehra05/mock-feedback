@@ -5,7 +5,7 @@ export const TTS_MODEL = 'gpt-4o-mini-tts';
 export const TTS_VOICE = 'alloy' as const;
 
 // Timeouts (milliseconds)
-export const STT_TIMEOUT_MS = 30_000;
+export const STT_TIMEOUT_MS = 60_000;
 export const LLM_TIMEOUT_MS = 20_000;
 export const TTS_TIMEOUT_MS = 30_000;
 
