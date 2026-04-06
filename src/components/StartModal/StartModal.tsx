@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { TOPICS, QUESTION_COUNTS, DEFAULT_QUESTION_COUNT } from '@/constants/top
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
 import { API_KEY_DESCRIPTION } from '@/constants/copy';
+import { getCandidateName, saveCandidateName } from '@/db/preferences/preferences';
 
 interface StartModalProps {
   open: boolean;
@@ -42,6 +43,16 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
   const [name, setName] = useState('');
 
+  useEffect(() => {
+    let mounted = true;
+    void getCandidateName().then((saved) => {
+      if (mounted && saved) setName(saved);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleKeySaved = useCallback(() => {
     // Guide focus to the next field after key is saved
     requestAnimationFrame(() => {
@@ -51,8 +62,10 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
 
   function handleStart() {
     /* v8 ignore next */ if (!topic || !hasKey) return;
+    const trimmedName = name.trim();
+    if (trimmedName) void saveCandidateName(trimmedName);
     const params = new URLSearchParams({ topic, count: questionCount });
-    if (name.trim()) params.set('name', name.trim());
+    if (trimmedName) params.set('name', trimmedName);
     void navigate(`/session?${params.toString()}`);
     onOpenChange(false);
   }

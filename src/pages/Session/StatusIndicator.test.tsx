@@ -24,6 +24,11 @@ test('StatusIndicator renders the correct status label per state, recording rule
   expect(screen.getByText(/no response detected/i)).toBeInTheDocument();
   r4.unmount();
 
+  // awaiting_transcript — processing answer
+  const r5pre = render(<StatusIndicator status="awaiting_transcript" questionIndex={1} />);
+  expect(screen.getByText(/processing your answer/i)).toBeInTheDocument();
+  r5pre.unmount();
+
   // generating — first question vs next question
   const r5a = render(<StatusIndicator status="generating" questionIndex={0} />);
   expect(screen.getByText(/generating first question/i)).toBeInTheDocument();

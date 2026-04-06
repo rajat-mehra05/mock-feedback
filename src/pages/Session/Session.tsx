@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT, toValidTopic } from '@/constants/topics';
@@ -30,6 +30,11 @@ export function Session() {
   const handleMaxRecording = useCallback(() => {
     stopRecordingOnly();
   }, [stopRecordingOnly]);
+
+  const handleRestart = useCallback(() => {
+    startedRef.current = true;
+    start({ topic, topicLabel, questionCount: count, candidateName: candidateName || undefined });
+  }, [start, topic, topicLabel, count, candidateName]);
 
   // Warn on navigation away during active session
   useEffect(() => {
@@ -69,7 +74,7 @@ export function Session() {
         />
 
         {state.status === 'error' && state.error && (
-          <SessionErrorDisplay error={state.error} onRetry={retry} />
+          <SessionErrorDisplay error={state.error} onRetry={retry} onRestart={handleRestart} />
         )}
 
         {state.status === 'completed' && state.isPartial && !state.sessionId && (

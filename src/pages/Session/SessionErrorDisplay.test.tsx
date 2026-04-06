@@ -20,6 +20,7 @@ test('error display shows retry button for retryable errors and settings link fo
         { type: 'rate_limit', message: 'Rate limited.', retryable: true } as OpenAIServiceError
       }
       onRetry={onRetry}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );
@@ -34,6 +35,7 @@ test('error display shows retry button for retryable errors and settings link fo
     <SessionErrorDisplay
       error={{ type: 'auth', message: 'Invalid key.', retryable: false } as OpenAIServiceError}
       onRetry={vi.fn()}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );
@@ -54,9 +56,29 @@ test('error display shows retry button for retryable errors and settings link fo
         { type: 'network', message: 'Connection lost.', retryable: false } as OpenAIServiceError
       }
       onRetry={vi.fn()}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.getByText(/connection lost/i)).toBeInTheDocument();
+});
+
+test('restart button calls onRestart when clicked', async () => {
+  const user = userEvent.setup();
+  const onRestart = vi.fn();
+
+  render(
+    <SessionErrorDisplay
+      error={
+        { type: 'network', message: 'Connection lost.', retryable: false } as OpenAIServiceError
+      }
+      onRetry={vi.fn()}
+      onRestart={onRestart}
+    />,
+    { wrapper: Wrapper },
+  );
+
+  await user.click(screen.getByRole('button', { name: /restart interview/i }));
+  expect(onRestart).toHaveBeenCalledOnce();
 });

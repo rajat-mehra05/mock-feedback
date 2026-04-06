@@ -100,7 +100,7 @@ export function interviewReducer(
       const newHistory = [...state.history, { question: state.currentQuestion!, answer: '' }];
       return {
         ...state,
-        status: 'generating',
+        status: 'awaiting_transcript',
         history: newHistory,
         currentQuestion: null,
         pendingTranscriptions: state.pendingTranscriptions + 1,
@@ -115,10 +115,15 @@ export function interviewReducer(
       const updatedHistory = state.history.map((turn, i) =>
         i === action.questionIndex ? { ...turn, answer: action.transcript } : turn,
       );
+      const newPending = state.pendingTranscriptions - 1;
+      // Unblock LLM generation once the transcript we were waiting for arrives
+      const nextStatus =
+        state.status === 'awaiting_transcript' && newPending === 0 ? 'generating' : state.status;
       return {
         ...state,
+        status: nextStatus,
         history: updatedHistory,
-        pendingTranscriptions: state.pendingTranscriptions - 1,
+        pendingTranscriptions: newPending,
       };
     }
 

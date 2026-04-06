@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { OpenAIServiceError } from '@/services/types';
 
@@ -7,9 +6,10 @@ const BILLING_URL = 'https://platform.openai.com/account/billing';
 interface SessionErrorDisplayProps {
   error: OpenAIServiceError;
   onRetry: () => void;
+  onRestart: () => void;
 }
 
-export function SessionErrorDisplay({ error, onRetry }: SessionErrorDisplayProps) {
+export function SessionErrorDisplay({ error, onRetry, onRestart }: SessionErrorDisplayProps) {
   return (
     <div
       className="w-full max-w-md border-4 border-black bg-neo-accent/10 p-6 text-center shadow-neo-sm"
@@ -39,7 +39,7 @@ export function SessionErrorDisplay({ error, onRetry }: SessionErrorDisplayProps
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
         )}
-        <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>
+        <Button variant="outline" size="sm" onClick={onRestart}>
           Restart Interview
         </Button>
       </div>
