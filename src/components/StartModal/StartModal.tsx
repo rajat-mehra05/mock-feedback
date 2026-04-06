@@ -44,9 +44,13 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   const [name, setName] = useState('');
 
   useEffect(() => {
+    let mounted = true;
     void getCandidateName().then((saved) => {
-      if (saved) setName(saved);
+      if (mounted && saved) setName(saved);
     });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleKeySaved = useCallback(() => {

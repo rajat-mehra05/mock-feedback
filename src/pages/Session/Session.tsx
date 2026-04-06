@@ -32,7 +32,7 @@ export function Session() {
   }, [stopRecordingOnly]);
 
   const handleRestart = useCallback(() => {
-    startedRef.current = false;
+    startedRef.current = true;
     start({ topic, topicLabel, questionCount: count, candidateName: candidateName || undefined });
   }, [start, topic, topicLabel, count, candidateName]);
 

@@ -10,6 +10,23 @@ const STATUS_DISPLAY: Record<string, { label: string; pulse?: boolean; color?: s
   completed: { label: 'Session complete!' },
 };
 
+function getStatusDisplay(
+  status: InterviewState,
+  questionIndex: number,
+  isPartial?: boolean,
+): { label: string; pulse?: boolean; color?: string } | undefined {
+  if (status === 'awaiting_transcript') return { label: 'Processing your answer...' };
+  if (status === 'generating')
+    return {
+      label: questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',
+    };
+  if (status === 'completed' && isPartial)
+    return { label: 'Session ended early — no questions were answered.' };
+  if (status === 'generating_feedback')
+    return { label: 'Generating your session feedback — hang tight...' };
+  return STATUS_DISPLAY[status];
+}
+
 export function StatusIndicator({
   status,
   questionIndex,
@@ -19,19 +36,7 @@ export function StatusIndicator({
   questionIndex: number;
   isPartial?: boolean;
 }) {
-  const display =
-    status === 'awaiting_transcript'
-      ? { label: 'Processing your answer...' }
-      : status === 'generating'
-        ? {
-            label:
-              questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',
-          }
-        : status === 'completed' && isPartial
-          ? { label: 'Session ended early — no questions were answered.' }
-          : status === 'generating_feedback'
-            ? { label: 'Generating your session feedback — hang tight...' }
-            : STATUS_DISPLAY[status];
+  const display = getStatusDisplay(status, questionIndex, isPartial);
   if (!display) return null;
 
   return (

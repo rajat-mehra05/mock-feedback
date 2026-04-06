@@ -63,3 +63,22 @@ test('error display shows retry button for retryable errors and settings link fo
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.getByText(/connection lost/i)).toBeInTheDocument();
 });
+
+test('restart button calls onRestart when clicked', async () => {
+  const user = userEvent.setup();
+  const onRestart = vi.fn();
+
+  render(
+    <SessionErrorDisplay
+      error={
+        { type: 'network', message: 'Connection lost.', retryable: false } as OpenAIServiceError
+      }
+      onRetry={vi.fn()}
+      onRestart={onRestart}
+    />,
+    { wrapper: Wrapper },
+  );
+
+  await user.click(screen.getByRole('button', { name: /restart interview/i }));
+  expect(onRestart).toHaveBeenCalledOnce();
+});

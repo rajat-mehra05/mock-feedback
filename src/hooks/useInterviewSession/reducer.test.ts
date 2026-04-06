@@ -187,6 +187,47 @@ test('ANSWER_RECORDED waits for transcript before generating, TRANSCRIPT_READY u
   expect(state.status).toBe('generating');
 });
 
+test('TRANSCRIPT_READY backfills answer without changing status when not in awaiting_transcript', () => {
+  // Build state: generating status with a pending transcription
+  const state: InterviewSessionState = {
+    ...initialState,
+    status: 'generating',
+    topic: 'react-nextjs',
+    topicLabel: 'React',
+    targetQuestionCount: 3,
+    currentQuestionIndex: 1,
+    history: [{ question: 'What is React?', answer: '' }],
+    pendingTranscriptions: 1,
+    startedAt: Date.now(),
+  };
+
+  const next = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
+    transcript: 'React is a UI library',
+  });
+  expect(next.history[0].answer).toBe('React is a UI library');
+  expect(next.pendingTranscriptions).toBe(0);
+  expect(next.status).toBe('generating'); // status unchanged
+
+  // Same scenario but in error status
+  const errorState: InterviewSessionState = {
+    ...state,
+    status: 'error',
+    error: { type: 'network', message: 'offline', retryable: true },
+    retryFromStatus: 'generating',
+  };
+
+  const nextError = interviewReducer(errorState, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
+    transcript: 'React is a UI library',
+  });
+  expect(nextError.history[0].answer).toBe('React is a UI library');
+  expect(nextError.pendingTranscriptions).toBe(0);
+  expect(nextError.status).toBe('error'); // status unchanged
+});
+
 test('ERROR and RETRY cycle returns to the failed state', () => {
   let state = interviewReducer(initialState, {
     type: 'START',
