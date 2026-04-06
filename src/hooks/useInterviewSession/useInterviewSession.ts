@@ -174,11 +174,14 @@ export function useInterviewSession() {
     const questionIndex = state.history.length; // index this answer will occupy
     dispatch({ type: 'ANSWER_RECORDED' });
 
-    // Background transcription — doesn't block the interview flow
+    // Background transcription with retry — doesn't block the interview flow
     const s = getSignal();
     void (async () => {
       try {
-        const transcript = await transcribeAudio(blob, s);
+        const transcript = await withRetry((sig) => transcribeAudio(blob, sig), {
+          ...RETRY_OPTS,
+          signal: s,
+        });
         if (s.aborted) return;
         dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript });
       } catch {

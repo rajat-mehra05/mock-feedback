@@ -126,7 +126,7 @@ test('TTS failure sets ttsFallbackText and still reaches user_recording', async 
   expect(result.current.state.ttsFallbackText).toBe('What is a closure?');
 });
 
-test('transcription failure falls back to placeholder text', async () => {
+test('non-retryable transcription failure falls back to placeholder immediately', async () => {
   vi.mocked(transcribeAudio).mockRejectedValue(new Error('STT down'));
 
   const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
@@ -141,6 +141,32 @@ test('transcription failure falls back to placeholder text', async () => {
 
   await waitFor(() => expect(result.current.state.pendingTranscriptions).toBe(0));
   expect(result.current.state.history[0].answer).toBe('[transcription failed]');
+  // Non-retryable error → only one attempt, no retries
+  expect(transcribeAudio).toHaveBeenCalledTimes(1);
+});
+
+test('transcription retries on transient error and succeeds on second attempt', async () => {
+  vi.mocked(transcribeAudio)
+    .mockRejectedValueOnce({ type: 'timeout', message: 'Timed out.', retryable: true })
+    .mockResolvedValueOnce('A closure captures variables.');
+
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/webm' });
+  rerender();
+
+  // First attempt fails (timeout, retryable) — retry delay is real setTimeout.
+  // waitFor polls frequently enough to catch the state update after the 1s retry delay.
+  await waitFor(
+    () => expect(result.current.state.history[0]?.answer).toBe('A closure captures variables.'),
+    { timeout: 5000 },
+  );
+  expect(transcribeAudio).toHaveBeenCalledTimes(2);
 });
 
 test('small audio blob skips STT and transitions through skipping state', async () => {

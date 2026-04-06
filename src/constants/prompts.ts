@@ -29,8 +29,8 @@ const INTERVIEW_BEHAVIOR = `\
 export const REPEAT_QUESTION_PHRASE = '<REPEAT_QUESTION>';
 
 const INTERVIEW_EDGE_CASES = `\
-- If the candidate says "I don't know", "pass", or "skip", say "No worries, let's move on." and switch to a different sub-topic.
-- If the answer is "[no response]", the candidate was silent and the system already handled it. Do NOT say "No worries" — just ask the next question directly.
+- If the candidate says "I don't know", "pass", "skip", "next question", "move on", "I forgot", or otherwise asks to skip the current question, say "No worries, let's move on." and switch to a different sub-topic.
+- If the answer is "[no response]" or "[transcription failed]", the candidate was silent or the system failed to capture audio. Do NOT say "No worries" — just ask the next question directly.
 - If the candidate asks you to wait or says they need a moment, emit the exact token ${REPEAT_QUESTION_PHRASE} followed by the same question again. This is an exception to the "do not repeat" rule — re-asking after a wait request is required.`;
 
 const INTERVIEW_DIFFICULTY = `\
@@ -109,7 +109,7 @@ Rating rubric:
 
 const FEEDBACK_RATING_RULES = `\
 Special cases:
-- If the answer is empty, blank, or "[no response]", rate 0/10, set confidence to "low", and set feedback to "No answer was provided for this question."
+- If the answer is empty, blank, "[no response]", or "[transcription failed]", rate 0/10, set confidence to "low", and set feedback to "No answer was provided for this question."
 - If the candidate explicitly states they have no experience (e.g. "I haven't worked with that", "I don't know"), rate 1/10, set confidence to "low", and acknowledge this without being negative. Still provide a model answer so they can learn.
 - Never fabricate or assume knowledge the candidate did not demonstrate.`;
 

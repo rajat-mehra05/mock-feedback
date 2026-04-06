@@ -13,7 +13,7 @@ test('session page renders topic header and question counter from query params',
 test('session page falls back to defaults for missing or invalid query params', () => {
   // No params at all — defaults to JS/TS topic and default count
   renderWithProviders(<Session />, { initialRoute: '/session' });
-  expect(screen.getByRole('heading', { name: /javascript \/ typescript/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /javascript & typescript/i })).toBeInTheDocument();
   expect(screen.getByText(/question 0 of 5/i)).toBeInTheDocument();
 });
 
