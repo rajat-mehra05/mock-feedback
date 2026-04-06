@@ -20,6 +20,7 @@ test('error display shows retry button for retryable errors and settings link fo
         { type: 'rate_limit', message: 'Rate limited.', retryable: true } as OpenAIServiceError
       }
       onRetry={onRetry}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );
@@ -34,6 +35,7 @@ test('error display shows retry button for retryable errors and settings link fo
     <SessionErrorDisplay
       error={{ type: 'auth', message: 'Invalid key.', retryable: false } as OpenAIServiceError}
       onRetry={vi.fn()}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );
@@ -54,6 +56,7 @@ test('error display shows retry button for retryable errors and settings link fo
         { type: 'network', message: 'Connection lost.', retryable: false } as OpenAIServiceError
       }
       onRetry={vi.fn()}
+      onRestart={vi.fn()}
     />,
     { wrapper: Wrapper },
   );

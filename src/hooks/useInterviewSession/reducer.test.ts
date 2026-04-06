@@ -125,7 +125,7 @@ test('STOP with no answers completes immediately', () => {
   expect(state.isPartial).toBe(true);
 });
 
-test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_READY backfills it', () => {
+test('ANSWER_RECORDED waits for transcript before generating, TRANSCRIPT_READY unblocks LLM', () => {
   // Setup: get to user_recording with one question asked
   let state = interviewReducer(initialState, {
     type: 'START',
@@ -142,14 +142,24 @@ test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_R
   expect(state.status).toBe('user_recording');
   expect(state.pendingTranscriptions).toBe(0);
 
-  // ANSWER_RECORDED — adds placeholder to history, increments pending, moves to generating
+  // ANSWER_RECORDED — adds placeholder, increments pending, waits for transcript
   state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
-  expect(state.status).toBe('generating');
+  expect(state.status).toBe('awaiting_transcript');
   expect(state.history).toHaveLength(1);
   expect(state.history[0].question).toBe('What is React?');
   expect(state.history[0].answer).toBe('');
   expect(state.pendingTranscriptions).toBe(1);
   expect(state.currentQuestion).toBeNull();
+
+  // TRANSCRIPT_READY backfills answer and transitions to generating
+  state = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
+    transcript: 'React is a UI library',
+  });
+  expect(state.history[0].answer).toBe('React is a UI library');
+  expect(state.pendingTranscriptions).toBe(0);
+  expect(state.status).toBe('generating');
 
   // Second question cycle
   state = interviewReducer(state, {
@@ -159,24 +169,14 @@ test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_R
   });
   state = interviewReducer(state, { type: 'TTS_DONE' });
 
-  // Background transcript arrives for first question while second is being recorded
-  state = interviewReducer(state, {
-    type: 'TRANSCRIPT_READY',
-    questionIndex: 0,
-    transcript: 'React is a UI library',
-  });
-  expect(state.history[0].answer).toBe('React is a UI library');
-  expect(state.pendingTranscriptions).toBe(0);
-  expect(state.status).toBe('user_recording');
-
-  // ANSWER_RECORDED for last question → generating (finalization deferred to QUESTION_READY)
+  // ANSWER_RECORDED for last question → awaiting_transcript
   state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
-  expect(state.status).toBe('generating');
+  expect(state.status).toBe('awaiting_transcript');
   expect(state.history).toHaveLength(2);
   expect(state.history[1].answer).toBe('');
   expect(state.pendingTranscriptions).toBe(1);
 
-  // Transcript arrives for second question
+  // Transcript arrives for second question → generating
   state = interviewReducer(state, {
     type: 'TRANSCRIPT_READY',
     questionIndex: 1,
@@ -184,6 +184,7 @@ test('ANSWER_RECORDED advances immediately with placeholder answer, TRANSCRIPT_R
   });
   expect(state.history[1].answer).toBe('Hooks let you use state in functions');
   expect(state.pendingTranscriptions).toBe(0);
+  expect(state.status).toBe('generating');
 });
 
 test('ERROR and RETRY cycle returns to the failed state', () => {

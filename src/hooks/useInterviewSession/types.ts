@@ -5,6 +5,7 @@ export type InterviewState =
   | 'ai_speaking'
   | 'user_recording'
   | 'transcribing'
+  | 'awaiting_transcript'
   | 'skipping'
   | 'generating'
   | 'generating_feedback'

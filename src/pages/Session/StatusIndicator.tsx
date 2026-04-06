@@ -20,16 +20,18 @@ export function StatusIndicator({
   isPartial?: boolean;
 }) {
   const display =
-    status === 'generating'
-      ? {
-          label:
-            questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',
-        }
-      : status === 'completed' && isPartial
-        ? { label: 'Session ended early — no questions were answered.' }
-        : status === 'generating_feedback'
-          ? { label: 'Generating your session feedback — hang tight...' }
-          : STATUS_DISPLAY[status];
+    status === 'awaiting_transcript'
+      ? { label: 'Processing your answer...' }
+      : status === 'generating'
+        ? {
+            label:
+              questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',
+          }
+        : status === 'completed' && isPartial
+          ? { label: 'Session ended early — no questions were answered.' }
+          : status === 'generating_feedback'
+            ? { label: 'Generating your session feedback — hang tight...' }
+            : STATUS_DISPLAY[status];
   if (!display) return null;
 
   return (
