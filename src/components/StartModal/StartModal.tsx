@@ -11,12 +11,20 @@ import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { TOPICS, QUESTION_COUNTS, DEFAULT_QUESTION_COUNT } from '@/constants/topics';
+import {
+  TOPIC_GROUPS,
+  TOPIC_LABELS,
+  QUESTION_COUNTS,
+  DEFAULT_QUESTION_COUNT,
+} from '@/constants/topics';
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
 import { API_KEY_DESCRIPTION } from '@/constants/copy';
@@ -123,13 +131,21 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
               </label>
               <Select value={topic} onValueChange={(v) => setTopic(v ?? '')}>
                 <SelectTrigger id="topic-select" aria-required="true">
-                  <SelectValue placeholder="Select a topic" />
+                  <SelectValue placeholder="Select a topic">
+                    {topic ? TOPIC_LABELS[topic as keyof typeof TOPIC_LABELS] : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {TOPICS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
+                  {TOPIC_GROUPS.map((group, i) => (
+                    <SelectGroup key={group.category}>
+                      {i > 0 && <SelectSeparator />}
+                      <SelectLabel>{group.category}</SelectLabel>
+                      {group.topics.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>

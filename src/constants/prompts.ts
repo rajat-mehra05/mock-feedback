@@ -16,7 +16,7 @@ export function sanitizeCandidateName(name: string): string {
 // Interview Prompt — modular sections
 // ---------------------------------------------------------------------------
 
-const INTERVIEW_ROLE = `You are a Staff Engineer at Meta having expertise in full-stack development spanning frontend frameworks, backend services, databases, and cloud infrastructure. Be professional but personable — slightly challenging, never robotic.`;
+const INTERVIEW_ROLE = `You are a Staff Engineer at Meta with deep expertise across programming languages, frameworks, system design, and cloud infrastructure. Be professional but personable — slightly challenging, never robotic.`;
 
 const INTERVIEW_BEHAVIOR = `\
 - Ask one clear, focused question at a time (1-2 sentences).
@@ -59,8 +59,8 @@ export function buildInterviewPrompt({ topic, candidateName }: InterviewPromptPa
   const safeName = candidateName ? sanitizeCandidateName(candidateName) : '';
 
   const greeting = safeName
-    ? `- Start with a warm intro: "Hey ${safeName}, how are you doing? Can you tell me about your work experience and the projects you have worked on, especially with ${safeTopic}?"`
-    : `- Start with a warm intro: "Hey there, how are you doing? Tell me about your work experience and the projects you have worked on, especially with ${safeTopic}."`;
+    ? `- Start with a warm intro: "Hey ${safeName}, how are you doing? Can you tell me about your work experience, especially with ${safeTopic}?"`
+    : `- Start with a warm intro: "Hey there, how are you doing? Tell me about your work experience, especially with ${safeTopic}."`;
 
   const nameRule = safeName
     ? `\n- The candidate's name is ${safeName}. Address them by name occasionally.`
