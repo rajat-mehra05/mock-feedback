@@ -42,6 +42,32 @@ test('first-time user sees API key input, saves key, sees Saved confirmation, th
   expect(onOpenChange).toHaveBeenCalledWith(false);
 });
 
+test('topic dropdown renders grouped categories with all topics', async () => {
+  await saveApiKey('sk-existing');
+  const user = userEvent.setup();
+
+  renderWithProviders(<StartModal open={true} onOpenChange={vi.fn()} />);
+
+  // Open the dropdown
+  const topicTrigger = await screen.findByLabelText(/interview topic/i);
+  await user.click(topicTrigger);
+
+  // Wait for dropdown portal to render
+  await screen.findByRole('option', { name: /python/i });
+
+  // Category headings are rendered as group labels
+  expect(screen.getByText('Languages & Runtimes')).toBeInTheDocument();
+  expect(screen.getByText('Frameworks')).toBeInTheDocument();
+  expect(screen.getByText('Concepts')).toBeInTheDocument();
+  expect(screen.getByText('Behavioral')).toBeInTheDocument();
+
+  // Spot-check topics from different groups
+  expect(screen.getByRole('option', { name: 'Go' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /system design \(backend\)/i })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /docker & kubernetes/i })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /behavioral & star/i })).toBeInTheDocument();
+});
+
 test('returning user with existing key does not see API key input', async () => {
   await deleteApiKey();
   await saveApiKey('sk-existing');
