@@ -37,10 +37,10 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 
 15 topics across 4 groups:
 
-- **Languages & Runtimes:** JavaScript & TypeScript, Python, Go, Java, Rust
-- **Frameworks:** React & Next.js, Node.js, FastAPI & Django
-- **Concepts:** System Design (Frontend / Backend / Full-Stack), Docker & Kubernetes, AWS & Cloud, GraphQL
-- **Behavioral:** Behavioral & STAR
+- **Languages & Runtimes (5):** JavaScript & TypeScript, Python, Go, Java, Rust
+- **Frameworks (3):** React & Next.js, Node.js, FastAPI & Django
+- **Concepts (6):** System Design (Frontend), System Design (Backend), System Design (Full-Stack), Docker & Kubernetes, AWS & Cloud, GraphQL
+- **Behavioral (1):** Behavioral & STAR
 
 ## Getting Started
 
