@@ -34,6 +34,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const chunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectedRef = useRef(false);
 
   const cleanupSilenceDetector = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -79,6 +80,22 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current = stream;
       chunksRef.current = [];
 
+      // Detect mid-recording device disconnect (e.g. AirPods removed / Bluetooth drops)
+      disconnectedRef.current = false;
+      const track = stream.getAudioTracks()[0];
+      if (track) {
+        track.addEventListener('ended', () => {
+          disconnectedRef.current = true;
+          cleanupSilenceDetector();
+          chunksRef.current = [];
+          const rec = mediaRecorderRef.current;
+          if (rec && rec.state === 'recording') {
+            rec.stop();
+          }
+          setError('Microphone disconnected. Please reconnect and try again.');
+        });
+      }
+
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
 
@@ -87,8 +104,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
+        // On device disconnect, the ended handler already set the error —
+        // don't emit a blob that would race with the error state.
+        if (!disconnectedRef.current) {
+          setAudioBlob(new Blob(chunksRef.current, { type: mimeType }));
+        }
         setIsRecording(false);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;

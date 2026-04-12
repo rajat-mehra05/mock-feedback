@@ -1,3 +1,4 @@
+import { APIConnectionError, APIConnectionTimeoutError } from 'openai';
 import type { OpenAIServiceError } from '@/services/types';
 
 const KNOWN_TYPES = new Set([
@@ -23,6 +24,21 @@ export function classifyOpenAIError(error: unknown): OpenAIServiceError {
 
   if (error instanceof DOMException && error.name === 'AbortError') {
     return { type: 'timeout', message: 'Request timed out.', retryable: true };
+  }
+
+  // OpenAI SDK wraps fetch failures in APIConnectionTimeoutError / APIConnectionError.
+  // These are transient and should be retried.
+  // NOTE: Timeout check must come first — APIConnectionTimeoutError extends APIConnectionError.
+  if (error instanceof APIConnectionTimeoutError) {
+    return { type: 'timeout', message: 'Request timed out.', retryable: true };
+  }
+
+  if (error instanceof APIConnectionError) {
+    return {
+      type: 'network',
+      message: 'Connection error. Check your internet connection and try again.',
+      retryable: true,
+    };
   }
 
   if (error instanceof TypeError) {
