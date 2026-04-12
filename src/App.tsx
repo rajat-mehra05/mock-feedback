@@ -6,8 +6,7 @@ import { ApiKeyProvider } from '@/hooks/ApiKeyContext/ApiKeyContext';
 import { Layout } from '@/components/Layout/Layout';
 import { ErrorBoundary, SessionErrorFallback } from '@/components/ErrorBoundary/ErrorBoundary';
 import { Spinner } from '@/components/ui/spinner';
-
-const Home = lazy(() => import('@/pages/Home/Home').then((m) => ({ default: m.Home })));
+import { Home } from '@/pages/Home/Home';
 const Session = lazy(() => import('@/pages/Session/Session').then((m) => ({ default: m.Session })));
 const History = lazy(() => import('@/pages/History/History').then((m) => ({ default: m.History })));
 const Feedback = lazy(() =>

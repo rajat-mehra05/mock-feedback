@@ -19,11 +19,11 @@ const buttonVariants = cva(
         link: 'border-transparent text-black underline-offset-4 shadow-none hover:underline',
       },
       size: {
-        default: 'h-10 gap-2 px-4',
+        default: 'h-11 gap-2 px-4',
         xs: 'h-7 gap-1 px-2 text-xs',
         sm: 'h-8 gap-1.5 px-3 text-xs',
         lg: 'h-12 gap-2 px-6 text-base',
-        icon: 'size-10',
+        icon: 'size-11',
         'icon-xs': 'size-7',
         'icon-sm': 'size-8',
         'icon-lg': 'size-12',
