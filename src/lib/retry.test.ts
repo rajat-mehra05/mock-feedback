@@ -2,6 +2,9 @@ import { expect, test, vi } from 'vitest';
 import { withRetry } from '@/lib/retry';
 
 test('withRetry retries retryable errors until success, stops on non-retryable, and exhausts attempts', async () => {
+  // Pin Math.random to 1 so equal-jitter delay hits the backoff ceiling (deterministic).
+  const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1);
+
   // Succeeds on second attempt after a retryable failure
   const retryable = vi
     .fn()
@@ -37,6 +40,8 @@ test('withRetry retries retryable errors until success, stops on non-retryable, 
     withRetry(exhausted, { maxAttempts: 2, baseDelayMs: 1, maxDelayMs: 1 }),
   ).rejects.toMatchObject({ type: 'rate_limit' });
   expect(exhausted).toHaveBeenCalledTimes(2);
+
+  randomSpy.mockRestore();
 });
 
 test('withRetry respects abort signal: pre-aborted and mid-delay abort', async () => {

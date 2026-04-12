@@ -1,3 +1,4 @@
+import { APIConnectionError, APIConnectionTimeoutError } from 'openai';
 import { expect, test, vi } from 'vitest';
 import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
 
@@ -31,7 +32,19 @@ test('classifyOpenAIError maps status codes and error types to normalized errors
   expect(abort.type).toBe('timeout');
   expect(abort.retryable).toBe(true);
 
-  // TypeError → network
+  // OpenAI SDK APIConnectionTimeoutError → timeout (retryable)
+  const sdkTimeout = classifyOpenAIError(new APIConnectionTimeoutError());
+  expect(sdkTimeout.type).toBe('timeout');
+  expect(sdkTimeout.retryable).toBe(true);
+
+  // OpenAI SDK APIConnectionError → network (retryable)
+  const sdkConn = classifyOpenAIError(
+    new APIConnectionError({ cause: new TypeError('fetch failed') }),
+  );
+  expect(sdkConn.type).toBe('network');
+  expect(sdkConn.retryable).toBe(true);
+
+  // TypeError → network (not retryable — raw fetch failure without SDK wrapper)
   const network = classifyOpenAIError(new TypeError('Failed to fetch'));
   expect(network.type).toBe('network');
   expect(network.retryable).toBe(false);

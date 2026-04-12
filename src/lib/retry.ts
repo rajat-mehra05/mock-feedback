@@ -23,7 +23,12 @@ export async function withRetry<T>(
       if (!isRetryable || isLastAttempt) throw error;
       if (signal?.aborted) throw error;
 
-      const delay = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      // Equal jitter (AWS "Exponential Backoff and Jitter"): the half-window
+      // floor avoids immediate 429 re-limits; the random upper half avoids
+      // lockstep retries.
+      const backoffCeiling = Math.min(baseDelayMs * 2 ** attempt, maxDelayMs);
+      const halfWindow = backoffCeiling / 2;
+      const delay = halfWindow + Math.random() * halfWindow;
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, delay);
         if (signal) {
