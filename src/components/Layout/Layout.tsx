@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SettingsModal } from '@/components/SettingsModal/SettingsModal';
+import { APP_NAME } from '@/constants/copy';
 import logoSvg from '@/assets/logo.svg';
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -56,7 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
           aria-label="Main navigation"
           className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4"
         >
-          <Link to="/" aria-label="VoiceRound — Home" className="flex items-center gap-2">
+          <Link to="/" aria-label={`${APP_NAME} — Home`} className="flex items-center gap-2">
             <img
               src={logoSvg}
               alt=""
@@ -65,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="h-11 w-11"
             />
             <span className="text-xl font-bold uppercase leading-none tracking-tight text-black">
-              VoiceRound
+              {APP_NAME}
             </span>
           </Link>
 

@@ -53,6 +53,8 @@ export function Feedback() {
     );
   }
 
+  const roundedScore = Math.round(session.averageScore);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -146,9 +148,9 @@ export function Feedback() {
             Average Score:
           </span>
           <span
-            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(Math.round(session.averageScore))} ${scoreBg(Math.round(session.averageScore))}`}
+            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(roundedScore)} ${scoreBg(roundedScore)}`}
           >
-            {Math.round(session.averageScore)}/10
+            {roundedScore}/10
           </span>
         </div>
         <p className="text-sm font-medium text-black/80">

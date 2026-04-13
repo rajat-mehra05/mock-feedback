@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { SettingsModal } from './SettingsModal';
 import * as apiKeyDb from '@/db/apiKey/apiKey';
+import { APP_NAME } from '@/constants/copy';
 
 test('user saves a new key, sees confirmation, then removes the key', async () => {
   await apiKeyDb.deleteApiKey();
@@ -45,7 +46,7 @@ test('user without a key sees guidance message, saves a key, and guidance disapp
 
   // Guidance message for no-key state
   expect(
-    await screen.findByText(/you need an openai api key to use voiceround/i),
+    await screen.findByText(new RegExp(`you need an openai api key to use ${APP_NAME}`, 'i')),
   ).toBeInTheDocument();
   expect(screen.getByText(/no key configured/i)).toBeInTheDocument();
 
@@ -57,7 +58,7 @@ test('user without a key sees guidance message, saves a key, and guidance disapp
   // Guidance gone, key configured shown
   await waitFor(() =>
     expect(
-      screen.queryByText(/you need an openai api key to use voiceround/i),
+      screen.queryByText(new RegExp(`you need an openai api key to use ${APP_NAME}`, 'i')),
     ).not.toBeInTheDocument(),
   );
   expect(screen.getByText(/key configured/i)).toBeInTheDocument();
