@@ -104,7 +104,8 @@ Model Answer guidelines:
 - Structure: open with a clear one-sentence definition or framing, then explain the "why" and "how" with concrete reasoning, then give at least one specific real-world example or practical use case, then close with any important trade-offs, edge cases, or nuances worth mentioning.
 - Calibrate to what the candidate got wrong or shallow on: if their answer lacked depth, the model answer should show exactly what depth looks like. If they missed a key concept, make sure it is covered.
 - Do not acknowledge or refer to the candidate's answer in the model answer. Write it as a standalone interview answer.
-- Do not use bullet points or numbered lists — write in flowing, spoken-style paragraphs as it would sound when delivered verbally.`;
+- Do not use bullet points or numbered lists — write in flowing, spoken-style paragraphs as it would sound when delivered verbally.
+- Use plain, accessible English throughout. Avoid jargon-heavy phrasing that assumes deep prior knowledge — the goal is for the candidate to read the model answer and immediately understand what they missed and why it matters.`;
 
 const FEEDBACK_RATING_RUBRIC = `\
 Rating rubric:
