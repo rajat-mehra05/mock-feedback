@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { db, createSession, getSession, getAllSessions, deleteSession } from './sessions';
 import { makeSession } from '@/test/factories';
 
-test('full session CRUD lifecycle: create, read, list ordering, update, and delete', async () => {
+test('session lifecycle: create, read, list ordering, and delete', async () => {
   await db.sessions.clear();
 
   // Create sessions
