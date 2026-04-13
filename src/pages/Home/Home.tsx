@@ -1,37 +1,22 @@
 import { useState } from 'react';
-import { Mic, Brain, BarChart3, Zap } from 'lucide-react';
 import { StartModal } from '@/components/StartModal/StartModal';
+import { FEATURES } from '@/constants/home';
+import {
+  HOME_BADGE,
+  HOME_HERO_HEADING_LINE1,
+  HOME_HERO_HEADING_LINE2,
+  HOME_HERO_BODY,
+  HOME_HERO_TAGLINE,
+  HOME_START_LABEL,
+  HOME_CTA_HINT,
+  HOME_FOOTER_OPEN_SOURCE,
+  GITHUB_REPO_URL,
+  GITHUB_ISSUES_URL,
+} from '@/constants/copy';
 
 function preloadSession() {
   void import('@/pages/Session/Session');
 }
-
-const FEATURES = [
-  {
-    icon: Mic,
-    title: 'Voice-First',
-    desc: 'Speak naturally. Auto-detects when you stop.',
-    color: 'bg-neo-accent',
-  },
-  {
-    icon: Brain,
-    title: 'AI Interviewer',
-    desc: 'Staff-level questions that adapt to your answers.',
-    color: 'bg-neo-secondary',
-  },
-  {
-    icon: BarChart3,
-    title: 'Instant Feedback',
-    desc: 'Detailed ratings and actionable tips per question.',
-    color: 'bg-neo-muted',
-  },
-  {
-    icon: Zap,
-    title: 'Zero Setup',
-    desc: 'Runs in your browser. Just bring an OpenAI key.',
-    color: 'bg-neo-cream',
-  },
-] as const;
 
 export function Home() {
   const [startOpen, setStartOpen] = useState(false);
@@ -43,14 +28,14 @@ export function Home() {
         {/* Left: copy */}
         <div className="flex-1 space-y-6 text-center lg:text-left">
           <div className="inline-block border-2 border-black bg-neo-secondary px-3 py-1 text-xs font-bold uppercase tracking-widest shadow-neo-sm">
-            AI-Powered Mock Interviews
+            {HOME_BADGE}
           </div>
 
           <h1 className="text-4xl font-black uppercase leading-[1.1] tracking-tight text-black sm:text-5xl lg:text-6xl">
-            Nail your next
+            {HOME_HERO_HEADING_LINE1}
             <br />
             <span className="relative inline-block">
-              <span className="relative z-10">tech interview</span>
+              <span className="relative z-10">{HOME_HERO_HEADING_LINE2}</span>
               <span
                 className="absolute bottom-1 left-0 -z-0 h-4 w-full -rotate-1 bg-neo-accent sm:h-5"
                 aria-hidden="true"
@@ -59,9 +44,7 @@ export function Home() {
           </h1>
 
           <p className="max-w-lg text-lg font-medium leading-relaxed text-black/70 lg:text-xl">
-            Practice with a Staff Engineer AI that asks real questions, listens to your voice, and
-            gives brutally honest feedback.{' '}
-            <strong className="text-black">No fluff. No mercy. Just growth.</strong>
+            {HOME_HERO_BODY} <strong className="text-black">{HOME_HERO_TAGLINE}</strong>
           </p>
         </div>
 
@@ -72,14 +55,14 @@ export function Home() {
             onClick={() => setStartOpen(true)}
             onMouseEnter={preloadSession}
             onFocus={preloadSession}
-            aria-label="Start new interview session"
+            aria-label={HOME_START_LABEL}
             className="group relative flex h-40 w-40 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-2xl font-black uppercase tracking-wide text-black shadow-neo-lg transition-all duration-150 hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none sm:h-48 sm:w-48 sm:text-3xl"
           >
             <span className="transition-transform duration-150 group-hover:scale-110">Start</span>
           </button>
 
           <p className="max-w-[240px] text-center text-sm font-bold text-black/60">
-            Pick a topic, turn on your mic, and go.
+            {HOME_CTA_HINT}
           </p>
         </div>
       </section>
@@ -106,12 +89,12 @@ export function Home() {
 
       {/* Footer */}
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-4 text-center text-sm font-bold text-black/60">
-        <span>Fully Open source ❤️</span>
+        <span>{HOME_FOOTER_OPEN_SOURCE}</span>
         <span aria-hidden="true" className="text-black/20">
           |
         </span>
         <a
-          href="https://github.com/rajat-mehra05/voice-round"
+          href={GITHUB_REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-black"
@@ -122,7 +105,7 @@ export function Home() {
           |
         </span>
         <a
-          href="https://github.com/rajat-mehra05/voice-round/issues"
+          href={GITHUB_ISSUES_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-black"

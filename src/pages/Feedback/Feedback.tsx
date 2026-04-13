@@ -78,7 +78,7 @@ export function Feedback() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="feedback">Detailed Feedback</SelectItem>
-            <SelectItem value="model-answers">Model Answers</SelectItem>
+            <SelectItem value="model-answers">Good Answers</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -129,9 +129,9 @@ export function Feedback() {
               ) : (
                 <div className="border-2 border-black bg-neo-secondary/30 p-4">
                   <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
-                    Model Answer
+                    Good Answer
                   </p>
-                  <p className="text-sm font-medium text-black">{q.followUp || q.feedback}</p>
+                  <p className="text-sm font-medium text-black leading-relaxed">{q.modelAnswer}</p>
                 </div>
               )}
             </section>

@@ -95,7 +95,7 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
   expect(backButtons.length).toBeGreaterThan(0);
 });
 
-test('user toggles to Model Answers view and sees followUp content', async () => {
+test('user toggles to Model Answers view and sees modelAnswer content', async () => {
   await db.sessions.clear();
   await db.sessions.add(
     makeSession({
@@ -109,7 +109,7 @@ test('user toggles to Model Answers view and sees followUp content', async () =>
           userTranscript: 'A function that captures scope.',
           rating: 8,
           feedback: 'Good explanation.',
-          followUp: 'A closure is a function that retains access to its lexical scope.',
+          modelAnswer: 'A closure is a function that retains access to its lexical scope.',
         },
       ],
     }),
@@ -124,9 +124,9 @@ test('user toggles to Model Answers view and sees followUp content', async () =>
   // Toggle to model answers
   const trigger = screen.getByRole('combobox', { name: /view mode/i });
   await user.click(trigger);
-  const modelOption = await screen.findByRole('option', { name: /model answers/i });
+  const modelOption = await screen.findByRole('option', { name: /good answers/i });
   await user.click(modelOption);
 
-  // Model answer (followUp) visible
+  // Model answer visible
   expect(await screen.findByText(/retains access to its lexical scope/i)).toBeInTheDocument();
 });

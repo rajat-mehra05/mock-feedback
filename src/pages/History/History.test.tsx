@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -52,7 +52,7 @@ test('user sees stats bar and session cards when sessions exist', async () => {
   expect(screen.getByRole('button', { name: /back to home/i })).toBeInTheDocument();
 });
 
-test('Delete All prompts for confirmation, clears sessions on confirm, and aborts on cancel', async () => {
+test('Delete All opens a confirmation dialog, keeps sessions on cancel, clears on confirm', async () => {
   await db.sessions.clear();
   await db.sessions.bulkAdd([
     makeSession({ id: 'del-1', topic: 'React' }),
@@ -62,21 +62,19 @@ test('Delete All prompts for confirmation, clears sessions on confirm, and abort
 
   renderWithProviders(<History />);
 
-  // Wait for sessions to load
   const deleteButton = await screen.findByRole('button', { name: /delete all/i });
-  expect(deleteButton).toBeInTheDocument();
 
-  // Cancel — sessions remain
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+  // Open dialog — cancel — sessions remain
   await user.click(deleteButton);
-  expect(window.confirm).toHaveBeenCalledOnce();
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: /cancel/i }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getAllByRole('article')).toHaveLength(2);
 
-  // Confirm — sessions cleared
-  vi.mocked(window.confirm).mockReturnValueOnce(true);
-  await user.click(deleteButton);
+  // Open dialog — confirm — sessions cleared
+  await user.click(screen.getByRole('button', { name: /delete all/i }));
+  const dialog = await screen.findByRole('dialog');
+  await user.click(within(dialog).getByRole('button', { name: /delete all/i }));
   expect(await screen.findByText(/no interviews yet/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /delete all/i })).not.toBeInTheDocument();
-
-  vi.restoreAllMocks();
 });

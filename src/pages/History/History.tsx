@@ -4,12 +4,21 @@ import { SessionCard } from '@/components/SessionCard/SessionCard';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useSessions } from '@/hooks/useSessions/useSessions';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 
 export function History() {
   const { sessions, isLoading, removeSession, removeAll } = useSessions();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const totalInterviews = sessions.length;
   const avgScore =
@@ -27,7 +36,6 @@ export function History() {
   }
 
   async function handleDeleteAll() {
-    if (!window.confirm('Delete all interview sessions? This cannot be undone.')) return;
     setIsDeleting(true);
     try {
       await removeAll();
@@ -44,14 +52,43 @@ export function History() {
         <h1 className="text-3xl font-bold uppercase tracking-tight text-black">Past Sessions</h1>
         <div className="flex gap-2">
           {sessions.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => void handleDeleteAll()}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete All'}
-            </Button>
+            <>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmOpen(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete All'}
+              </Button>
+
+              <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent showCloseButton={false}>
+                  <DialogHeader>
+                    <DialogTitle>Delete all sessions?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently remove all {sessions.length} interview session
+                      {sessions.length !== 1 ? 's' : ''}. This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={isDeleting}
+                      onClick={() => {
+                        setConfirmOpen(false);
+                        void handleDeleteAll();
+                      }}
+                    >
+                      Delete All
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
           <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>
             Back to Home

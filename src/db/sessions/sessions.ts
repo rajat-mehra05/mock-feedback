@@ -8,7 +8,7 @@ export interface Question {
   rating: number;
   feedback: string;
   confidence?: ConfidenceLevel;
-  followUp?: string;
+  modelAnswer: string;
 }
 
 export interface Session {
