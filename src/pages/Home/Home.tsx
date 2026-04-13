@@ -111,7 +111,7 @@ export function Home() {
           |
         </span>
         <a
-          href="https://github.com/rajat-mehra05/mock-feedback"
+          href="https://github.com/rajat-mehra05/voice-round"
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-black"
@@ -122,7 +122,7 @@ export function Home() {
           |
         </span>
         <a
-          href="https://github.com/rajat-mehra05/mock-feedback/issues"
+          href="https://github.com/rajat-mehra05/voice-round/issues"
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-black"
