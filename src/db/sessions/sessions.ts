@@ -19,9 +19,10 @@ export interface Session {
   questionCount: number;
   averageScore: number;
   questions: Question[];
+  summary?: string;
 }
 
-const db = new Dexie('MockFeedbackDB') as Dexie & {
+const db = new Dexie('VoiceRoundDB') as Dexie & {
   sessions: EntityTable<Session, 'id'>;
 };
 

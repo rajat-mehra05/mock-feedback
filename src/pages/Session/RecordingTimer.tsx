@@ -45,6 +45,10 @@ export function RecordingTimer({ isActive, onMaxReached }: RecordingTimerProps) 
 
   return (
     <p
+      role="timer"
+      aria-live={isWarning ? 'assertive' : 'off'}
+      aria-atomic="true"
+      aria-label={`Recording time: ${formatTime(elapsed)}${isWarning ? `, ${remaining} seconds remaining` : ''}`}
       className={`font-mono text-sm ${isWarning ? 'font-semibold text-red-600' : 'text-muted-foreground'}`}
     >
       {formatTime(elapsed)}

@@ -33,6 +33,8 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     duration: 600,
     questionCount: questions.length,
     averageScore: 7.5,
+    summary:
+      'Solid foundational knowledge. Focus on explaining the "why" behind concepts and connecting answers to real-world scenarios to push scores higher.',
     questions,
     ...overrides,
   };

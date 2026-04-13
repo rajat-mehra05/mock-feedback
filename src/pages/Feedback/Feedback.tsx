@@ -69,12 +69,15 @@ export function Feedback() {
         <Select
           value={viewMode}
           onValueChange={(v) => {
-            const mode = v ?? 'feedback';
-            if (mode === 'feedback' || mode === 'model-answers') setViewMode(mode);
+            if (v === 'feedback' || v === 'model-answers') setViewMode(v);
           }}
         >
           <SelectTrigger className="w-48" aria-label="View mode">
-            <SelectValue />
+            <SelectValue>
+              {(value: string) =>
+                value === 'model-answers' ? 'Good Answers' : 'Detailed Feedback'
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="feedback">Detailed Feedback</SelectItem>
@@ -129,7 +132,7 @@ export function Feedback() {
               ) : (
                 <div className="border-2 border-black bg-neo-secondary/30 p-4">
                   <p className="mb-1 text-xs font-bold uppercase tracking-wider text-black/60">
-                    Good Answer
+                    Good Answers
                   </p>
                   <p className="text-sm font-medium text-black leading-relaxed">{q.modelAnswer}</p>
                 </div>
@@ -153,11 +156,7 @@ export function Feedback() {
             {roundedScore}/10
           </span>
         </div>
-        <p className="text-sm font-medium text-black/80">
-          You answered {session.questionCount} questions on {session.topic}. Your strongest answers
-          demonstrated good conceptual understanding. Focus on providing more specific examples and
-          quantifying your experiences to improve your scores.
-        </p>
+        {session.summary && <p className="text-sm font-medium text-black/80">{session.summary}</p>}
       </section>
 
       <div className="flex justify-center">

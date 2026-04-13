@@ -52,44 +52,41 @@ export function History() {
         <h1 className="text-3xl font-bold uppercase tracking-tight text-black">Past Sessions</h1>
         <div className="flex gap-2">
           {sessions.length > 0 && (
-            <>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmOpen(true)}
-                disabled={isDeleting}
-              >
-                {isDeleting ? 'Deleting...' : 'Delete All'}
-              </Button>
-
-              <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <DialogContent showCloseButton={false}>
-                  <DialogHeader>
-                    <DialogTitle>Delete all sessions?</DialogTitle>
-                    <DialogDescription>
-                      This will permanently remove all {sessions.length} interview session
-                      {sessions.length !== 1 ? 's' : ''}. This cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      disabled={isDeleting}
-                      onClick={() => {
-                        setConfirmOpen(false);
-                        void handleDeleteAll();
-                      }}
-                    >
-                      Delete All
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmOpen(true)}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete All'}
+            </Button>
           )}
+          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <DialogContent showCloseButton={false}>
+              <DialogHeader>
+                <DialogTitle>Delete all sessions?</DialogTitle>
+                <DialogDescription>
+                  This will permanently remove all {sessions.length} interview session
+                  {sessions.length !== 1 ? 's' : ''}. This cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    void handleDeleteAll();
+                  }}
+                >
+                  Delete All
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/" />}>
             Back to Home
           </Button>
@@ -127,7 +124,7 @@ export function History() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-2">
           {sessions.map((session) => (
             <SessionCard
               key={session.id}
