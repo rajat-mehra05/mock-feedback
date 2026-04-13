@@ -21,6 +21,8 @@ test('user sees topic, date, duration, question count, score, and card links to 
             userTranscript: 'Event loop.',
             rating: 7,
             feedback: 'Good.',
+            modelAnswer:
+              'Node handles concurrency through a single-threaded event loop backed by libuv, which offloads I/O to the OS and processes callbacks asynchronously.',
           },
         ],
       })}

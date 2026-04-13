@@ -23,8 +23,9 @@ function PageLoader() {
 function AppRoutes() {
   const { pathname } = useLocation();
 
-  // Fix @base-ui Select rendering aria-hidden inputs with tabindex="-1"
-  // which triggers axe "aria-hidden-focus" violation
+  // Workaround for @base-ui/react bug: Select renders aria-hidden inputs with tabindex="-1"
+  // which triggers axe "aria-hidden-focus" violation.
+  // Remove once fixed upstream: https://github.com/mui/base-ui/issues/1294
   useEffect(() => {
     let frameId: number;
     const observer = new MutationObserver(() => {
@@ -55,8 +56,22 @@ function AppRoutes() {
               </ErrorBoundary>
             }
           />
-          <Route path="/history" element={<History />} />
-          <Route path="/history/:id" element={<Feedback />} />
+          <Route
+            path="/history"
+            element={
+              <ErrorBoundary>
+                <History />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/history/:id"
+            element={
+              <ErrorBoundary>
+                <Feedback />
+              </ErrorBoundary>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

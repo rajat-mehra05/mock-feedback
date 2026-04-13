@@ -1,12 +1,14 @@
 # VoiceRound
 
-AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally, and you get detailed feedback with ratings.
+AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally and you get detailed feedback with ratings.
+
+![VoiceRound home screen](public/home.png)
 
 ## Why I Built This
 
 I wanted to get better at explaining technical concepts out loud, the way you have to in real interviews. This app lets me practice that and get honest feedback on both my answers and how I communicate them.
 
-Most mock interview tools I found were paid, and I couldn't customize them to focus on what I actually needed to work on. So I made this open source. You can tweak the prompts, add your own topics, or change how feedback works. Make it yours.
+Most mock interview tools I found were paid and I couldn't customize them to focus on what I actually needed to work on. So I made this open source. You can tweak the prompts, add your own topics or change how feedback works. Make it yours.
 
 ## Tech Stack
 
@@ -22,7 +24,7 @@ Most mock interview tools I found were paid, and I couldn't customize them to fo
 
 ## BYOK (Bring Your Own Key)
 
-This app requires your own OpenAI API key. Your key is stored in IndexedDB on your device and is only sent to OpenAI directly from the browser. No keys are shipped, hardcoded, or proxied.
+This app requires your own OpenAI API key. Your key is stored in IndexedDB on your device and is only sent to OpenAI directly from the browser. No keys are shipped, hardcoded or proxied.
 
 ## How It Works
 
@@ -70,7 +72,7 @@ npm run dev
 
 ## Accessibility
 
-Accessibility has been a priority from the start. The app is designed to meet WCAG 2.1 AA standards — all interactive elements are fully keyboard-navigable, and screen readers are kept informed of recording and session state changes.
+Accessibility has been a priority from the start. The app is designed to meet WCAG 2.1 AA standards — all interactive elements are fully keyboard-navigable and screen readers are kept informed of recording and session state changes.
 
 ## Contributing
 

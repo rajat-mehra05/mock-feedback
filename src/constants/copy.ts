@@ -14,3 +14,16 @@ export const UNSUPPORTED_BROWSER_MESSAGE =
 export const NO_MIC_MESSAGE = 'No microphone detected. Please connect a microphone and try again.';
 export const MIC_PERMISSION_MESSAGE =
   'Microphone access is required for the interview. Please allow microphone access in your browser settings and reload the page.';
+
+// Home page
+export const HOME_BADGE = 'AI-Powered Mock Interviews';
+export const HOME_HERO_HEADING_LINE1 = 'Nail your next';
+export const HOME_HERO_HEADING_LINE2 = 'tech interview';
+export const HOME_HERO_BODY =
+  'Practice real interview questions out loud with an AI that listens and gives feedback that actually makes you better.';
+export const HOME_HERO_TAGLINE = 'No fluff. No mercy. Just growth.';
+export const HOME_START_LABEL = 'Start new interview session';
+export const HOME_CTA_HINT = 'Ready when you are.';
+export const HOME_FOOTER_OPEN_SOURCE = 'Fully Open source ❤️';
+export const GITHUB_REPO_URL = 'https://github.com/rajat-mehra05/voice-round';
+export const GITHUB_ISSUES_URL = 'https://github.com/rajat-mehra05/voice-round/issues';

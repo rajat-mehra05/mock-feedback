@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { scoreColor, scoreBg } from '@/lib/score';
 import type { Session } from '@/db/sessions/sessions';
 
@@ -30,27 +29,14 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
   const firstQuestion = session.questions[0]?.questionText ?? '';
 
   return (
-    <article className="group/article relative h-full">
-      {onDelete && (
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(session.id);
-          }}
-          aria-label={`Delete ${session.topic} session`}
-          className="absolute -top-3 -right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black opacity-0 shadow-[2px_2px_0px_0px_#000] transition-opacity duration-100 hover:brightness-90 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-black group-hover/article:opacity-100"
-        >
-          <Trash2Icon className="h-4 w-4" />
-        </button>
-      )}
+    <article className="group/article relative">
       <Link
         to={`/history/${session.id}`}
-        className="group/link block h-full focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+        className="block focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
         aria-label={`View feedback for ${session.topic} interview on ${formatDate(session.createdAt)}`}
       >
-        <Card className="h-full transition-all duration-200 group-hover/link:-translate-y-1 group-hover/link:shadow-neo-lg">
-          <CardHeader>
+        <Card className="gap-4 transition-all duration-200 group-hover/article:-translate-y-1 group-hover/article:shadow-neo-lg">
+          <CardHeader className="px-6">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <CardTitle className="truncate">{session.topic}</CardTitle>
@@ -70,7 +56,7 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1">
+          <CardContent className="px-6">
             {firstQuestion && (
               <blockquote className="border-l-4 border-black pl-3 text-sm font-medium leading-relaxed text-black/70">
                 {firstQuestion}
@@ -78,9 +64,8 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
             )}
           </CardContent>
 
-          <CardFooter className="gap-3 text-xs font-bold text-black/60">
-            <Badge variant="secondary">{session.topic.split(' ')[0]}</Badge>
-            <span className="ml-auto">{session.questionCount} questions</span>
+          <CardFooter className="gap-3 px-6 text-xs font-bold text-black/60">
+            <span>{session.questionCount} questions</span>
             <span aria-hidden="true" className="text-black/30">
               |
             </span>
@@ -88,6 +73,15 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
           </CardFooter>
         </Card>
       </Link>
+      {onDelete && (
+        <button
+          onClick={() => onDelete(session.id)}
+          aria-label={`Delete ${session.topic} session`}
+          className="absolute bottom-4 right-6 flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000] transition-all duration-100 group-hover/article:-translate-y-1 hover:brightness-90 focus-visible:ring-2 focus-visible:ring-black"
+        >
+          <Trash2Icon className="h-3.5 w-3.5" />
+        </button>
+      )}
     </article>
   );
 }

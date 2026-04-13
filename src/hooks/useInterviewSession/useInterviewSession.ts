@@ -125,6 +125,7 @@ export function useInterviewSession() {
             duration: elapsed,
             questionCount: state.history.length,
             averageScore: Math.round(avg * 10) / 10,
+            summary: result.summary,
             questions: state.history.map((turn, i) => ({
               id: crypto.randomUUID(),
               questionText: turn.question,
@@ -132,7 +133,7 @@ export function useInterviewSession() {
               rating: result.questions[i]?.rating ?? 0,
               feedback: result.questions[i]?.feedback ?? '',
               confidence: result.questions[i]?.confidence ?? 'medium',
-              followUp: result.questions[i]?.modelAnswer,
+              modelAnswer: result.questions[i]?.modelAnswer ?? '',
             })),
           });
           if (effectSignal.aborted) return;

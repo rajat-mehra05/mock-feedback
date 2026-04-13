@@ -1,9 +1,10 @@
 import type { InterviewState } from '@/hooks/useInterviewSession/types';
 import { RECORDING_RULES } from '@/constants/copy';
 import { Spinner } from '@/components/ui/spinner';
+import { SoundWavePulse } from './SoundWavePulse';
 
 const STATUS_DISPLAY: Record<string, { label: string; pulse?: boolean; color?: string }> = {
-  ai_speaking: { label: 'AI is speaking...', pulse: true, color: 'bg-blue-500' },
+  ai_speaking: { label: 'AI is speaking...' },
   user_recording: { label: 'Recording your answer...', pulse: true, color: 'bg-red-500' },
   skipping: { label: 'No response detected, moving to next question...' },
   generating_feedback: { label: 'Generating feedback...' },
@@ -46,6 +47,7 @@ export function StatusIndicator({
       aria-live="polite"
       aria-label="Session status"
     >
+      {status === 'ai_speaking' && <SoundWavePulse />}
       {display.pulse && display.color && (
         <div className={`h-4 w-4 rounded-full ${display.color} motion-safe:animate-pulse`} />
       )}
