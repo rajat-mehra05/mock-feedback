@@ -37,5 +37,6 @@ npm-debug.log*
 # Project docs (not for PR)
 BugsAndFixes.md
 PLAN.md
+CLAUDE.md
 ARCHITECTURAL_DECISIONS.md
 Interview.md
