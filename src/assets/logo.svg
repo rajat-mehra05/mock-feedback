@@ -1,0 +1,23 @@
+<svg width="92" height="94" viewBox="8 8 92 94" xmlns="http://www.w3.org/2000/svg">
+    <!-- Speech bubble -->
+    <rect x="10" y="10" width="80" height="70" rx="14" fill="#ffd93d" stroke="#000" stroke-width="4" />
+
+    <!-- Speech tail -->
+    <path d="M30 80 L30 100 L50 80 Z" fill="#ffd93d" stroke="#000" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- Inner highlight -->
+    <rect x="18" y="18" width="64" height="54" rx="10" fill="rgba(255,255,255,0.15)" />
+
+    <!-- Eyes with movement animation -->
+    <g>
+        <circle cx="40" cy="40" r="3.5" fill="#000">
+            <animate attributeName="cx" values="40;42;40;38;40" dur="3s" repeatCount="indefinite" />
+        </circle>
+        <circle cx="60" cy="40" r="3.5" fill="#000">
+            <animate attributeName="cx" values="60;62;60;58;60" dur="3s" repeatCount="indefinite" />
+        </circle>
+    </g>
+
+    <!-- Smile -->
+    <path d="M38 52 Q50 60 62 52" stroke="#000" stroke-width="3" fill="none" stroke-linecap="round" />
+</svg>

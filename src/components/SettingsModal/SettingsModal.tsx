@@ -33,10 +33,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }, 1000);
   }
 
-  async function handleRemove() {
-    await remove();
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -78,12 +74,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               )}
             </div>
             {apiKey && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => void handleRemove()}
-              >
+              <Button type="button" variant="destructive" size="sm" onClick={() => void remove()}>
                 Remove
               </Button>
             )}

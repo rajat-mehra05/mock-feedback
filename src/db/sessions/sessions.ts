@@ -41,13 +41,6 @@ export async function getAllSessions(): Promise<Session[]> {
   return db.sessions.orderBy('createdAt').reverse().toArray();
 }
 
-export async function updateSession(
-  id: string,
-  changes: Partial<Omit<Session, 'id'>>,
-): Promise<void> {
-  await db.sessions.update(id, changes);
-}
-
 export async function deleteSession(id: string): Promise<void> {
   return db.sessions.delete(id);
 }

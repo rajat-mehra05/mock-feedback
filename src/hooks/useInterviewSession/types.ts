@@ -4,7 +4,6 @@ export type InterviewState =
   | 'idle'
   | 'ai_speaking'
   | 'user_recording'
-  | 'transcribing'
   | 'awaiting_transcript'
   | 'skipping'
   | 'generating'
@@ -44,8 +43,6 @@ export type InterviewAction =
   | { type: 'QUESTION_READY'; question: string; isRepeat: boolean }
   | { type: 'TTS_DONE' }
   | { type: 'TTS_FAILED'; question: string }
-  | { type: 'TRANSCRIBING' }
-  | { type: 'RECORDING_DONE'; transcript: string }
   | { type: 'ANSWER_RECORDED' }
   | { type: 'TRANSCRIPT_READY'; questionIndex: number; transcript: string }
   | { type: 'FEEDBACK_DONE'; sessionId: string }

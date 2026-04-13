@@ -1,15 +1,8 @@
 import { expect, test } from 'vitest';
-import {
-  db,
-  createSession,
-  getSession,
-  getAllSessions,
-  updateSession,
-  deleteSession,
-} from './sessions';
+import { db, createSession, getSession, getAllSessions, deleteSession } from './sessions';
 import { makeSession } from '@/test/factories';
 
-test('full session CRUD lifecycle: create, read, list ordering, update, and delete', async () => {
+test('session lifecycle: create, read, list ordering, and delete', async () => {
   await db.sessions.clear();
 
   // Create sessions
@@ -32,13 +25,6 @@ test('full session CRUD lifecycle: create, read, list ordering, update, and dele
   expect(all[0].id).toBe('newer');
   expect(all[1].id).toBe('middle');
   expect(all[2].id).toBe('older');
-
-  // Update modifies fields without touching others
-  await updateSession('older', { averageScore: 9.2, duration: 900 });
-  const updated = await getSession('older');
-  expect(updated!.averageScore).toBe(9.2);
-  expect(updated!.duration).toBe(900);
-  expect(updated!.topic).toBe('JavaScript & TypeScript');
 
   // Delete removes the session
   await deleteSession('middle');

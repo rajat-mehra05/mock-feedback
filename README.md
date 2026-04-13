@@ -1,4 +1,4 @@
-# Mock Feedback
+# VoiceRound
 
 AI-powered mock interviewer that helps developers practice technical interviews. The AI asks questions via voice, you answer verbally, and you get detailed feedback with ratings.
 

@@ -11,19 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getSession, type Session } from '@/db/sessions/sessions';
+import { scoreColor, scoreBg } from '@/lib/score';
 import type { ConfidenceLevel } from '@/services/types';
-
-function scoreColor(score: number): string {
-  if (score >= 8) return 'text-green-700';
-  if (score >= 6) return 'text-yellow-700';
-  return 'text-red-700';
-}
-
-function scoreBg(score: number): string {
-  if (score >= 8) return 'bg-green-200 border-black';
-  if (score >= 6) return 'bg-yellow-200 border-black';
-  return 'bg-red-200 border-black';
-}
 
 const CONFIDENCE_CONFIG: Record<ConfidenceLevel, { label: string; style: string }> = {
   high: { label: 'High Confidence', style: 'bg-green-100 text-green-800 border-green-800' },
@@ -63,6 +52,8 @@ export function Feedback() {
       </div>
     );
   }
+
+  const roundedScore = Math.round(session.averageScore);
 
   return (
     <div className="space-y-8">
@@ -156,16 +147,11 @@ export function Feedback() {
           <span className="text-sm font-bold uppercase tracking-wider text-black/60">
             Average Score:
           </span>
-          {(() => {
-            const roundedScore = Math.round(session.averageScore);
-            return (
-              <span
-                className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(roundedScore)} ${scoreBg(roundedScore)}`}
-              >
-                {roundedScore}/10
-              </span>
-            );
-          })()}
+          <span
+            className={`border-2 border-black px-3 py-1 text-xl font-bold ${scoreColor(roundedScore)} ${scoreBg(roundedScore)}`}
+          >
+            {roundedScore}/10
+          </span>
         </div>
         <p className="text-sm font-medium text-black/80">
           You answered {session.questionCount} questions on {session.topic}. Your strongest answers
