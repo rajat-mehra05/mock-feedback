@@ -41,6 +41,8 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           rating: 9,
           confidence: 'high',
           feedback: 'Excellent answer covering the diffing process.',
+          modelAnswer:
+            'The virtual DOM is a lightweight in-memory representation of the real DOM. React uses it to batch and diff changes, then applies only the minimal set of updates to the actual DOM, avoiding costly reflows.',
         },
         {
           id: 'q2',
@@ -49,6 +51,8 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           rating: 7,
           confidence: 'medium',
           feedback: 'Good but could mention the ESLint plugin.',
+          modelAnswer:
+            'Hooks must be called at the top level of a React function — never inside loops, conditions, or nested functions. This ensures the hooks call order is stable across renders. The eslint-plugin-react-hooks enforces this automatically.',
         },
         {
           id: 'q3',
@@ -57,6 +61,8 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
           rating: 4,
           confidence: 'low',
           feedback: 'Too brief. Discuss Context API or state management alternatives.',
+          modelAnswer:
+            'Prop drilling is passing data down through multiple component layers that do not themselves need it, just to reach a deeply nested child. It makes components harder to refactor and reason about. The usual solutions are React Context for simple cases, or a state manager like Zustand or Redux for more complex shared state.',
         },
       ],
     }),
