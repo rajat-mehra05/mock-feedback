@@ -29,13 +29,13 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
   const firstQuestion = session.questions[0]?.questionText ?? '';
 
   return (
-    <article>
+    <article className="group/article relative">
       <Link
         to={`/history/${session.id}`}
-        className="group/link block focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+        className="block focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
         aria-label={`View feedback for ${session.topic} interview on ${formatDate(session.createdAt)}`}
       >
-        <Card className="gap-4 transition-all duration-200 group-hover/link:-translate-y-1 group-hover/link:shadow-neo-lg">
+        <Card className="gap-4 transition-all duration-200 group-hover/article:-translate-y-1 group-hover/article:shadow-neo-lg">
           <CardHeader className="px-6">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -70,22 +70,18 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
               |
             </span>
             <span>{formatDuration(session.duration)}</span>
-            {onDelete && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDelete(session.id);
-                }}
-                aria-label={`Delete ${session.topic} session`}
-                className="ml-auto flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000] transition-all duration-100 hover:brightness-90 focus-visible:ring-2 focus-visible:ring-black"
-              >
-                <Trash2Icon className="h-3.5 w-3.5" />
-              </button>
-            )}
           </CardFooter>
         </Card>
       </Link>
+      {onDelete && (
+        <button
+          onClick={() => onDelete(session.id)}
+          aria-label={`Delete ${session.topic} session`}
+          className="absolute bottom-4 right-6 flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000] transition-all duration-100 group-hover/article:-translate-y-1 hover:brightness-90 focus-visible:ring-2 focus-visible:ring-black"
+        >
+          <Trash2Icon className="h-3.5 w-3.5" />
+        </button>
+      )}
     </article>
   );
 }
