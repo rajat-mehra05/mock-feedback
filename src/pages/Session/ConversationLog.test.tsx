@@ -3,6 +3,9 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { ConversationLog } from './ConversationLog';
 
+// jsdom does not implement scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
 test('renders nothing when history is empty and no current question', () => {
   renderWithProviders(
     <ConversationLog history={[]} currentQuestion={null} ttsFallbackText={null} />,
