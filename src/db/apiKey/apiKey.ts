@@ -27,8 +27,3 @@ export async function getApiKey(): Promise<string | null> {
 export async function deleteApiKey(): Promise<void> {
   await keyDb.apiKeys.delete(KEY_ID);
 }
-
-export async function hasApiKey(): Promise<boolean> {
-  const entry = await keyDb.apiKeys.get(KEY_ID);
-  return !!entry?.key;
-}

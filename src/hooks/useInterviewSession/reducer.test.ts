@@ -29,18 +29,20 @@ test('interview reducer transitions through the complete happy path', () => {
   state = interviewReducer(state, { type: 'TTS_DONE' });
   expect(state.status).toBe('user_recording');
 
-  // TRANSCRIBING → transcribing
-  state = interviewReducer(state, { type: 'TRANSCRIBING' });
-  expect(state.status).toBe('transcribing');
+  // ANSWER_RECORDED → awaiting_transcript
+  state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
+  expect(state.status).toBe('awaiting_transcript');
+  expect(state.history).toHaveLength(1);
+  expect(state.history[0].question).toBe('What is JSX?');
+  expect(state.history[0].answer).toBe('');
 
-  // RECORDING_DONE (not last) → generating
+  // TRANSCRIPT_READY backfills answer → generating
   state = interviewReducer(state, {
-    type: 'RECORDING_DONE',
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
     transcript: 'JSX is syntax extension',
   });
   expect(state.status).toBe('generating');
-  expect(state.history).toHaveLength(1);
-  expect(state.history[0].question).toBe('What is JSX?');
   expect(state.history[0].answer).toBe('JSX is syntax extension');
 
   // Second question cycle
@@ -50,10 +52,14 @@ test('interview reducer transitions through the complete happy path', () => {
     question: 'Explain hooks',
   });
   state = interviewReducer(state, { type: 'TTS_DONE' });
-  state = interviewReducer(state, { type: 'TRANSCRIBING' });
 
-  // RECORDING_DONE (last question) → generating (finalization deferred to QUESTION_READY)
-  state = interviewReducer(state, { type: 'RECORDING_DONE', transcript: 'Hooks are functions' });
+  // ANSWER_RECORDED + TRANSCRIPT_READY for last question
+  state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
+  state = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 1,
+    transcript: 'Hooks are functions',
+  });
   expect(state.status).toBe('generating');
   expect(state.history).toHaveLength(2);
 
@@ -302,8 +308,13 @@ test('QUESTION_READY with isRepeat keeps currentQuestionIndex unchanged and remo
     question: 'What is JSX?',
   });
   state = interviewReducer(state, { type: 'TTS_DONE' });
-  // Simulate "wait" answer recorded
-  state = interviewReducer(state, { type: 'RECORDING_DONE', transcript: 'Wait a moment' });
+  // Simulate "wait" answer recorded via ANSWER_RECORDED + TRANSCRIPT_READY
+  state = interviewReducer(state, { type: 'ANSWER_RECORDED' });
+  state = interviewReducer(state, {
+    type: 'TRANSCRIPT_READY',
+    questionIndex: 0,
+    transcript: 'Wait a moment',
+  });
   expect(state.history).toHaveLength(1);
   expect(state.currentQuestionIndex).toBe(1);
 

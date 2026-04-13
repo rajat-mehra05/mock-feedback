@@ -80,22 +80,6 @@ export function interviewReducer(
         ttsFallbackText: action.question,
       };
 
-    case 'TRANSCRIBING':
-      return { ...state, status: 'transcribing' };
-
-    case 'RECORDING_DONE': {
-      const newHistory = [
-        ...state.history,
-        { question: state.currentQuestion!, answer: action.transcript },
-      ];
-      return {
-        ...state,
-        status: 'generating',
-        history: newHistory,
-        currentQuestion: null,
-      };
-    }
-
     case 'ANSWER_RECORDED': {
       const newHistory = [...state.history, { question: state.currentQuestion!, answer: '' }];
       return {

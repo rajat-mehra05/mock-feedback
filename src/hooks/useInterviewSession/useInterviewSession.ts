@@ -14,6 +14,9 @@ import { REPEAT_QUESTION_PHRASE } from '@/constants/prompts';
 import { createSession } from '@/db/sessions/sessions';
 import type { OpenAIServiceError } from '@/services/types';
 
+// Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <1KB
+const MIN_BLOB_SIZE = 2000;
+
 const RETRY_OPTS = {
   maxAttempts: RETRY_MAX_ATTEMPTS,
   baseDelayMs: RETRY_BASE_DELAY_MS,
@@ -155,9 +158,6 @@ export function useInterviewSession() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.error]);
-
-  // Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <1KB
-  const MIN_BLOB_SIZE = 2000;
 
   // audioBlob ready → check if it contains real speech, then advance
   useEffect(() => {

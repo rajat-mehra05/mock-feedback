@@ -1,16 +1,14 @@
 import { expect, test } from 'vitest';
-import { saveApiKey, getApiKey, deleteApiKey, hasApiKey } from './apiKey';
+import { saveApiKey, getApiKey, deleteApiKey } from './apiKey';
 
 test('save, retrieve, and delete API key lifecycle', async () => {
   await deleteApiKey();
 
   // Initially no key
-  expect(await hasApiKey()).toBe(false);
   expect(await getApiKey()).toBeNull();
 
   // Save a key
   await saveApiKey('sk-test-key-123');
-  expect(await hasApiKey()).toBe(true);
   expect(await getApiKey()).toBe('sk-test-key-123');
 
   // Update the key
@@ -19,6 +17,5 @@ test('save, retrieve, and delete API key lifecycle', async () => {
 
   // Delete the key
   await deleteApiKey();
-  expect(await hasApiKey()).toBe(false);
   expect(await getApiKey()).toBeNull();
 });

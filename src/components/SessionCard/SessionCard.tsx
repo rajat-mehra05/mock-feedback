@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { scoreColor, scoreBg } from '@/lib/score';
 import type { Session } from '@/db/sessions/sessions';
 
 function formatDuration(seconds: number): string {
@@ -18,18 +19,6 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 
 function formatDate(date: Date): string {
   return dateFormatter.format(date);
-}
-
-function scoreColor(score: number): string {
-  if (score >= 8) return 'text-green-700';
-  if (score >= 6) return 'text-yellow-700';
-  return 'text-red-700';
-}
-
-function scoreBg(score: number): string {
-  if (score >= 8) return 'bg-green-200 border-black';
-  if (score >= 6) return 'bg-yellow-200 border-black';
-  return 'bg-red-200 border-black';
 }
 
 interface SessionCardProps {

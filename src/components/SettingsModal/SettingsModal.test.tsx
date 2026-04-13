@@ -45,7 +45,7 @@ test('user without a key sees guidance message, saves a key, and guidance disapp
 
   // Guidance message for no-key state
   expect(
-    await screen.findByText(/you need an openai api key to use mock feedback/i),
+    await screen.findByText(/you need an openai api key to use voiceround/i),
   ).toBeInTheDocument();
   expect(screen.getByText(/no key configured/i)).toBeInTheDocument();
 
@@ -57,7 +57,7 @@ test('user without a key sees guidance message, saves a key, and guidance disapp
   // Guidance gone, key configured shown
   await waitFor(() =>
     expect(
-      screen.queryByText(/you need an openai api key to use mock feedback/i),
+      screen.queryByText(/you need an openai api key to use voiceround/i),
     ).not.toBeInTheDocument(),
   );
   expect(screen.getByText(/key configured/i)).toBeInTheDocument();

@@ -1,4 +1,4 @@
-export const APP_NAME = 'Mock Feedback';
+export const APP_NAME = 'VoiceRound';
 
 export const EMPTY_SESSIONS_MESSAGE = 'Your past interview sessions will appear here';
 export const API_KEY_DESCRIPTION =
