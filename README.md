@@ -14,7 +14,7 @@ Most mock interview tools I found were paid and I couldn't customize them to foc
 
 - **Frontend:** Vite 8 + React 19 + TypeScript 5.9
 - **Styling:** Tailwind CSS v4 + shadcn/ui
-- **AI / Voice:** OpenAI (GPT-4o Mini for LLM + STT, gpt-4o-mini-tts for TTS)
+- **AI / Voice:** OpenAI (GPT-4o mini for LLM + STT, gpt-4o-mini-tts for TTS)
 - **Storage:** IndexedDB (Dexie.js) — fully local, no backend
 - **Testing:** Vitest + React Testing Library + MSW
 - **CI:** GitHub Actions (lint + format + unit tests + build)
@@ -34,6 +34,129 @@ This app requires your own OpenAI API key. Your key is stored in IndexedDB on yo
 4. You answer verbally — mic records and auto-detects when you stop speaking
 5. After all questions, AI generates structured feedback (rating + confidence level + commentary per question + overall summary)
 6. Feedback saved to IndexedDB, viewable anytime from History
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Pages["Pages (React Router v7)"]
+        Home["/  Home"]
+        StartModal["StartModal<br/>(topic + name + API key)"]
+        Session["/session  Interview"]
+        History["/history  History"]
+        Feedback["/history/:id  Feedback"]
+    end
+
+    subgraph Hooks["Core Hooks"]
+        useInterview["useInterviewSession<br/>(state machine + orchestrator)"]
+        useAudio["useAudioRecorder<br/>(Web Audio API + silence detection)"]
+        useApiKeyHook["ApiKeyProvider<br/>(React Context)"]
+    end
+
+    subgraph Services["Services (OpenAI SDK)"]
+        OpenAIClient["OpenAI Client Factory<br/>(cached instance)"]
+        LLM["LLM<br/>GPT-4o mini"]
+        STT["STT<br/>gpt-4o-mini-transcribe"]
+        TTS["TTS<br/>gpt-4o-mini-tts"]
+        FeedbackSvc["Feedback<br/>GPT-4o mini"]
+    end
+
+    subgraph Storage["Storage (IndexedDB via Dexie)"]
+        SessionsDB[("Sessions DB<br/>interviews + scores")]
+        KeyDB[("API Key DB<br/>OpenAI key")]
+        PrefsDB[("Preferences DB<br/>candidate name")]
+    end
+
+    subgraph Browser["Browser APIs"]
+        Mic["MediaRecorder"]
+        AudioCtx["AudioContext<br/>AnalyserNode (RMS)"]
+        AudioPlay["AudioContext<br/>Playback"]
+    end
+
+    Home --> StartModal
+    StartModal -->|"load/save name"| PrefsDB
+    StartModal -->|"start interview"| Session
+    Session --> useInterview
+    useInterview --> LLM
+    useInterview --> useAudio
+    useInterview -->|"question text"| TTS
+    useInterview -->|"audio blob"| STT
+    useInterview -->|"all Q&A pairs"| FeedbackSvc
+    useInterview -->|"save session"| SessionsDB
+    useInterview -->|"navigate on complete"| Feedback
+
+    useAudio --> Mic
+    useAudio --> AudioCtx
+    TTS --> AudioPlay
+
+    LLM --> OpenAIClient
+    STT --> OpenAIClient
+    TTS --> OpenAIClient
+    FeedbackSvc --> OpenAIClient
+    OpenAIClient -->|"reads key"| KeyDB
+    useApiKeyHook -->|"read/write key"| KeyDB
+
+    History -->|"load sessions"| SessionsDB
+    Feedback -->|"load session"| SessionsDB
+```
+
+### Interview Flow (State Machine)
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> generating : START
+    generating --> ai_speaking : QUESTION_READY
+    ai_speaking --> user_recording : TTS_DONE
+    user_recording --> awaiting_transcript : ANSWER_RECORDED
+    awaiting_transcript --> generating : TRANSCRIPT_READY (more questions)
+    awaiting_transcript --> generating_feedback : TRANSCRIPT_READY (all done)
+    ai_speaking --> user_recording : TTS_FAILED (fallback to text)
+    user_recording --> skipping : SKIP_NO_RESPONSE (silence)
+    skipping --> generating : next question
+    skipping --> generating_feedback : last question
+    generating_feedback --> completed : FEEDBACK_DONE
+    completed --> [*]
+
+    generating --> generating_feedback : STOP (early)
+    ai_speaking --> generating_feedback : STOP (early)
+    user_recording --> generating_feedback : STOP (early)
+    awaiting_transcript --> generating_feedback : STOP (early)
+
+    generating --> error : ERROR
+    ai_speaking --> error : ERROR
+    user_recording --> error : ERROR
+    awaiting_transcript --> error : ERROR
+    generating_feedback --> error : ERROR
+    error --> generating : RETRY
+    error --> ai_speaking : RETRY
+    error --> generating_feedback : RETRY
+```
+
+### Data Flow
+
+```text
+User clicks Start
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  INTERVIEW LOOP (repeats per question)                          │
+│                                                                 │
+│  1. LLM generates question (GPT-4o mini + conversation history) │
+│  2. TTS speaks question aloud (gpt-4o-mini-tts → AudioContext)  │
+│  3. User answers verbally (MediaRecorder + silence detection)   │
+│  4. STT transcribes answer (gpt-4o-mini-transcribe)             │
+│     └─ waits for transcript before generating next question     │
+└─────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Feedback generation (GPT-4o mini)
+    → per-question: rating, confidence, commentary, model answer
+    → overall summary
+    │
+    ▼
+Session saved to IndexedDB → navigate to Feedback page
+```
 
 ## Interview Topics
 
@@ -66,7 +189,7 @@ npm run dev
 - Mic device detection and permission gating
 - Native silence detection via Web Audio API `AnalyserNode` (RMS amplitude) — auto-stops recording after 6 seconds of silence
 - Max recording duration: 4 minutes per answer (with 30s warning)
-- Transcription runs in the background — no "transcribing..." wait between questions
+- Transcription runs in the background — next question generates after transcript is ready
 - Supported formats: WebM/Opus (Chrome/Firefox), MP4/AAC (Safari)
 - All in-flight API calls cancelled via AbortController on navigation/stop
 
