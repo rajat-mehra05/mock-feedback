@@ -135,7 +135,7 @@ stateDiagram-v2
 
 ### Data Flow
 
-```
+```text
 User clicks Start
     │
     ▼
