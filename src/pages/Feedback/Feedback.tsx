@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { getSession, type Session } from '@/db/sessions/sessions';
 import { scoreColor, scoreBg } from '@/lib/score';
+import { trackEvent } from '@/lib/analytics';
 import type { ConfidenceLevel } from '@/services/types';
 
 const CONFIDENCE_CONFIG: Record<ConfidenceLevel, { label: string; style: string }> = {
@@ -33,7 +34,10 @@ export function Feedback() {
   useEffect(() => {
     if (!id) return;
     getSession(id)
-      .then((s) => setSession(s ?? null))
+      .then((s) => {
+        setSession(s ?? null);
+        if (s) void trackEvent('feedback_viewed');
+      })
       .catch(() => setSession(null))
       .finally(() => setIsLoading(false));
   }, [id]);

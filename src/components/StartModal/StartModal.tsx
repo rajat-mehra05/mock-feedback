@@ -29,6 +29,7 @@ import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
 import { API_KEY_DESCRIPTION } from '@/constants/copy';
 import { getCandidateName, saveCandidateName } from '@/db/preferences/preferences';
+import { trackEvent } from '@/lib/analytics';
 
 interface StartModalProps {
   open: boolean;
@@ -72,6 +73,10 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
     /* v8 ignore next */ if (!topic || !hasKey) return;
     const trimmedName = name.trim();
     if (trimmedName) void saveCandidateName(trimmedName);
+    void trackEvent('session_started', {
+      topic,
+      questionCount: Number(questionCount),
+    });
     const params = new URLSearchParams({ topic, count: questionCount });
     if (trimmedName) params.set('name', trimmedName);
     void navigate(`/session?${params.toString()}`);

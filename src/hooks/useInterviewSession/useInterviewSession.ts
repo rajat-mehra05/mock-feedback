@@ -13,6 +13,7 @@ import { INTERVIEW_CLOSING_MESSAGE } from '@/constants/openai';
 import { REPEAT_QUESTION_PHRASE } from '@/constants/prompts';
 import { createSession } from '@/db/sessions/sessions';
 import type { OpenAIServiceError } from '@/services/types';
+import { trackEvent } from '@/lib/analytics';
 
 // Minimum blob size (bytes) to consider as real speech — silence-only blobs are typically <1KB
 const MIN_BLOB_SIZE = 2000;
@@ -137,6 +138,12 @@ export function useInterviewSession() {
             })),
           });
           if (effectSignal.aborted) return;
+          void trackEvent('session_completed', {
+            topic: state.topicLabel,
+            questionCount: state.targetQuestionCount,
+            answeredCount: state.history.length,
+            isPartial: state.isPartial,
+          });
           dispatch({ type: 'FEEDBACK_DONE', sessionId });
         } catch (error) {
           if (effectSignal.aborted) return;

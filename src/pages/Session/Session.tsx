@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT, toValidTopic } from '@/constants/topics';
 import { useInterviewSession } from '@/hooks/useInterviewSession/useInterviewSession';
+import { trackEvent } from '@/lib/analytics';
 import { SessionHeader } from './SessionHeader';
+import { StopDialog } from './StopDialog';
 import { ConversationLog } from './ConversationLog';
 import { StatusIndicator } from './StatusIndicator';
 import { RecordingTimer } from './RecordingTimer';
@@ -12,6 +13,7 @@ import { MicCheckGate } from './MicCheckGate';
 
 export function Session() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const topic = toValidTopic(searchParams.get('topic'));
   const rawCount = Number(searchParams.get('count'));
   const count =
@@ -20,6 +22,8 @@ export function Session() {
   const candidateName = searchParams.get('name') ?? '';
   const { state, start, stop, retry, stopRecordingOnly } = useInterviewSession();
   const startedRef = useRef(false);
+  const [stopDialogOpen, setStopDialogOpen] = useState(false);
+  const answeredCount = state.history.length;
 
   const handleMicReady = useCallback(() => {
     if (startedRef.current) return;
@@ -90,13 +94,29 @@ export function Session() {
           state.status,
         ) && (
           <button
-            onClick={stop}
+            onClick={() => setStopDialogOpen(true)}
             aria-label="Stop interview"
             className="flex h-20 w-20 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-sm font-bold uppercase tracking-wide text-black shadow-neo transition-all duration-100 hover:-translate-y-0.5 hover:shadow-neo-md focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
           >
             Stop
           </button>
         )}
+
+        <StopDialog
+          open={stopDialogOpen}
+          onOpenChange={setStopDialogOpen}
+          answeredCount={answeredCount}
+          totalCount={count}
+          onLeave={() => {
+            setStopDialogOpen(false);
+            void trackEvent('interview_abandoned', { topic: topicLabel });
+            void navigate('/history');
+          }}
+          onEndEarly={() => {
+            setStopDialogOpen(false);
+            stop();
+          }}
+        />
       </MicCheckGate>
     </div>
   );
