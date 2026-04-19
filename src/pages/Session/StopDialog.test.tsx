@@ -72,10 +72,10 @@ test('stop button with 0 answers shows leave dialog, cancel keeps interview, lea
   await user.click(within(reopened).getByRole('button', { name: /leave/i }));
 
   expect(stopFn).not.toHaveBeenCalled();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   expect(trackEvent).toHaveBeenCalledWith(
     'interview_abandoned',
-    expect.objectContaining({ topic: expect.any(String) }),
+    expect.objectContaining({ topic: expect.any(String) as string }),
   );
 });
 
