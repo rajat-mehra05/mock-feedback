@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SessionCard } from '@/components/SessionCard/SessionCard';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { trackEvent } from '@/lib/analytics';
 
 const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 
@@ -19,6 +20,10 @@ export function History() {
   const { sessions, isLoading, removeSession, removeAll } = useSessions();
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    void trackEvent('history_viewed');
+  }, []);
 
   const totalInterviews = sessions.length;
   const avgScore =
