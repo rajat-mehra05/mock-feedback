@@ -43,6 +43,27 @@ export function Layout({ children }: { children: ReactNode }) {
     if (mobileMenuOpen) menuItemRefs.current[0]?.focus();
   }, [mobileMenuOpen]);
 
+  // Global shortcut: Cmd+, (macOS) / Ctrl+, (Windows/Linux) opens Settings.
+  // Skip when typing in an editable field so the modal does not interrupt input.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey || e.altKey) return;
+      if (!(e.metaKey || e.ctrlKey) || e.key !== ',') return;
+      const { target } = e;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      setSettingsOpen(true);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col bg-background neo-grid-pattern">
       <a

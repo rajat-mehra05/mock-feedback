@@ -205,6 +205,19 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     };
   }, [cleanupSilenceDetector]);
 
+  // Stop recording when the window loses focus. Prevents silent
+  // background recording when the user switches tabs or apps.
+  // Captured audio is preserved via the onstop handler.
+  useEffect(() => {
+    const handleBlur = () => {
+      if (mediaRecorderRef.current?.state === 'recording') {
+        stopRecording();
+      }
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [stopRecording]);
+
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 
   return { startRecording, stopRecording, clearBlob, isRecording, audioBlob, error };
