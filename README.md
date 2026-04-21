@@ -174,6 +174,21 @@ npm install
 npm run dev
 ```
 
+## Build Targets
+
+The project supports two build targets. The active target is selected via `VITE_TARGET`, loaded from `.env` (web, default) and `.env.tauri` (desktop).
+
+| Script                 | Command                             | Output                                                                                   |
+| ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `npm run build`        | alias for `build:web`               | web build                                                                                |
+| `npm run build:web`    | `tsc -b && vite build`              | web build                                                                                |
+| `npm run build:tauri`  | `tsc -b && vite build --mode tauri` | bundle for the Tauri shell                                                               |
+| `npm run sync-version` | `node scripts/sync-version.mjs`     | syncs version across `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` |
+
+Tauri configuration is gated behind `mode === 'tauri'` in `vite.config.ts`: relative `base`, modern webview target, and the `TAURI_*` env prefix.
+
+In application code, read the current target via `import.meta.env.VITE_TARGET` or import the selected adapter via `@/platform`. The Tauri shell itself lands in Phase 4 — until then, `build:tauri` only produces the frontend bundle.
+
 ## Error Handling
 
 - **Invalid API key (401):** prompts user to update key in Settings

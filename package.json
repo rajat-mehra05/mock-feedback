@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web": "tsc -b && vite build",
+    "build:tauri": "tsc -b && vite build --mode tauri",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -15,6 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lighthouse": "lhci autorun",
+    "sync-version": "node scripts/sync-version.mjs",
     "prepare": "husky"
   },
   "dependencies": {
