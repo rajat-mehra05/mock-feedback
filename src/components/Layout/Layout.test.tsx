@@ -124,20 +124,26 @@ test('desktop Settings button opens SettingsModal', async () => {
   expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
 });
 
-test('Cmd+, keyboard shortcut opens SettingsModal', async () => {
+test('Cmd+, keyboard shortcut opens SettingsModal and is guarded against editable-field focus', async () => {
   const user = userEvent.setup();
 
   renderWithProviders(
     <Layout>
-      <p>Page content</p>
+      <input aria-label="Name" />
     </Layout>,
   );
 
   expect(screen.queryByRole('dialog', { name: /settings/i })).not.toBeInTheDocument();
 
-  // Cmd+, on macOS. The same handler also matches Ctrl+, for Windows/Linux.
+  // Typing in an input: Cmd+, must NOT hijack the keystroke and pop the modal.
+  const input = screen.getByRole('textbox', { name: /name/i });
+  await user.click(input);
   await user.keyboard('{Meta>},{/Meta}');
+  expect(screen.queryByRole('dialog', { name: /settings/i })).not.toBeInTheDocument();
 
+  // Outside any input: Cmd+, opens Settings. Same handler also matches Ctrl+, on Windows/Linux.
+  input.blur();
+  await user.keyboard('{Meta>},{/Meta}');
   expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
 });
 

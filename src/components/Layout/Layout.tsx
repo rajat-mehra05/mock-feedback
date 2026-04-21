@@ -44,12 +44,21 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [mobileMenuOpen]);
 
   // Global shortcut: Cmd+, (macOS) / Ctrl+, (Windows/Linux) opens Settings.
+  // Skip when typing in an editable field so the modal does not interrupt input.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
-        e.preventDefault();
-        setSettingsOpen(true);
+      if (e.shiftKey || e.altKey) return;
+      if (!(e.metaKey || e.ctrlKey) || e.key !== ',') return;
+      const { target } = e;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
       }
+      e.preventDefault();
+      setSettingsOpen(true);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
