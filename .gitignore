@@ -6,6 +6,11 @@ dist/
 dist-ssr/
 *.tsbuildinfo
 
+# Tauri
+# Cargo.lock IS committed for this app binary (reproducible builds)
+src-tauri/target/
+src-tauri/gen/
+
 # Environment
 .env
 .env.local

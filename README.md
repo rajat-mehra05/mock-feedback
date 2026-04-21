@@ -15,12 +15,13 @@ Most mock interview tools I found were paid and I couldn't customize them to foc
 - **Frontend:** Vite 8 + React 19 + TypeScript 5.9
 - **Styling:** Tailwind CSS v4 + shadcn/ui
 - **AI / Voice:** OpenAI (GPT-4o mini for LLM + STT, gpt-4o-mini-tts for TTS)
-- **Storage:** IndexedDB (Dexie.js) — fully local, no backend
+- **Storage:** IndexedDB (Dexie.js). Fully local, no backend
+- **Desktop (optional):** Tauri v2 shell for macOS and Windows
 - **Testing:** Vitest + React Testing Library + MSW
 - **CI:** GitHub Actions (lint + format + unit tests + build)
 - **Quality:** Lighthouse CI (performance + accessibility)
 - **Pre-commit:** Husky + lint-staged
-- **Analytics:** Vercel Analytics
+- **Analytics:** Vercel Analytics (web only)
 
 ## BYOK (Bring Your Own Key)
 
@@ -174,6 +175,17 @@ npm install
 npm run dev
 ```
 
+### Desktop (optional)
+
+Running the native desktop shell requires a [Rust toolchain](https://www.rust-lang.org/tools/install) (stable, 1.77+). Once installed:
+
+```bash
+npm run tauri:dev     # dev loop, hot reloads the frontend, rebuilds Rust on change
+npm run tauri:build   # produces a .dmg (macOS) or .msi (Windows) in src-tauri/target/release/bundle/
+```
+
+First `tauri:build` takes a few minutes while Cargo fetches and builds Tauri's crate graph. Subsequent builds are much faster.
+
 ## Build Targets
 
 The project supports two build targets. The active target is selected via `VITE_TARGET`, loaded from `.env` (web, default) and `.env.tauri` (desktop).
@@ -182,12 +194,14 @@ The project supports two build targets. The active target is selected via `VITE_
 | ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------- |
 | `npm run build`        | alias for `build:web`               | web build                                                                                |
 | `npm run build:web`    | `tsc -b && vite build`              | web build                                                                                |
-| `npm run build:tauri`  | `tsc -b && vite build --mode tauri` | bundle for the Tauri shell                                                               |
+| `npm run build:tauri`  | `tsc -b && vite build --mode tauri` | frontend bundle only, consumed by `tauri:build`                                          |
+| `npm run tauri:dev`    | `tauri dev`                         | launches the native desktop app with the dev server                                      |
+| `npm run tauri:build`  | `tauri build`                       | produces a packaged `.dmg` or `.msi` desktop installer                                   |
 | `npm run sync-version` | `node scripts/sync-version.mjs`     | syncs version across `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` |
 
 Tauri configuration is gated behind `mode === 'tauri'` in `vite.config.ts`: relative `base`, modern webview target, and the `TAURI_*` env prefix.
 
-In application code, read the current target via `import.meta.env.VITE_TARGET` or import the selected adapter via `@/platform`. The Tauri shell itself lands in Phase 4 — until then, `build:tauri` only produces the frontend bundle.
+In application code, read the current target via `import.meta.env.VITE_TARGET` or import the selected adapter via `@/platform`. The Rust shell lives in `src-tauri/` and currently wraps the existing web build without a Rust proxy. API calls still go direct from the renderer to OpenAI using the user-provided key.
 
 ## Error Handling
 
