@@ -68,7 +68,20 @@ export function Home() {
       </section>
 
       {/* Feature cards */}
-      <section aria-label="Features">
+      <section aria-labelledby="features-heading" className="space-y-8">
+        <h2
+          id="features-heading"
+          className="text-center text-2xl font-black uppercase tracking-tight text-black sm:text-3xl"
+        >
+          Why{' '}
+          <span className="relative inline-block">
+            <span className="relative z-10">VoiceRound</span>
+            <span
+              className="absolute bottom-1 left-0 -z-0 h-2 w-full -rotate-1 bg-neo-accent sm:h-2.5"
+              aria-hidden="true"
+            />
+          </span>
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map(({ icon: Icon, title, desc, color }) => (
             <div

@@ -4,7 +4,7 @@ export const FEATURES = [
   {
     icon: Mic,
     title: 'Voice-First',
-    desc: 'Speak naturally. Auto-detects when you stop.',
+    desc: 'Speak naturally. Auto-detects when you stop talking.',
     color: 'bg-neo-accent',
   },
   {
@@ -16,13 +16,13 @@ export const FEATURES = [
   {
     icon: BarChart3,
     title: 'Instant Feedback',
-    desc: 'Detailed ratings and actionable tips per question.',
+    desc: 'Detailed ratings and actionable feedback per answer.',
     color: 'bg-neo-muted',
   },
   {
     icon: Zap,
     title: 'Zero Setup',
-    desc: 'Runs in your browser. Just bring an OpenAI key.',
+    desc: 'Runs in your browser. Your OpenAI key is used only to call OpenAI.',
     color: 'bg-neo-cream',
   },
 ] as const;
