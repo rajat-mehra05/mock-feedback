@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Agentation } from 'agentation';
 import { ApiKeyProvider } from '@/hooks/ApiKeyContext/ApiKeyContext';
+import { AppRouter } from '@/components/AppRouter/AppRouter';
 import { Layout } from '@/components/Layout/Layout';
 import { ErrorBoundary, SessionErrorFallback } from '@/components/ErrorBoundary/ErrorBoundary';
 import { Spinner } from '@/components/ui/spinner';
@@ -82,11 +83,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <AppRouter>
         <ApiKeyProvider>
           <AppRoutes />
         </ApiKeyProvider>
-      </BrowserRouter>
+      </AppRouter>
       <Analytics />
       {import.meta.env.DEV && <Agentation />}
     </ErrorBoundary>
