@@ -48,9 +48,11 @@ test('tauri platform routes secrets through IPC commands and silences analytics'
   await platform.storage.secrets.clear('openai_api_key');
   expect(invokeMock).toHaveBeenLastCalledWith('secret_clear', { key: 'openai_api_key' });
 
+  const invokeCallsBefore = invokeMock.mock.calls.length;
   await expect(platform.storage.secrets.set('other_key', 'x')).rejects.toThrow(
     /unknown secret key/i,
   );
+  expect(invokeMock.mock.calls.length).toBe(invokeCallsBefore);
 
   await expect(platform.analytics.track('noop_event')).resolves.toBeUndefined();
 });

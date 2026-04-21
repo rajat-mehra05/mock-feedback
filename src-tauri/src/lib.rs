@@ -1,5 +1,6 @@
 use tauri::Manager;
 
+#[cfg(target_os = "macos")]
 mod menu;
 mod secrets;
 

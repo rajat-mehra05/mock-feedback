@@ -3,7 +3,7 @@ import { SECRET_OPENAI_API_KEY, type Platform } from '../types';
 
 function requireOpenAIKey(key: string): void {
   if (key !== SECRET_OPENAI_API_KEY) {
-    throw new Error(`Unknown secret key: ${key}`);
+    throw new Error(`unknown secret key: ${key}`);
   }
 }
 
