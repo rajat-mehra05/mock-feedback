@@ -98,7 +98,11 @@ export function History() {
         </div>
       </div>
 
-      <div role="region" aria-label="Interview statistics" className="grid grid-cols-3 gap-4">
+      <div
+        role="region"
+        aria-label="Interview statistics"
+        className="grid grid-cols-2 gap-4 sm:grid-cols-3"
+      >
         <div className="border-4 border-black bg-neo-secondary p-4 text-center shadow-neo-sm">
           <p className="text-3xl font-bold text-black">{totalInterviews}</p>
           <p className="text-xs font-bold uppercase tracking-widest text-black/70">Interviews</p>
@@ -109,7 +113,7 @@ export function History() {
           </p>
           <p className="text-xs font-bold uppercase tracking-widest text-black/70">Avg Score</p>
         </div>
-        <div className="border-4 border-black bg-neo-accent p-4 text-center shadow-neo-sm">
+        <div className="col-span-2 border-4 border-black bg-neo-accent p-4 text-center shadow-neo-sm sm:col-span-1">
           <p className="text-3xl font-bold text-black">
             {lastDate ? shortDateFormatter.format(lastDate) : '—'}
           </p>

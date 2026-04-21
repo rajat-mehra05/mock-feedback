@@ -43,6 +43,18 @@ export function Layout({ children }: { children: ReactNode }) {
     if (mobileMenuOpen) menuItemRefs.current[0]?.focus();
   }, [mobileMenuOpen]);
 
+  // Global shortcut: Cmd+, (macOS) / Ctrl+, (Windows/Linux) opens Settings.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col bg-background neo-grid-pattern">
       <a

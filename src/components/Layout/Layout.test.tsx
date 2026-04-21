@@ -124,6 +124,23 @@ test('desktop Settings button opens SettingsModal', async () => {
   expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
 });
 
+test('Cmd+, keyboard shortcut opens SettingsModal', async () => {
+  const user = userEvent.setup();
+
+  renderWithProviders(
+    <Layout>
+      <p>Page content</p>
+    </Layout>,
+  );
+
+  expect(screen.queryByRole('dialog', { name: /settings/i })).not.toBeInTheDocument();
+
+  // Cmd+, on macOS. The same handler also matches Ctrl+, for Windows/Linux.
+  await user.keyboard('{Meta>},{/Meta}');
+
+  expect(await screen.findByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+});
+
 test('skip-to-content link and landmarks are accessible', () => {
   renderWithProviders(
     <Layout>
