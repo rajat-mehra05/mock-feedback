@@ -1,6 +1,5 @@
 export const APP_NAME = 'VoiceRound';
 
-export const EMPTY_SESSIONS_MESSAGE = 'Your past interview sessions will appear here';
 export const API_KEY_DESCRIPTION =
   'This app requires your own OpenAI API key. Your key stays on your device and is only sent to OpenAI.';
 export const OPENAI_API_KEYS_URL = 'https://platform.openai.com/api-keys';
@@ -20,8 +19,8 @@ export const HOME_BADGE = 'AI-Powered Mock Interviews';
 export const HOME_HERO_HEADING_LINE1 = 'Nail your next';
 export const HOME_HERO_HEADING_LINE2 = 'tech interview';
 export const HOME_HERO_BODY =
-  'Practice real interview questions out loud with an AI that listens and gives feedback that actually makes you better.';
-export const HOME_HERO_TAGLINE = 'No fluff. No mercy. Just growth.';
+  'Practice real interviews out loud with an AI that listens, evaluates and improves your answers.';
+export const HOME_HERO_TAGLINE = 'No fluff. Just honest feedback. Real improvement.';
 export const HOME_START_LABEL = 'Start new interview session';
 export const HOME_CTA_HINT = 'Ready when you are.';
 export const HOME_FOOTER_OPEN_SOURCE = 'Fully Open source ❤️';
