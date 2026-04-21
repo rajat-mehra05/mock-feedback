@@ -34,6 +34,10 @@ let updated = 0;
 if (existsSync(cargoPath)) {
   const raw = readFileSync(cargoPath, 'utf8');
   // Only replaces the first `version = "x.y.z"` line, which is the one in [package].
+  if (!/^version\s*=\s*"[^"]*"/m.test(raw)) {
+    console.error(`No [package] version line found in ${path.relative(root, cargoPath)}`);
+    process.exit(1);
+  }
   const next = raw.replace(/^version\s*=\s*"[^"]*"/m, `version = "${version}"`);
   if (next !== raw) {
     writeFileSync(cargoPath, next);

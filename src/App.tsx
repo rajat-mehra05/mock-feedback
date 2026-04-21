@@ -88,7 +88,7 @@ export default function App() {
           <AppRoutes />
         </ApiKeyProvider>
       </AppRouter>
-      <Analytics />
+      {import.meta.env.VITE_TARGET !== 'tauri' && <Analytics />}
       {import.meta.env.DEV && <Agentation />}
     </ErrorBoundary>
   );
