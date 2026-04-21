@@ -22,7 +22,7 @@ export const FEATURES = [
   {
     icon: Zap,
     title: 'Zero Setup',
-    desc: 'Runs fully in your browser. Your OpenAI key never leaves your device.',
+    desc: 'Runs in your browser. Your OpenAI key is used only to call OpenAI.',
     color: 'bg-neo-cream',
   },
 ] as const;
