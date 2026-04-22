@@ -8,6 +8,7 @@
  */
 
 import { mark } from '@/lib/perf';
+import { TtsChunkQueue } from '@/lib/ttsChunkQueue';
 
 const MIME = 'audio/mpeg';
 
@@ -97,14 +98,13 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   const objectUrl = URL.createObjectURL(mediaSource);
   audio.src = objectUrl;
 
-  const pending: Uint8Array[] = [];
+  // Chunk ordering + closed/errored lifecycle flags live in a pure helper
+  // so invariants (push-after-close is a no-op, fail drains the queue,
+  // canEndStream is true only after drain) are covered by tests that don't
+  // need jsdom's missing MediaSource/HTMLAudioElement. See
+  // `src/lib/ttsChunkQueue.ts`.
+  const queue = new TtsChunkQueue();
   let sourceBuffer: SourceBuffer | null = null;
-  let endOfStreamRequested = false;
-  // `closed` flips once end() has been called. Late pushes that arrive after
-  // the stream was marked done (e.g. a stray channel delta after `kind: done`)
-  // would otherwise try to append to a closed MediaSource and throw.
-  let closed = false;
-  let errored = false;
 
   const cleanupAudio = () => {
     audio.pause();
@@ -117,22 +117,27 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
     if (signal) signal.removeEventListener('abort', onAbort);
   };
 
+  const failStream = (err: Error) => {
+    if (queue.isErrored) return;
+    queue.fail();
+    cleanupAudio();
+    reject(err);
+  };
+
   const flush = () => {
-    if (errored || !sourceBuffer || sourceBuffer.updating) return;
-    const next = pending.shift();
+    if (queue.isErrored || !sourceBuffer || sourceBuffer.updating) return;
+    const next = queue.nextChunk();
     if (next) {
       try {
         // Pass the view directly so only the actual chunk region is appended,
         // regardless of whether `next` is a fresh allocation or a subview.
         sourceBuffer.appendBuffer(next as unknown as BufferSource);
       } catch (err) {
-        errored = true;
-        cleanupAudio();
-        reject(err instanceof Error ? err : new Error('appendBuffer failed'));
+        failStream(err instanceof Error ? err : new Error('appendBuffer failed'));
       }
       return;
     }
-    if (endOfStreamRequested && mediaSource.readyState === 'open') {
+    if (queue.canEndStream() && mediaSource.readyState === 'open') {
       try {
         mediaSource.endOfStream();
       } catch {
@@ -144,35 +149,26 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   mediaSource.addEventListener('sourceopen', () => {
     // If an abort or earlier error already settled the stream, skip setup so
     // we don't call reject/cleanupAudio twice.
-    if (errored) return;
+    if (queue.isErrored) return;
     try {
       sourceBuffer = mediaSource.addSourceBuffer(MIME);
       sourceBuffer.addEventListener('updateend', flush);
       flush();
     } catch (err) {
-      if (errored) return;
-      errored = true;
-      cleanupAudio();
-      reject(err instanceof Error ? err : new Error('addSourceBuffer failed'));
+      failStream(err instanceof Error ? err : new Error('addSourceBuffer failed'));
     }
   });
 
   audio.addEventListener('ended', () => {
     cleanupAudio();
-    if (!errored) resolve();
+    if (!queue.isErrored) resolve();
   });
   audio.addEventListener('error', () => {
-    if (errored) return;
-    errored = true;
-    cleanupAudio();
-    reject(new Error('audio element error'));
+    failStream(new Error('audio element error'));
   });
 
   const onAbort = () => {
-    if (errored) return;
-    errored = true;
-    cleanupAudio();
-    reject(new DOMException('Audio playback aborted', 'AbortError'));
+    failStream(new DOMException('Audio playback aborted', 'AbortError'));
   };
   if (signal) {
     if (signal.aborted) {
@@ -193,22 +189,18 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
 
   return {
     push(bytes) {
-      if (errored || closed) return;
+      if (queue.isErrored || queue.isClosed) return;
       markFirstChunk();
-      pending.push(bytes);
+      queue.push(bytes);
       flush();
     },
     end() {
-      if (errored || closed) return;
-      closed = true;
-      endOfStreamRequested = true;
+      if (queue.isErrored || queue.isClosed) return;
+      queue.end();
       flush();
     },
     fail(error) {
-      if (errored) return;
-      errored = true;
-      cleanupAudio();
-      reject(error);
+      failStream(error);
     },
     finished,
   };

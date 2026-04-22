@@ -11,6 +11,7 @@ const recorderState = {
   audioBlob: null as Blob | null,
   isRecording: false,
   error: null as MicError | null,
+  streamingId: null as string | null,
 };
 const recorderFns = {
   startRecording: vi.fn(),
@@ -29,6 +30,9 @@ vi.mock('@/hooks/useAudioRecorder/useAudioRecorder', () => ({
     },
     get error() {
       return recorderState.error;
+    },
+    get streamingId() {
+      return recorderState.streamingId;
     },
   }),
 }));
@@ -69,6 +73,7 @@ beforeEach(async () => {
   recorderState.audioBlob = null;
   recorderState.isRecording = false;
   recorderState.error = null;
+  recorderState.streamingId = null;
   recorderFns.startRecording.mockClear();
   recorderFns.stopRecording.mockClear();
   recorderFns.clearBlob.mockClear();
@@ -316,4 +321,72 @@ test('feedback generation error transitions to error state', async () => {
   await waitFor(() => expect(result.current.state.status).toBe('error'));
   expect(result.current.state.error?.message).toBe('feedback failed');
   expect(result.current.state.retryFromStatus).toBe('generating_feedback');
+});
+
+// Phase 9.2/9.3: when the recorder streamed chunks to the Rust-side buffer
+// but the audio blob turns out to be silence, the Rust buffer would linger
+// without these discards — the 9.2/9.3 pipeline has no reason to commit on
+// a "no response" turn.
+test('a silent recording that skips STT still drops the streamed Rust buffer', async ({
+  onTestFinished,
+}) => {
+  const discard = vi.fn().mockResolvedValue(undefined);
+  const pushChunk = vi.fn().mockResolvedValue(undefined);
+  const commit = vi.fn().mockResolvedValue('unused');
+  const originalStreaming = platform.http.openai.transcribeStreaming;
+  platform.http.openai.transcribeStreaming = { pushChunk, commit, discard };
+  onTestFinished(() => {
+    platform.http.openai.transcribeStreaming = originalStreaming;
+  });
+
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 3 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  // Below MIN_BLOB_SIZE ⇒ session treats this as silence and skips STT.
+  recorderState.streamingId = 'stream-silent';
+  recorderState.audioBlob = new Blob([new Uint8Array(100)], { type: 'audio/wav' });
+  rerender();
+
+  await waitFor(() => expect(result.current.state.status).toBe('skipping'));
+  expect(discard).toHaveBeenCalledWith('stream-silent');
+  // Commit path must not run on a "no response" turn.
+  expect(commit).not.toHaveBeenCalled();
+});
+
+test('a transcribe failure after retries drops the streamed Rust buffer so memory does not pile up', async ({
+  onTestFinished,
+}) => {
+  const discard = vi.fn().mockResolvedValue(undefined);
+  const pushChunk = vi.fn().mockResolvedValue(undefined);
+  const commit = vi.fn().mockResolvedValue('unused');
+  const originalStreaming = platform.http.openai.transcribeStreaming;
+  platform.http.openai.transcribeStreaming = { pushChunk, commit, discard };
+  onTestFinished(() => {
+    platform.http.openai.transcribeStreaming = originalStreaming;
+  });
+
+  // Non-retryable error → withRetry bails on the first attempt.
+  vi.mocked(transcribeAudio).mockRejectedValue({
+    type: 'unknown',
+    message: 'STT down',
+    retryable: false,
+  });
+
+  const { result, rerender } = renderHook(() => useInterviewSession(), { wrapper });
+  act(() => {
+    result.current.start({ topic: 'react-nextjs', topicLabel: 'React', questionCount: 1 });
+  });
+  await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
+
+  recorderState.streamingId = 'stream-broken';
+  recorderState.audioBlob = new Blob([new Uint8Array(6000)], { type: 'audio/wav' });
+  rerender();
+
+  await waitFor(() =>
+    expect(result.current.state.history[0]?.answer).toBe('[transcription failed]'),
+  );
+  expect(discard).toHaveBeenCalledWith('stream-broken');
 });

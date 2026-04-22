@@ -112,7 +112,6 @@ export interface TranscribeCommitRequest {
    *  this rate. The backend prepends a WAV header before uploading. Omit
    *  for self-contained container formats. */
   sampleRate?: number;
-  timeoutMs?: number;
 }
 
 /** Optional capability: push audio bytes to the backend during recording so
@@ -120,8 +119,13 @@ export interface TranscribeCommitRequest {
  *  mic-stop time. Implemented by the Tauri adapter; the web path has no
  *  intermediate backend to pre-buffer into and leaves these undefined. */
 export interface TranscribeStreamingOps {
-  /** Called for each chunk emitted by MediaRecorder during a turn. */
-  pushChunk(requestId: string, chunk: Uint8Array, signal?: AbortSignal): Promise<void>;
+  /** Push a chunk of captured audio to the backend-side buffer.
+   *
+   *  `chunk` is raw 16-bit little-endian mono PCM produced by the Phase 9.3
+   *  AudioWorklet (`public/audio/downsample-worklet.js`) at
+   *  `CAPTURE_SAMPLE_RATE` (16kHz). The Rust side concatenates chunks in
+   *  arrival order and prepends a WAV header on commit. */
+  pushChunk(requestId: string, chunk: Uint8Array): Promise<void>;
   /** Called on mic-stop. Returns the transcript. */
   commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string>;
   /** Called when a recording is abandoned without a commit. Idempotent. */

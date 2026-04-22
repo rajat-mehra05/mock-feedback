@@ -35,6 +35,11 @@ class DownsampleProcessor extends AudioWorkletProcessor {
     // port message (see below).
     this.batch = new Int16Array(BATCH_SAMPLES);
     this.batchOffset = 0;
+    // Reusable scratch buffer for the per-quantum mono downmix. Sized to
+    // the standard render-quantum frame count (128); grown on demand if a
+    // host ever uses a larger quantum. Avoids a ~512-byte Float32Array
+    // allocation per process() call (~375/sec at 48kHz hardware rate).
+    this.monoScratch = new Float32Array(128);
     this.port.onmessage = (event) => {
       // Main thread asks us to flush the tail (on stop) before the graph
       // is torn down so the trailing < 250ms isn't lost. After flushing
@@ -71,8 +76,12 @@ class DownsampleProcessor extends AudioWorkletProcessor {
     const channels = input.length;
     const frames = input[0].length;
 
-    // Downmix to mono. `channels === 1` is a cheap path; otherwise average.
-    const mono = new Float32Array(frames);
+    // Downmix to mono into the reusable scratch buffer. Grow only if the
+    // host somehow widens the render quantum (uncommon but allowed by spec).
+    if (this.monoScratch.length < frames) {
+      this.monoScratch = new Float32Array(frames);
+    }
+    const mono = this.monoScratch;
     if (channels === 1) {
       mono.set(input[0]);
     } else {

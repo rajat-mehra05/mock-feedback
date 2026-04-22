@@ -273,7 +273,7 @@ async function* tauriChatStream(req: ChatRequest, signal?: AbortSignal): AsyncIt
  */
 function makeTranscribeStreaming(): TranscribeStreamingOps {
   return {
-    async pushChunk(requestId, chunk) {
+    async pushChunk(requestId: string, chunk: Uint8Array) {
       try {
         await invoke('transcribe_push_chunk', chunk, {
           headers: { 'x-request-id': requestId },

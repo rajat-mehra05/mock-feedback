@@ -47,6 +47,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   /** First chunk marks `transcribe_start` in the perf log so stage deltas
    *  are measured from the moment Rust starts accumulating audio. */
   const firstChunkMarkedRef = useRef(false);
+  /** Pending `pushChunk` invokes for the current recording. Each chunk's
+   *  promise is stored here so the finalizer can await them all before
+   *  surfacing the blob — otherwise the commit can race ahead of the last
+   *  chunk and drain an incomplete buffer on Rust. Cleared per recording. */
+  const pendingPushesRef = useRef<Promise<void>[]>([]);
 
   const releaseCaptureGraph = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -63,15 +68,20 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     audioContextRef.current = null;
   }, []);
 
-  const buildWavBlob = useCallback((): Blob | null => {
+  const buildWavBlob = useCallback((): Blob => {
+    // Always returns a Blob, even when no chunks arrived (fast-stop before
+    // the worklet could emit anything). An empty 44-byte WAV trips the
+    // downstream `MIN_BLOB_SIZE` check and routes into SKIP_NO_RESPONSE —
+    // matching the pre-9.3 MediaRecorder behaviour. Returning `null` here
+    // would leave the session stuck in `user_recording` because the
+    // audioBlob-change effect only fires on a transition.
     const chunks = pcmChunksRef.current;
-    if (chunks.length === 0) return null;
-    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
     const merged = new Int16Array(total);
     let offset = 0;
-    for (const c of chunks) {
-      merged.set(c, offset);
-      offset += c.length;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
     }
     pcmChunksRef.current = [];
     // Cast via `unknown as BlobPart` because TS 5.9's Uint8Array type is
@@ -109,8 +119,21 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     finalizeRef.current = () => {
       finalizeRef.current = null;
       const blob = buildWavBlob();
-      releaseCaptureGraph();
-      if (!disconnectedRef.current && blob) setAudioBlob(blob);
+      // Await in-flight chunk pushes before the blob goes live. The consumer
+      // (stt.ts) kicks off `transcribe_commit` on the blob, and that commit
+      // drains the Rust buffer — if the last chunk's invoke is still in
+      // flight, the buffer would be incomplete. The pending array is
+      // snapshotted + cleared so a second recording can't pile on, and
+      // `Promise.all([])` resolves in the next microtask so the empty case
+      // needs no special path. Both resolution and rejection of individual
+      // pushes publish the blob (errors were swallowed at push time).
+      const pending = pendingPushesRef.current;
+      pendingPushesRef.current = [];
+      const publish = () => {
+        releaseCaptureGraph();
+        if (!disconnectedRef.current) setAudioBlob(blob);
+      };
+      void Promise.all(pending).then(publish, publish);
     };
 
     // Ask the worklet to post its tail, followed by the 'flushed' sentinel
@@ -127,6 +150,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const abortWithError = useCallback(
     (err: MicError) => {
       pcmChunksRef.current = [];
+      pendingPushesRef.current = [];
       disconnectedRef.current = true;
       finalizeRef.current = null; // any pending 'flushed' sentinel is now a no-op
       releaseCaptureGraph();
@@ -150,6 +174,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     resetPerf();
     firstChunkMarkedRef.current = false;
     pcmChunksRef.current = [];
+    pendingPushesRef.current = [];
 
     const streaming = platform.http.openai.transcribeStreaming;
     const newStreamingId = streaming ? crypto.randomUUID() : null;
@@ -217,10 +242,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
           // Wrap in a fresh Uint8Array so the underlying buffer is the exact
           // PCM range; Tauri's binary IPC ships it zero-copy.
           const bytes = new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-          void streaming.pushChunk(newStreamingId, bytes).catch(() => {
-            // Individual push failures are recoverable — commit surfaces a
-            // classified error later.
-          });
+          // Track the promise so the finalizer can await all in-flight
+          // pushes before the consumer commits — otherwise the commit can
+          // race ahead of the last chunk and drain an incomplete buffer.
+          // Individual push failures are swallowed here (commit surfaces a
+          // classified error anyway); the `.catch` also prevents
+          // unhandled-rejection warnings inside Promise.all.
+          pendingPushesRef.current.push(streaming.pushChunk(newStreamingId, bytes).catch(() => {}));
         }
       };
 

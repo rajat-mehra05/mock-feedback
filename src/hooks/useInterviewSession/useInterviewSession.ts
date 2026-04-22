@@ -43,6 +43,13 @@ export function useInterviewSession() {
     pendingTextRef.current = null;
     if (text !== null) dispatch({ type: 'QUESTION_TEXT_PROGRESS', text });
   }, []);
+  const cancelPendingText = useCallback(() => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    pendingTextRef.current = null;
+  }, []);
   const scheduleTextUpdate = useCallback(
     (text: string) => {
       pendingTextRef.current = text;
@@ -92,6 +99,10 @@ export function useInterviewSession() {
           const raw = result.text;
           const isRepeat = raw.includes(REPEAT_QUESTION_PHRASE);
           const question = isRepeat ? raw.replace(REPEAT_QUESTION_PHRASE, '').trim() : raw;
+          // Drain any in-flight QUESTION_TEXT_PROGRESS before committing the
+          // final question — otherwise a pending rAF can overwrite the final
+          // text with a stale partial after this dispatch.
+          cancelPendingText();
           // Chat + TTS have both completed at this point. Dispatch the two
           // actions back-to-back so React 18 batches them into a single
           // commit and the `ai_speaking` handler below never re-fires TTS.
@@ -223,8 +234,17 @@ export function useInterviewSession() {
     const streamingId = recorder.streamingId;
     recorder.clearBlob();
 
+    // Called on any path that won't reach `transcribe_commit` (silent
+    // skip, transcribe failure after retries) so the Rust-side buffer
+    // doesn't linger. Safe when streamingId is null or the web adapter
+    // has no streaming support — both short-circuit.
+    const discardStreamingBuffer = () => {
+      if (streamingId) void platform.http.openai.transcribeStreaming?.discard(streamingId);
+    };
+
     // Skip STT for silent/empty blobs — prevents Whisper hallucination
     if (blob.size < MIN_BLOB_SIZE) {
+      discardStreamingBuffer();
       dispatch({ type: 'SKIP_NO_RESPONSE' });
       return;
     }
@@ -244,6 +264,10 @@ export function useInterviewSession() {
         dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript });
       } catch (error) {
         if (s.aborted) return;
+        // On final failure (retries exhausted) the Rust buffer is still
+        // alive — drop it so a long-running session doesn't accumulate
+        // orphaned recordings under the byte cap.
+        discardStreamingBuffer();
         // Surface so users have something to paste when transcription breaks;
         // the state machine still records "[transcription failed]" for the LLM.
         console.error('[transcribe] failed for question', questionIndex, error);
@@ -264,12 +288,9 @@ export function useInterviewSession() {
   useEffect(
     () => () => {
       abortRef.current.abort();
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
+      cancelPendingText();
     },
-    [],
+    [cancelPendingText],
   );
 
   const start = useCallback((config: InterviewConfig) => {

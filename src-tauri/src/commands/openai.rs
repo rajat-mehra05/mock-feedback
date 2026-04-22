@@ -1,11 +1,12 @@
 use crate::error::AppError;
 use crate::openai::client::OPENAI_BASE_URL;
 use crate::secrets::read_key;
-use crate::AppState;
+use crate::{AppState, TranscribeBuffer};
 use futures_util::StreamExt;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::time::Instant;
 use tauri::{
     ipc::{Channel, InvokeBody, InvokeResponseBody, Request},
     State,
@@ -328,6 +329,13 @@ pub struct TranscribeCommitArgs {
     pub sample_rate: Option<u32>,
 }
 
+/// Hard cap per request so a stuck / runaway recording can't leak memory.
+/// `MAX_RECORDING_SECONDS` (240s) * 32KB/s (16kHz mono Int16) = ~7.7MB; we
+/// round up to 16MB for headroom on WAV header overhead and silence padding.
+/// When the cap is hit we drop the buffer and surface an error so the UI can
+/// react instead of silently accumulating partial audio.
+const TRANSCRIBE_BUFFER_MAX_BYTES: usize = 16 * 1024 * 1024;
+
 /// Append a chunk of audio bytes to the buffer for this request id. Metadata
 /// (the request id) travels in headers so the body stays raw.
 #[tauri::command]
@@ -350,7 +358,22 @@ pub async fn transcribe_push_chunk(
         }
     };
     let mut buffers = state.transcribe_buffers.lock();
-    buffers.entry(request_id).or_default().extend_from_slice(chunk);
+    let buf = buffers
+        .entry(request_id.clone())
+        .or_insert_with(|| TranscribeBuffer {
+            bytes: Vec::new(),
+            last_updated: Instant::now(),
+        });
+    if buf.bytes.len() + chunk.len() > TRANSCRIBE_BUFFER_MAX_BYTES {
+        // Drop the buffer so the process doesn't keep growing and surface a
+        // terminal error to the caller.
+        buffers.remove(&request_id);
+        return Err(AppError::other(
+            "transcribe buffer exceeded maximum size",
+        ));
+    }
+    buf.bytes.extend_from_slice(chunk);
+    buf.last_updated = Instant::now();
     Ok(())
 }
 
@@ -362,12 +385,19 @@ pub async fn transcribe_commit(
     args: TranscribeCommitArgs,
     state: State<'_, AppState>,
 ) -> Result<String, AppError> {
+    // Clone the buffer so it stays intact if the upload fails — the caller
+    // may retry (withRetry on the frontend) and we don't want the first
+    // attempt's drain to starve retries with a "no buffered audio" error.
+    // Buffer is explicitly removed on success below, and via
+    // `transcribe_discard` / `cancel_request` on abandon.
     let pcm = state
         .transcribe_buffers
         .lock()
-        .remove(&args.request_id)
+        .get(&args.request_id)
+        .map(|buf| buf.bytes.clone())
         .ok_or_else(|| AppError::other("no buffered audio for request id"))?;
     if pcm.is_empty() {
+        state.transcribe_buffers.lock().remove(&args.request_id);
         return Err(AppError::other("transcribe_commit received empty buffer"));
     }
 
@@ -416,6 +446,9 @@ pub async fn transcribe_commit(
         .get("text")
         .and_then(|t| t.as_str())
         .ok_or_else(|| AppError::other("empty transcription response"))?;
+    // Upload succeeded — now it's safe to drop the buffer. Retries on
+    // upstream errors (429, 5xx, network) reuse the clone we made above.
+    state.transcribe_buffers.lock().remove(&args.request_id);
     Ok(text.to_string())
 }
 
@@ -625,5 +658,66 @@ fn classify_status(status: u16, body: String) -> AppError {
             }
         }
         _ => AppError::Upstream { message, status },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wav_header_matches_openai_expected_riff_layout_for_16khz_mono_pcm() {
+        // Two samples of PCM — small enough to inspect every field, large
+        // enough to prove the data section and header sizes line up. Mirrors
+        // the JS `wavEncoder.test.ts` so a cross-runtime round-trip is
+        // guaranteed to produce identical bytes.
+        let pcm: [u8; 4] = [0x01, 0x00, 0xff, 0xff]; // two LE Int16: 1, -1
+        let wav = wrap_pcm_in_wav(&pcm, 16000);
+
+        assert_eq!(wav.len(), 44 + 4);
+        assert_eq!(&wav[0..4], b"RIFF");
+        assert_eq!(&wav[8..12], b"WAVE");
+        assert_eq!(&wav[12..16], b"fmt ");
+        assert_eq!(&wav[36..40], b"data");
+
+        // RIFF chunk size = file size - 8 = 40
+        assert_eq!(u32::from_le_bytes(wav[4..8].try_into().unwrap()), 40);
+        // fmt subchunk size = 16 (PCM)
+        assert_eq!(u32::from_le_bytes(wav[16..20].try_into().unwrap()), 16);
+        // format code 1 = PCM, 1 channel, 16kHz
+        assert_eq!(u16::from_le_bytes(wav[20..22].try_into().unwrap()), 1);
+        assert_eq!(u16::from_le_bytes(wav[22..24].try_into().unwrap()), 1);
+        assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 16000);
+        // byte rate = 16000 * 1 * 2
+        assert_eq!(u32::from_le_bytes(wav[28..32].try_into().unwrap()), 32_000);
+        // bits per sample
+        assert_eq!(u16::from_le_bytes(wav[34..36].try_into().unwrap()), 16);
+        // data size
+        assert_eq!(u32::from_le_bytes(wav[40..44].try_into().unwrap()), 4);
+        // payload preserved exactly
+        assert_eq!(&wav[44..48], &pcm);
+    }
+
+    #[test]
+    fn sse_boundary_detection_accepts_all_three_blank_line_variants_from_the_spec() {
+        // OpenAI emits `\n\n` today; proxies can rewrite to CRLF. Spec says
+        // clients MUST accept `\r\n\r\n`, `\n\n`, and `\r\r`. Missing a
+        // variant means the stream hangs forever waiting for the wrong
+        // terminator.
+        assert_eq!(find_event_boundary(b"data: 1\n\nrest"), Some((7, 2)));
+        assert_eq!(find_event_boundary(b"data: 1\r\n\r\nrest"), Some((7, 4)));
+        assert_eq!(find_event_boundary(b"data: 1\r\rrest"), Some((7, 2)));
+        // Incomplete event: still waiting for more bytes.
+        assert_eq!(find_event_boundary(b"data: 1\n"), None);
+        assert_eq!(find_event_boundary(b""), None);
+    }
+
+    #[test]
+    fn sse_boundary_prefers_crlf_over_bare_lf_when_both_could_match() {
+        // `\r\n\r\n` shares `\n\n` as a substring. The parser must report
+        // the 4-byte separator so the caller drains the full terminator
+        // instead of leaving a stray `\r\n` in the buffer.
+        let (_, sep_len) = find_event_boundary(b"x\r\n\r\ny").unwrap();
+        assert_eq!(sep_len, 4);
     }
 }

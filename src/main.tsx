@@ -38,11 +38,13 @@ async function boot(): Promise<void> {
 
   // Phase 9.4: warm the AudioWorklet so the first recording's `addModule`
   // call is a cache hit. Fire after first paint so the preload doesn't
-  // contend with the initial render.
+  // contend with the initial render. Best-effort — chunk load failures
+  // (offline, flaky network) are swallowed rather than leaked as
+  // unhandled rejections; the recorder's own addModule is the fallback.
   requestAnimationFrame(() => {
-    void import('@/lib/workletPreload').then(({ preloadDownsampleWorklet }) =>
-      preloadDownsampleWorklet(),
-    );
+    import('@/lib/workletPreload')
+      .then(({ preloadDownsampleWorklet }) => preloadDownsampleWorklet())
+      .catch((err: unknown) => console.warn('[worklet] preload skipped:', err));
   });
 }
 
