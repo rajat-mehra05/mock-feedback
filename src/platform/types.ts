@@ -39,7 +39,7 @@ export interface Session {
 }
 
 export interface SessionsAdapter {
-  create(session: Session): Promise<string>;
+  create(session: Session): Promise<void>;
   get(id: string): Promise<Session | undefined>;
   getAll(): Promise<Session[]>;
   delete(id: string): Promise<void>;

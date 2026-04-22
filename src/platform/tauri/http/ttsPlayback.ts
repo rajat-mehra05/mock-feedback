@@ -103,11 +103,13 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   };
 
   const flush = () => {
-    if (!sourceBuffer || sourceBuffer.updating) return;
+    if (errored || !sourceBuffer || sourceBuffer.updating) return;
     const next = pending.shift();
     if (next) {
       try {
-        sourceBuffer.appendBuffer(next.buffer as ArrayBuffer);
+        // Pass the view directly so only the actual chunk region is appended,
+        // regardless of whether `next` is a fresh allocation or a subview.
+        sourceBuffer.appendBuffer(next as unknown as BufferSource);
       } catch (err) {
         errored = true;
         cleanupAudio();
@@ -125,11 +127,15 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   };
 
   mediaSource.addEventListener('sourceopen', () => {
+    // If an abort or earlier error already settled the stream, skip setup so
+    // we don't call reject/cleanupAudio twice.
+    if (errored) return;
     try {
       sourceBuffer = mediaSource.addSourceBuffer(MIME);
       sourceBuffer.addEventListener('updateend', flush);
       flush();
     } catch (err) {
+      if (errored) return;
       errored = true;
       cleanupAudio();
       reject(err instanceof Error ? err : new Error('addSourceBuffer failed'));

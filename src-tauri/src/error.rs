@@ -54,6 +54,11 @@ impl From<reqwest::Error> for AppError {
         if let Some(status) = e.status() {
             return AppError::Upstream { message: e.to_string(), status: status.as_u16() };
         }
+        // Body decode failures (malformed upstream JSON) are not network
+        // errors — the network completed successfully, the payload was bad.
+        if e.is_decode() {
+            return AppError::other(e.to_string());
+        }
         AppError::Network { message: e.to_string() }
     }
 }

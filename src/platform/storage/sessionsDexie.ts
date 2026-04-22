@@ -9,8 +9,8 @@ db.version(1).stores({
   sessions: 'id, topic, createdAt',
 });
 
-export async function createSession(session: Session): Promise<string> {
-  return db.sessions.add(session);
+export async function createSession(session: Session): Promise<void> {
+  await db.sessions.add(session);
 }
 
 export async function getSession(id: string): Promise<Session | undefined> {

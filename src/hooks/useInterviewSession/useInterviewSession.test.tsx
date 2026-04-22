@@ -48,7 +48,7 @@ vi.mock('@/services/feedback/feedback', () => ({
     summary: 'Well done.',
   }),
 }));
-const createSession = vi.fn().mockResolvedValue('mock-session-id');
+const createSession = vi.fn().mockResolvedValue(undefined);
 vi.spyOn(platform.storage.sessions, 'create').mockImplementation(createSession);
 
 const { useInterviewSession } = await import('./useInterviewSession');
@@ -78,7 +78,7 @@ beforeEach(async () => {
       questions: [{ rating: 8, feedback: 'Good.', confidence: 'high', modelAnswer: 'Model.' }],
       summary: 'Well done.',
     });
-  createSession.mockReset().mockResolvedValue('mock-session-id');
+  createSession.mockReset().mockResolvedValue(undefined);
 });
 
 test('full single-question interview: idle → generate → speak → record → feedback → completed', async () => {

@@ -10,10 +10,13 @@ pub fn build() -> Client {
         // this is just an upper bound.
         .pool_idle_timeout(Some(Duration::from_secs(90)))
         .connect_timeout(Duration::from_secs(15))
-        // Request-level safety net. The renderer can still cancel earlier via
-        // `cancel_request`, but this guarantees no invoke hangs forever if the
-        // upstream stops responding mid-stream.
-        .timeout(Duration::from_secs(60))
+        // `read_timeout` is per-chunk (resets on each successful read), so a
+        // long TTS stream plays fine while a stalled connection is caught.
+        // `timeout` is the upper bound for the whole request — big enough to
+        // accommodate a multi-paragraph TTS response without aborting a
+        // legitimate stream.
+        .read_timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(300))
         .build()
         .expect("reqwest client build")
 }

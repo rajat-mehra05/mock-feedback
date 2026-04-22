@@ -33,7 +33,14 @@ export async function playAudioArrayBuffer(
   return new Promise<void>((resolve, reject) => {
     const abortHandler = () => {
       source.onended = null;
-      source.stop();
+      // `source.stop()` throws InvalidStateError if called before `start()`.
+      // Abort can fire in the narrow window between listener registration and
+      // the `start()` call below; swallow the throw so we still reject cleanly.
+      try {
+        source.stop();
+      } catch {
+        // not yet started — nothing to stop
+      }
       closeContext();
       reject(new DOMException('Audio playback aborted', 'AbortError'));
     };

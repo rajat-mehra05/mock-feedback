@@ -97,15 +97,28 @@ pub async fn openai_chat(args: ChatArgs, state: State<'_, AppState>) -> Result<S
     let token = register_token(&state, &args.request_id);
     let client = state.http.clone();
 
-    let body = json!({
-        "model": args.request.model,
-        "messages": args.request.messages.iter().map(|m| json!({
-            "role": m.role,
-            "content": m.content,
-        })).collect::<Vec<_>>(),
-        "temperature": args.request.temperature,
-        "max_tokens": args.request.max_tokens,
-    });
+    // `json!` with `Option::None` emits JSON `null`, which OpenAI rejects for
+    // `temperature` / `max_tokens`. Build the body manually and only insert
+    // optional fields when they're `Some`.
+    let mut body = serde_json::Map::new();
+    body.insert("model".into(), serde_json::Value::String(args.request.model.clone()));
+    body.insert(
+        "messages".into(),
+        serde_json::Value::Array(
+            args.request
+                .messages
+                .iter()
+                .map(|m| json!({ "role": m.role, "content": m.content }))
+                .collect(),
+        ),
+    );
+    if let Some(t) = args.request.temperature {
+        body.insert("temperature".into(), json!(t));
+    }
+    if let Some(n) = args.request.max_tokens {
+        body.insert("max_tokens".into(), json!(n));
+    }
+    let body = serde_json::Value::Object(body);
 
     let request = client
         .post(format!("{OPENAI_BASE_URL}/chat/completions"))
@@ -192,13 +205,20 @@ pub async fn openai_tts(
     let token = register_token(&state, &args.request_id);
     let client = state.http.clone();
 
-    let body = json!({
-        "model": args.request.model,
-        "voice": args.request.voice,
-        "input": args.request.input,
-        "instructions": args.request.instructions,
-        "response_format": args.request.response_format.clone().unwrap_or_else(|| "mp3".into()),
-    });
+    let mut body = serde_json::Map::new();
+    body.insert("model".into(), serde_json::Value::String(args.request.model.clone()));
+    body.insert("voice".into(), serde_json::Value::String(args.request.voice.clone()));
+    body.insert("input".into(), serde_json::Value::String(args.request.input.clone()));
+    if let Some(ref instructions) = args.request.instructions {
+        body.insert("instructions".into(), serde_json::Value::String(instructions.clone()));
+    }
+    body.insert(
+        "response_format".into(),
+        serde_json::Value::String(
+            args.request.response_format.clone().unwrap_or_else(|| "mp3".into()),
+        ),
+    );
+    let body = serde_json::Value::Object(body);
 
     let request = client
         .post(format!("{OPENAI_BASE_URL}/audio/speech"))

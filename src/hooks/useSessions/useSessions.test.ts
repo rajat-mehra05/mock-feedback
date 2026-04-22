@@ -31,15 +31,14 @@ test('useSessions loads sessions, removes one, and removes all', async () => {
   await waitFor(() => expect(result.current.sessions).toHaveLength(0));
 });
 
-test('useSessions handles storage failure gracefully', async () => {
+test('useSessions handles storage failure gracefully', async ({ onTestFinished }) => {
   const spy = vi
     .spyOn(platform.storage.sessions, 'getAll')
     .mockRejectedValueOnce(new Error('DB corrupted'));
+  onTestFinished(() => spy.mockRestore());
 
   const { result } = renderHook(() => useSessions());
 
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   expect(result.current.sessions).toEqual([]);
-
-  spy.mockRestore();
 });
