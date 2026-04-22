@@ -20,6 +20,16 @@
 const MIN_SENTENCE_CHARS = 8;
 const TERMINATORS = new Set(['.', '?', '!']);
 
+// Common abbreviations that look like sentence ends but aren't. The MIN guard
+// catches short candidates like "Dr." on its own, but a long sentence that
+// ends with an abbreviation ("I spoke to Dr." or "Use hooks e.g.") would
+// otherwise pass the length check and split wrongly.
+const ABBREVIATION_END_RE = /(?:e\.g\.|i\.e\.|Mr\.|Mrs\.|Ms\.|Dr\.)$/;
+
+function endsWithKnownAbbreviation(text: string): boolean {
+  return ABBREVIATION_END_RE.test(text);
+}
+
 export class SentenceAccumulator {
   private buffer = '';
 
@@ -50,9 +60,8 @@ export class SentenceAccumulator {
       }
 
       const candidate = this.buffer.slice(start, j + 1).trim();
-      if (candidate.length < MIN_SENTENCE_CHARS) {
-        // Too short to be a real sentence end — probably an abbreviation or
-        // decimal. Skip the boundary and keep accumulating.
+      if (candidate.length < MIN_SENTENCE_CHARS || endsWithKnownAbbreviation(candidate)) {
+        // Too short, or ends with a known abbreviation — skip this boundary.
         i = j;
         continue;
       }

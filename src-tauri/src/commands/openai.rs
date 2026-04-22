@@ -183,9 +183,9 @@ pub async fn openai_chat_stream(
                         buffer.extend_from_slice(&bytes);
 
                         // Drain complete SSE events (blank-line terminated).
-                        while let Some(sep) = find_event_boundary(&buffer) {
-                            let event_bytes: Vec<u8> = buffer.drain(..sep + 2).collect();
-                            let Ok(event) = std::str::from_utf8(&event_bytes[..sep]) else {
+                        while let Some((pos, sep_len)) = find_event_boundary(&buffer) {
+                            let event_bytes: Vec<u8> = buffer.drain(..pos + sep_len).collect();
+                            let Ok(event) = std::str::from_utf8(&event_bytes[..pos]) else {
                                 // A validly-framed SSE event with non-UTF-8 payload would be
                                 // an OpenAI contract violation. Skip and continue rather than
                                 // tearing the whole turn down.
@@ -430,11 +430,26 @@ fn build_chat_body(request: &ChatRequestBody, stream: bool) -> serde_json::Value
     serde_json::Value::Object(body)
 }
 
-/// SSE events are terminated by a blank line (`\n\n`). We search at the byte
-/// level because `bytes_stream()` chunks may split multi-byte UTF-8 codepoints
-/// mid-character; the separators themselves are ASCII so this is safe.
-fn find_event_boundary(buf: &[u8]) -> Option<usize> {
-    buf.windows(2).position(|w| w == b"\n\n")
+/// SSE events are terminated by a blank line. The spec (W3C) requires clients
+/// to accept all three line-ending variants — `\r\n\r\n`, `\n\n`, and `\r\r` —
+/// even though OpenAI currently emits `\n\n`. A proxy between us and the API
+/// could rewrite line endings, and hanging forever waiting for `\n\n` is a
+/// bad failure mode. Byte-level search is safe because the separators are
+/// ASCII regardless of how UTF-8 codepoints split across stream chunks.
+///
+/// Returns `(position_of_content_end, separator_length)` so the caller can
+/// drain the right number of bytes from the buffer.
+fn find_event_boundary(buf: &[u8]) -> Option<(usize, usize)> {
+    if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+        return Some((pos, 4));
+    }
+    if let Some(pos) = buf.windows(2).position(|w| w == b"\n\n") {
+        return Some((pos, 2));
+    }
+    if let Some(pos) = buf.windows(2).position(|w| w == b"\r\r") {
+        return Some((pos, 2));
+    }
+    None
 }
 
 fn classify_status(status: u16, body: String) -> AppError {

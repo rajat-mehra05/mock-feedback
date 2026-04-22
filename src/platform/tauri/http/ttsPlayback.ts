@@ -100,6 +100,10 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   const pending: Uint8Array[] = [];
   let sourceBuffer: SourceBuffer | null = null;
   let endOfStreamRequested = false;
+  // `closed` flips once end() has been called. Late pushes that arrive after
+  // the stream was marked done (e.g. a stray channel delta after `kind: done`)
+  // would otherwise try to append to a closed MediaSource and throw.
+  let closed = false;
   let errored = false;
 
   const cleanupAudio = () => {
@@ -189,13 +193,14 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
 
   return {
     push(bytes) {
-      if (errored) return;
+      if (errored || closed) return;
       markFirstChunk();
       pending.push(bytes);
       flush();
     },
     end() {
-      if (errored) return;
+      if (errored || closed) return;
+      closed = true;
       endOfStreamRequested = true;
       flush();
     },

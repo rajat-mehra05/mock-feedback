@@ -179,9 +179,14 @@ async function* tauriChatStream(req: ChatRequest, signal?: AbortSignal): AsyncIt
     if (delta.kind === 'content') {
       buffered.push(delta.text);
     } else if (delta.kind === 'done') {
-      state.terminal = { done: true };
+      // Don't overwrite an existing terminal (e.g. a prior abort).
+      if (!state.terminal) state.terminal = { done: true };
     } else {
-      state.terminal = { error: new Error(delta.message) };
+      // Rust emits a raw `message` on the channel *and* rejects the invoke
+      // promise. The invoke path runs `classifyOpenAIError`, so it carries
+      // richer detail (code, status, retryable). Wake the reader here but
+      // let invokePromise.catch set the terminal so the structured error
+      // wins — unless an abort or earlier terminal has already landed.
     }
     notify();
   };

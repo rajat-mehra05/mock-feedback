@@ -80,6 +80,11 @@ export async function streamAndSpeakQuestion(
       });
     }
   })();
+  // If speakText rejects while the chat-side for-await is still pumping, the
+  // rejection is in flight but no handler is attached yet. Node/vitest flag
+  // that as an unhandled rejection. Attach a no-op catch to mark it handled;
+  // `await consumerPromise` below still propagates the original error state.
+  consumerPromise.catch(() => {});
 
   let chatError: unknown = null;
   try {
@@ -131,8 +136,13 @@ export async function streamAndSpeakQuestion(
   }
 
   if (chatError) {
+    // Once TTS has started speaking sentence 1, a retry would play the
+    // question's audio a second time. Force `retryable: false` on any error
+    // that happened after the first token arrived so `withRetry` bails out.
+    const classified = classifyOpenAIError(chatError);
+    if (firstTokenSeen) classified.retryable = false;
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
-    throw classifyOpenAIError(chatError);
+    throw classified;
   }
 
   const trimmed = fullText.trim();
@@ -144,8 +154,13 @@ export async function streamAndSpeakQuestion(
 }
 
 function isAbortError(error: unknown): boolean {
-  // `DOMException` extends `Error`, and our abort path throws
-  // `new DOMException('Aborted', 'AbortError')`. A single instanceof + name
-  // check covers both DOMException and any plain Error tagged as AbortError.
-  return error instanceof Error && error.name === 'AbortError';
+  // Duck-type on `.name` rather than `instanceof Error` so aborts that crossed
+  // a realm boundary (workers, iframes, jsdom's separate realm in tests) still
+  // match. Any object with `name === 'AbortError'` counts.
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name: unknown }).name === 'AbortError'
+  );
 }

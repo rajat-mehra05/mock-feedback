@@ -77,3 +77,19 @@ test('terminators inside very short fragments stay merged with the next sentence
   expect(emitted).toEqual(['Hi! Tell me about your React background.']);
   expect(acc.flush()).toBeNull();
 });
+
+test('long sentences ending with abbreviations do not split at the abbreviation', () => {
+  // "I spoke to Dr." is 14 chars — over the length guard — but it would be a
+  // bad split because "Dr." is a title, not a sentence end. The abbreviation
+  // regex prevents the split so the TTS queue gets the full sentence.
+  const acc = new SentenceAccumulator();
+  expect(acc.push('I spoke to Dr. Smith about useEffect. ')).toEqual([
+    'I spoke to Dr. Smith about useEffect.',
+  ]);
+
+  acc.push('Hooks are useful in many ways e.g. ');
+  acc.push('useState and useEffect are common. ');
+  // Both "e.g." and the real sentence boundary after "common." exist; only
+  // the latter should split.
+  expect(acc.flush()).toBeNull();
+});

@@ -150,6 +150,11 @@ async function* webChatStream(
       },
       { signal: merged },
     );
+    // Stream is established — clear the network timeout so a slow but healthy
+    // token stream isn't killed when it exceeds LLM_TIMEOUT_MS. The caller's
+    // own `signal` still reaches the stream via the merged abort signal.
+    // `cleanup` (clearTimeout) is idempotent so the finally call is a no-op.
+    cleanup();
     for await (const chunk of stream) {
       const text = chunk.choices[0]?.delta?.content;
       if (text) yield text;
