@@ -1,10 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getAllSessions,
-  deleteSession,
-  deleteAllSessions,
-  type Session,
-} from '@/db/sessions/sessions';
+import { platform, type Session } from '@/platform';
 
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -13,7 +8,7 @@ export function useSessions() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllSessions().then(
+    platform.storage.sessions.getAll().then(
       (data) => {
         if (!cancelled) {
           setSessions(data);
@@ -35,12 +30,12 @@ export function useSessions() {
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const removeSession = useCallback(async (id: string) => {
-    await deleteSession(id);
+    await platform.storage.sessions.delete(id);
     setRefreshKey((k) => k + 1);
   }, []);
 
   const removeAll = useCallback(async () => {
-    await deleteAllSessions();
+    await platform.storage.sessions.deleteAll();
     setRefreshKey((k) => k + 1);
   }, []);
 

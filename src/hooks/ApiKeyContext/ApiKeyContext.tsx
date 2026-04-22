@@ -1,30 +1,31 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { getApiKey, saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
+import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 import { ApiKeyContext } from '@/hooks/ApiKeyContext/apiKeyState';
 
 export function ApiKeyProvider({ children }: { children: ReactNode }) {
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [hasKey, setHasKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getApiKey()
-      .then((key) => setApiKey(key))
-      .catch(() => setApiKey(null))
+    platform.storage.secrets
+      .has(SECRET_OPENAI_API_KEY)
+      .then(setHasKey)
+      .catch(() => setHasKey(false))
       .finally(() => setIsLoading(false));
   }, []);
 
   const save = useCallback(async (key: string) => {
-    await saveApiKey(key);
-    setApiKey(key);
+    await platform.storage.secrets.set(SECRET_OPENAI_API_KEY, key);
+    setHasKey(true);
   }, []);
 
   const remove = useCallback(async () => {
-    await deleteApiKey();
-    setApiKey(null);
+    await platform.storage.secrets.clear(SECRET_OPENAI_API_KEY);
+    setHasKey(false);
   }, []);
 
   return (
-    <ApiKeyContext.Provider value={{ apiKey, hasKey: !!apiKey, isLoading, save, remove }}>
+    <ApiKeyContext.Provider value={{ hasKey, isLoading, save, remove }}>
       {children}
     </ApiKeyContext.Provider>
   );

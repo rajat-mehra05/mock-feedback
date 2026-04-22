@@ -1,13 +1,13 @@
 import { expect, test } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/msw/server';
-import { saveApiKey } from '@/db/apiKey/apiKey';
+import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 import { generateFeedback } from '@/services/feedback/feedback';
 
 const BASE_URL = 'https://api.openai.com/v1';
 
 test('generateFeedback returns parsed feedback from OpenAI and throws classified errors', async () => {
-  await saveApiKey('sk-test');
+  await platform.storage.secrets.set(SECRET_OPENAI_API_KEY, 'sk-test');
 
   const feedbackJSON = JSON.stringify({
     questions: [

@@ -1,26 +1,20 @@
-import { getOpenAIClient } from '@/services/openai/openai';
-import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
-import { STT_MODEL, STT_TIMEOUT_MS } from '@/constants/openai';
+import { platform } from '@/platform';
+import { STT_MODEL } from '@/constants/openai';
+import { mark } from '@/lib/perf';
 
 /**
  * Transcribes an audio blob using OpenAI's STT model.
- * Returns the transcript text.
+ * Returns the transcript text. The adapter handles network timeouts and
+ * keychain-backed authentication on Tauri.
  */
 export async function transcribeAudio(blob: Blob, signal?: AbortSignal): Promise<string> {
-  const client = await getOpenAIClient();
-  const file = new File([blob], 'recording.webm', { type: blob.type });
-  const { signal: mergedSignal, cleanup } = createTimeoutSignal(STT_TIMEOUT_MS, signal);
-
+  mark('transcribe_start');
   try {
-    const response = await client.audio.transcriptions.create(
-      { model: STT_MODEL, file },
-      { signal: mergedSignal },
+    return await platform.http.openai.transcribe(
+      { model: STT_MODEL, audio: blob, filename: 'recording.webm' },
+      signal,
     );
-    return response.text;
-  } catch (error) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
-    throw classifyOpenAIError(error);
   } finally {
-    cleanup();
+    mark('transcribe_end');
   }
 }

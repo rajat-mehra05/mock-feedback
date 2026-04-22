@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Feedback } from './Feedback';
-import { db } from '@/db/sessions/sessions';
+import { platform } from '@/platform';
 import { makeSession } from '@/test/factories';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -17,7 +17,7 @@ function renderFeedback(sessionId: string) {
 }
 
 test('user sees session not found for invalid id', async () => {
-  await db.sessions.clear();
+  await platform.storage.sessions.deleteAll();
   renderFeedback('nonexistent');
 
   expect(await screen.findByText(/session not found/i)).toBeInTheDocument();
@@ -25,9 +25,9 @@ test('user sees session not found for invalid id', async () => {
 });
 
 test('user sees all questions with ratings, feedback text, overall summary, and back link', async () => {
-  await db.sessions.clear();
+  await platform.storage.sessions.deleteAll();
 
-  await db.sessions.add(
+  await platform.storage.sessions.create(
     makeSession({
       id: 'fb-session',
       topic: 'React & Next.js',
@@ -102,8 +102,8 @@ test('user sees all questions with ratings, feedback text, overall summary, and 
 });
 
 test('user toggles to Model Answers view and sees modelAnswer content', async () => {
-  await db.sessions.clear();
-  await db.sessions.add(
+  await platform.storage.sessions.deleteAll();
+  await platform.storage.sessions.create(
     makeSession({
       id: 'toggle-session',
       topic: 'JavaScript',

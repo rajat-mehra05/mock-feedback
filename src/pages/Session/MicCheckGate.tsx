@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { checkMediaRecorderSupport, checkMicDevices, checkMicPermission } from '@/lib/micCheck';
 import {
-  UNSUPPORTED_BROWSER_MESSAGE,
-  NO_MIC_MESSAGE,
-  MIC_PERMISSION_MESSAGE,
-} from '@/constants/copy';
+  canOpenMicSettings,
+  classifyMicError,
+  micError,
+  openMicSettings,
+  type MicError,
+} from '@/lib/micError';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -29,7 +31,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 export function MicCheckGate({ onReady, children }: { onReady: () => void; children: ReactNode }) {
   const [status, setStatus] = useState<CheckStatus>('checking');
   const [phase, setPhase] = useState<CheckPhase>('browser');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [failure, setFailure] = useState<MicError | null>(null);
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -41,58 +43,54 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
 
   async function runChecks() {
     const token = ++requestIdRef.current;
+    const isActive = () => mountedRef.current && token === requestIdRef.current;
 
     // Phase 1: Browser compatibility
     setPhase('browser');
     if (!checkMediaRecorderSupport()) {
-      if (!mountedRef.current || token !== requestIdRef.current) return;
-      setErrorMessage(UNSUPPORTED_BROWSER_MESSAGE);
+      if (!isActive()) return;
+      setFailure(micError('unsupported'));
       setStatus('failed');
       return;
     }
 
     // Phase 2: Mic device detection
-    if (!mountedRef.current || token !== requestIdRef.current) return;
+    if (!isActive()) return;
     setPhase('devices');
     try {
       const hasDevices = await checkMicDevices();
-      if (!mountedRef.current || token !== requestIdRef.current) return;
+      if (!isActive()) return;
       if (!hasDevices) {
-        setErrorMessage(NO_MIC_MESSAGE);
+        setFailure(micError('no-device'));
         setStatus('failed');
         return;
       }
     } catch {
-      if (!mountedRef.current || token !== requestIdRef.current) return;
-      setErrorMessage(NO_MIC_MESSAGE);
+      if (!isActive()) return;
+      setFailure(micError('no-device'));
       setStatus('failed');
       return;
     }
 
     // Phase 3: Mic permission
-    if (!mountedRef.current || token !== requestIdRef.current) return;
+    if (!isActive()) return;
     setPhase('permission');
 
-    // Fast-path: check permission state before calling getUserMedia
-    let permissionState: string | null;
+    let permissionState: string | null = null;
     try {
       permissionState = await checkMicPermission();
     } catch {
-      if (!mountedRef.current || token !== requestIdRef.current) return;
-      setErrorMessage(MIC_PERMISSION_MESSAGE);
-      setStatus('failed');
-      return;
+      // Unsupported — fall through to the getUserMedia prompt.
     }
-    if (!mountedRef.current || token !== requestIdRef.current) return;
+    if (!isActive()) return;
 
     if (permissionState === 'denied') {
-      setErrorMessage(MIC_PERMISSION_MESSAGE);
+      setFailure(micError('permission-denied'));
       setStatus('failed');
       return;
     }
 
     if (permissionState !== 'granted') {
-      // Permission is 'prompt' — need to call getUserMedia with a timeout
       try {
         await withTimeout(
           navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => {
@@ -101,15 +99,15 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
           MIC_CHECK_TIMEOUT_MS,
           'timeout',
         );
-      } catch {
-        if (!mountedRef.current || token !== requestIdRef.current) return;
-        setErrorMessage(MIC_PERMISSION_MESSAGE);
+      } catch (err) {
+        if (!isActive()) return;
+        setFailure(classifyMicError(err));
         setStatus('failed');
         return;
       }
     }
 
-    if (!mountedRef.current || token !== requestIdRef.current) return;
+    if (!isActive()) return;
     setStatus('passed');
     onReady();
   }
@@ -128,20 +126,33 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
     );
   }
 
-  if (status === 'failed') {
+  if (status === 'failed' && failure) {
+    const showSettings =
+      (failure.kind === 'permission-denied' || failure.kind === 'permission-revoked') &&
+      canOpenMicSettings();
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
-        <p className="max-w-md text-sm text-foreground">{errorMessage}</p>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setStatus('checking');
-            setPhase('browser');
-            void runChecks();
-          }}
-        >
-          Retry
-        </Button>
+        <p className="max-w-md text-sm text-foreground" role="alert">
+          {failure.message}
+        </p>
+        <div className="flex gap-2">
+          {showSettings && (
+            <Button variant="outline" onClick={openMicSettings}>
+              Open System Settings
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStatus('checking');
+              setPhase('browser');
+              setFailure(null);
+              void runChecks();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }

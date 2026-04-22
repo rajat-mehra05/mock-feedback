@@ -11,7 +11,7 @@ import { withRetry } from '@/lib/retry';
 import { RETRY_MAX_ATTEMPTS, RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS } from '@/constants/interview';
 import { INTERVIEW_CLOSING_MESSAGE } from '@/constants/openai';
 import { REPEAT_QUESTION_PHRASE } from '@/constants/prompts';
-import { createSession } from '@/db/sessions/sessions';
+import { platform } from '@/platform';
 import type { OpenAIServiceError } from '@/services/types';
 import { trackEvent } from '@/lib/analytics';
 
@@ -119,7 +119,7 @@ export function useInterviewSession() {
           const avg =
             result.questions.reduce((sum, q) => sum + q.rating, 0) / result.questions.length || 0;
 
-          await createSession({
+          await platform.storage.sessions.create({
             id: sessionId,
             topic: state.topicLabel,
             createdAt: new Date(),
@@ -160,7 +160,11 @@ export function useInterviewSession() {
   useEffect(() => {
     if (recorder.error && state.status === 'user_recording') {
       onError(
-        { type: 'unknown', message: recorder.error, retryable: true } as OpenAIServiceError,
+        {
+          type: 'unknown',
+          message: recorder.error.message,
+          retryable: true,
+        } as OpenAIServiceError,
         'user_recording',
       );
     }

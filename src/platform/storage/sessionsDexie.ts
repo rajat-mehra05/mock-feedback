@@ -1,26 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { ConfidenceLevel } from '@/services/types';
-
-export interface Question {
-  id: string;
-  questionText: string;
-  userTranscript: string;
-  rating: number;
-  feedback: string;
-  confidence?: ConfidenceLevel;
-  modelAnswer: string;
-}
-
-export interface Session {
-  id: string;
-  topic: string;
-  createdAt: Date;
-  duration: number;
-  questionCount: number;
-  averageScore: number;
-  questions: Question[];
-  summary?: string;
-}
+import type { Session } from '../types';
 
 const db = new Dexie('VoiceRoundDB') as Dexie & {
   sessions: EntityTable<Session, 'id'>;
@@ -30,8 +9,8 @@ db.version(1).stores({
   sessions: 'id, topic, createdAt',
 });
 
-export async function createSession(session: Session): Promise<string> {
-  return db.sessions.add(session);
+export async function createSession(session: Session): Promise<void> {
+  await db.sessions.add(session);
 }
 
 export async function getSession(id: string): Promise<Session | undefined> {

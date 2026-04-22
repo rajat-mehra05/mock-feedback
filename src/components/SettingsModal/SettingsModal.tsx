@@ -17,7 +17,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { apiKey, remove } = useApiKey();
+  const { hasKey, remove } = useApiKey();
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {!apiKey && (
+          {!hasKey && (
             <p className="text-sm font-bold text-black/60">
               You need an OpenAI API key to use {APP_NAME}. Set your key below, or add it when
               starting a session.
@@ -61,19 +61,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <ApiKeyInput
               inputId="api-key-input"
               onSaved={handleSaved}
-              placeholder={apiKey ? '••••••••••••••••' : undefined}
+              placeholder={hasKey ? '••••••••••••••••' : undefined}
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div className="text-sm font-bold" aria-live="polite">
-              {apiKey ? (
+              {hasKey ? (
                 <span className="text-green-700">Key configured</span>
               ) : (
                 <span className="text-black/70">No key configured</span>
               )}
             </div>
-            {apiKey && (
+            {hasKey && (
               <Button type="button" variant="destructive" size="sm" onClick={() => void remove()}>
                 Remove
               </Button>

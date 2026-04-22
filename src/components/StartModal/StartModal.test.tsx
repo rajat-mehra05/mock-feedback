@@ -3,7 +3,10 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { StartModal } from './StartModal';
-import { saveApiKey, deleteApiKey } from '@/db/apiKey/apiKey';
+import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
+
+const deleteApiKey = () => platform.storage.secrets.clear(SECRET_OPENAI_API_KEY);
+const saveApiKey = (key: string) => platform.storage.secrets.set(SECRET_OPENAI_API_KEY, key);
 
 test('first-time user sees API key input, saves key, sees Saved confirmation, then starts session', async () => {
   await deleteApiKey();

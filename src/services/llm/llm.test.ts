@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/msw/server';
-import { saveApiKey } from '@/db/apiKey/apiKey';
+import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 import { generateNextQuestion } from '@/services/llm/llm';
 
 const BASE_URL = 'https://api.openai.com/v1';
@@ -21,7 +21,7 @@ function useChatHandler(content: string, capture?: (body: CapturedRequest) => vo
 }
 
 test('generateNextQuestion returns a question, supports candidateName, and throws classified errors', async () => {
-  await saveApiKey('sk-test');
+  await platform.storage.secrets.set(SECRET_OPENAI_API_KEY, 'sk-test');
 
   const question = await generateNextQuestion('React & Next.js', []);
   expect(question).toBe('Can you explain the difference between == and === in JavaScript?');
@@ -51,6 +51,11 @@ test('generateNextQuestion returns a question, supports candidateName, and throw
 
   // Empty LLM response
   useChatHandler('');
+  await expect(generateNextQuestion('React', [])).rejects.toMatchObject({ type: 'unknown' });
+
+  // Whitespace-only LLM response must also be rejected — otherwise the
+  // session would advance with a blank question and the TTS would speak nothing.
+  useChatHandler('   \n\t  ');
   await expect(generateNextQuestion('React', [])).rejects.toMatchObject({ type: 'unknown' });
 
   // 401 auth error

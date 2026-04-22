@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { scoreColor, scoreBg } from '@/lib/score';
-import type { Session } from '@/db/sessions/sessions';
+import type { Session } from '@/platform';
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);

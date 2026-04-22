@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { saveCandidateName, getCandidateName, getOrCreateDeviceId } from './preferences';
+import { saveCandidateName, getCandidateName, getOrCreateDeviceId } from './preferencesDexie';
 
 test('candidate name save, retrieve, and overwrite lifecycle', async () => {
   expect(await getCandidateName()).toBeNull();

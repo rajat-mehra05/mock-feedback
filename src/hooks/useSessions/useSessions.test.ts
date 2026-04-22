@@ -1,9 +1,9 @@
 import { expect, test, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { db, createSession } from '@/db/sessions/sessions';
+import { db, createSession } from '@/platform/storage/sessionsDexie';
 import { makeSession } from '@/test/factories';
 import { useSessions } from './useSessions';
-import * as sessionsModule from '@/db/sessions/sessions';
+import { platform } from '@/platform';
 
 test('useSessions loads sessions, removes one, and removes all', async () => {
   await db.sessions.clear();
@@ -14,18 +14,15 @@ test('useSessions loads sessions, removes one, and removes all', async () => {
 
   const { result } = renderHook(() => useSessions());
 
-  // Initially loading, then resolves with sessions ordered by createdAt desc
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   expect(result.current.sessions).toHaveLength(2);
   expect(result.current.sessions[0].id).toBe('s2');
   expect(result.current.sessions[1].id).toBe('s1');
 
-  // Remove a single session
   await result.current.removeSession('s1');
   await waitFor(() => expect(result.current.sessions).toHaveLength(1));
   expect(result.current.sessions[0].id).toBe('s2');
 
-  // Add another session back, then remove all
   await createSession(makeSession({ id: 's3', topic: 'JS' }));
   result.current.refresh();
   await waitFor(() => expect(result.current.sessions).toHaveLength(2));
@@ -34,13 +31,14 @@ test('useSessions loads sessions, removes one, and removes all', async () => {
   await waitFor(() => expect(result.current.sessions).toHaveLength(0));
 });
 
-test('useSessions handles getAllSessions failure gracefully', async () => {
-  vi.spyOn(sessionsModule, 'getAllSessions').mockRejectedValueOnce(new Error('DB corrupted'));
+test('useSessions handles storage failure gracefully', async ({ onTestFinished }) => {
+  const spy = vi
+    .spyOn(platform.storage.sessions, 'getAll')
+    .mockRejectedValueOnce(new Error('DB corrupted'));
+  onTestFinished(() => spy.mockRestore());
 
   const { result } = renderHook(() => useSessions());
 
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   expect(result.current.sessions).toEqual([]);
-
-  vi.restoreAllMocks();
 });
