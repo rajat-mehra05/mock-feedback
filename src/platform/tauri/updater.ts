@@ -1,4 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app';
+import { error as logError } from '@tauri-apps/plugin-log';
 import { open as openShellUrl } from '@tauri-apps/plugin-shell';
 import type { UpdateInfo, UpdaterAdapter } from '../types';
 import { semverGreaterThan } from '@/lib/semverCompare';
@@ -43,11 +44,12 @@ interface GitHubRelease {
   html_url: string;
 }
 
-/** Exposed for test: the HTTP branch that talks to GitHub. Returns the
- *  minimal shape on success and `null` on any failure (non-2xx, network
- *  error, timeout, missing fields, JSON parse error). The caller must
- *  treat `null` as "can't check" — never as "no update." */
-export async function fetchLatestRelease(): Promise<GitHubRelease | null> {
+/** Exposed for test: the HTTP branch that talks to GitHub. Throws on any
+ *  failure (non-2xx, network error, timeout, missing fields, JSON parse
+ *  error). The caller is responsible for translating failures into
+ *  user-facing state — the launch toast swallows them to stay silent on
+ *  flaky networks; the Settings row surfaces them as an error. */
+export async function fetchLatestRelease(): Promise<GitHubRelease> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -55,14 +57,14 @@ export async function fetchLatestRelease(): Promise<GitHubRelease | null> {
       headers: { Accept: 'application/vnd.github+json' },
       signal: controller.signal,
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`GitHub releases returned HTTP ${response.status}`);
+    }
     const body = (await response.json()) as Partial<GitHubRelease>;
-    if (typeof body.tag_name !== 'string' || typeof body.html_url !== 'string') return null;
+    if (typeof body.tag_name !== 'string' || typeof body.html_url !== 'string') {
+      throw new Error('GitHub releases response missing tag_name or html_url');
+    }
     return { tag_name: body.tag_name, html_url: body.html_url };
-  } catch {
-    // Network failures / timeout / parse errors all map to "can't check" so
-    // the launch path stays silent. Settings UI surfaces errors explicitly.
-    return null;
   } finally {
     clearTimeout(timer);
   }
@@ -94,6 +96,17 @@ export const tauriUpdater: UpdaterAdapter = {
       // surface a Rust panic via the IPC bridge to an end user.
       return;
     }
-    await openShellUrl(url);
+    try {
+      await openShellUrl(url);
+    } catch (err) {
+      // Capability rejection or IPC failure. Log for diagnostics and
+      // swallow — the caller already ran `isAllowedReleaseUrl`, so we
+      // know the URL isn't the issue from our side, and the user just
+      // sees "nothing happened" which is better than an unhandled
+      // rejection bubbling out of the adapter.
+      logError(`openReleasePage failed: ${err instanceof Error ? err.message : String(err)}`).catch(
+        () => {},
+      );
+    }
   },
 };

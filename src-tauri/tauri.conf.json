@@ -27,7 +27,7 @@
   },
   "plugins": {
     "shell": {
-      "open": "https://github\\.com/rajat-mehra05/voice-round/releases(/.*)?"
+      "open": "^https://github\\.com/rajat-mehra05/voice-round/releases(/.*)?$"
     }
   },
   "bundle": {

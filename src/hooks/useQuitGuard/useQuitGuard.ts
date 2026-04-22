@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { platform } from '@/platform';
 
 /**
  * Phase 10: intercept the Tauri window close event while `shouldBlock` is
@@ -23,19 +24,27 @@ export function useQuitGuard(shouldBlock: boolean, message: string): void {
     let cancelled = false;
 
     void (async () => {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      if (cancelled) return;
-      const off = await getCurrentWindow().onCloseRequested((event) => {
-        if (!blockRef.current) return;
-        if (!window.confirm(message)) event.preventDefault();
-      });
-      // Cleanup may have fired during the awaited registration. Tear the
-      // listener down immediately instead of leaking it.
-      if (cancelled) {
-        off();
-        return;
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        if (cancelled) return;
+        const off = await getCurrentWindow().onCloseRequested((event) => {
+          if (!blockRef.current) return;
+          if (!window.confirm(message)) event.preventDefault();
+        });
+        // Cleanup may have fired during the awaited registration. Tear the
+        // listener down immediately instead of leaking it.
+        if (cancelled) {
+          off();
+          return;
+        }
+        unlisten = off;
+      } catch (err) {
+        // Either the dynamic import or `onCloseRequested` failed. Log so
+        // the failure is visible in the app log, then fall through — the
+        // app still works, the close guard just doesn't prompt. `unlisten`
+        // stays undefined so cleanup is a no-op.
+        platform.logger.error('useQuitGuard failed to register close listener', err);
       }
-      unlisten = off;
     })();
 
     return () => {

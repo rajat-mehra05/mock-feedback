@@ -30,14 +30,16 @@ export default defineConfig(({ mode }) => {
       target: isTauri ? ['chrome110', 'safari15'] : undefined,
       rolldownOptions: {
         output: {
-          // Phase 10: strip all `console.*` calls and `debugger` statements
-          // from production bundles via rolldown's oxc minifier. Dev/test
-          // builds never run minify so silence-detect logs and perf-mark
-          // traces stay visible. ErrorBoundary's durable diagnostics still
-          // reach the Tauri log file because `platform.logger.error` routes
-          // through `tauri-plugin-log`, not `console.*`.
+          // Phase 10: strip `console.*` calls and `debugger` statements in
+          // Tauri production bundles only. On Tauri the platform logger
+          // routes through `tauri-plugin-log` (file sink), so console
+          // calls are purely noise. On web, the platform logger IS
+          // `console.*` — stripping would silence ErrorBoundary's durable
+          // diagnostics in web production, which is a regression. Dev /
+          // test builds never run minify so silence-detect logs and
+          // perf-mark traces stay visible regardless.
           minify: {
-            compress: { dropConsole: true, dropDebugger: true },
+            compress: { dropConsole: isTauri, dropDebugger: true },
           },
           manualChunks(id) {
             if (

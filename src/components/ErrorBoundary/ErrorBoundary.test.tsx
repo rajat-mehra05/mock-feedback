@@ -31,11 +31,17 @@ test('child throw triggers fallback, logs error, and reload button calls window.
   expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument();
 
   // componentDidCatch logs via platform.logger.error — on web that calls
-  // console.error with the same args.
+  // console.error. The payload is a bounded summary (not the raw Error)
+  // so the 1MB-capped Tauri log file can't be flushed by a single huge
+  // stack trace.
   expect(consoleErrorSpy).toHaveBeenCalledWith(
     'ErrorBoundary caught',
-    expect.any(Error),
-    expect.any(String),
+    expect.objectContaining({
+      errorName: 'Error',
+      errorMessage: 'Boom',
+      errorStack: expect.any(String) as unknown,
+      componentStack: expect.any(String) as unknown,
+    }),
   );
 
   // Reload button triggers window.location.reload

@@ -60,40 +60,40 @@ test('fetchLatestRelease returns tag_name + html_url on a 200 response', async (
   });
 });
 
-test('fetchLatestRelease returns null on a 403 (rate limit) so the launch path stays silent', async () => {
+test('fetchLatestRelease throws on a 403 so the Settings UI can surface the failure explicitly', async () => {
+  // Swallowing this to null would collapse "rate-limited / offline" and
+  // "you're up to date" into the same return value. The Settings row
+  // needs to distinguish them; the launch toast catches and ignores.
   server.use(
     http.get(RELEASES_URL, () =>
       HttpResponse.json({ message: 'rate limit exceeded' }, { status: 403 }),
     ),
   );
-  await expect(fetchLatestRelease()).resolves.toBeNull();
+  await expect(fetchLatestRelease()).rejects.toThrow(/HTTP 403/);
 });
 
-test('fetchLatestRelease returns null on a network error instead of throwing', async () => {
-  // MSW's `HttpResponse.error()` simulates a network-level failure (the
-  // fetch promise rejects). The adapter must swallow it — an unhandled
-  // rejection here would surface as a toast no-show AND a console error.
+test('fetchLatestRelease rejects on a network error instead of resolving', async () => {
   server.use(http.get(RELEASES_URL, () => HttpResponse.error()));
-  await expect(fetchLatestRelease()).resolves.toBeNull();
+  await expect(fetchLatestRelease()).rejects.toBeInstanceOf(Error);
 });
 
-test('fetchLatestRelease returns null when the response body is missing tag_name or html_url', async () => {
+test('fetchLatestRelease throws when the response body is missing tag_name or html_url', async () => {
   // Defence against an unexpected API shape (e.g. GitHub changes the
   // endpoint semantics). Unguarded, a missing field would propagate as
   // `undefined` into `semverGreaterThan` and the toast logic.
   server.use(
     http.get(RELEASES_URL, () => HttpResponse.json({ tag_name: 'v0.2.0' /* no html_url */ })),
   );
-  await expect(fetchLatestRelease()).resolves.toBeNull();
+  await expect(fetchLatestRelease()).rejects.toThrow(/missing tag_name or html_url/);
 });
 
-test('fetchLatestRelease returns null on invalid JSON instead of throwing', async () => {
+test('fetchLatestRelease rejects on invalid JSON', async () => {
   server.use(
     http.get(RELEASES_URL, () =>
       HttpResponse.text('not json at all', { headers: { 'Content-Type': 'application/json' } }),
     ),
   );
-  await expect(fetchLatestRelease()).resolves.toBeNull();
+  await expect(fetchLatestRelease()).rejects.toBeInstanceOf(Error);
 });
 
 test('isAllowedReleaseUrl accepts the canonical release-tag URL GitHub returns', () => {

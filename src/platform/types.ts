@@ -180,11 +180,16 @@ export interface UpdateInfo {
 }
 
 export interface UpdaterAdapter {
-  /** Returns an `UpdateInfo` if a newer release exists, `null` otherwise
-   *  (including the web path and any network/parse failures — callers treat
-   *  "can't check" as "no update" to keep the launch path silent). */
+  /** Resolves with an `UpdateInfo` when a newer release exists, or `null`
+   *  when the current version is up to date. Rejects when the check itself
+   *  fails (network, rate limit, parse error) so callers can distinguish
+   *  "up to date" from "can't check": the launch toast catches rejections
+   *  silently; the Settings row shows an error state. The web adapter
+   *  always resolves to `null` — no installed artifact to update. */
   checkForUpdate(): Promise<UpdateInfo | null>;
-  /** Opens the release page in the user's default browser. */
+  /** Opens the release page in the user's default browser. Adapters
+   *  validate the URL and contain platform failures — callers do not
+   *  need to try/catch. */
   openReleasePage(url: string): Promise<void>;
 }
 

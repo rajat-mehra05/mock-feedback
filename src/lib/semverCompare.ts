@@ -14,9 +14,11 @@ export function semverGreaterThan(a: string, b: string): boolean {
     const core = clean.split(/[-+]/)[0];
     const parts = core.split('.');
     if (parts.length !== 3) return null;
-    const nums = parts.map((p) => Number(p));
-    if (nums.some((n) => !Number.isInteger(n) || n < 0)) return null;
-    return nums as [number, number, number];
+    // Each part must be digits-only. `Number()` would otherwise quietly
+    // accept `""` (→0), `" 1 "`, and exponent notation like `1e3` (→1000),
+    // letting `'1..0'` or `'1e3.0.0'` pass as valid versions.
+    if (parts.some((p) => !/^\d+$/.test(p))) return null;
+    return parts.map((p) => Number(p)) as [number, number, number];
   };
 
   const pa = parsed(a);

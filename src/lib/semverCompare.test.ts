@@ -37,3 +37,16 @@ test('semverGreaterThan returns false for malformed input so junk tags cannot tr
   expect(semverGreaterThan('1.0.0', '')).toBe(false);
   expect(semverGreaterThan('-1.0.0', '0.0.0')).toBe(false);
 });
+
+test('semverGreaterThan rejects numeric-coercion quirks that a naive Number() would accept', () => {
+  // `'1..0'.split('.')` yields `['1', '', '0']`; `Number('')` is `0`, so
+  // without a strict digits-only guard this would parse as `[1, 0, 0]` and
+  // compare greater than `0.0.0`.
+  expect(semverGreaterThan('1..0', '0.0.0')).toBe(false);
+  // Trailing dot: `'1.2.'.split('.')` yields `['1', '2', '']` — same trap.
+  expect(semverGreaterThan('1.2.', '0.0.0')).toBe(false);
+  // Exponent notation: `Number('1e3')` is `1000`. Must be rejected.
+  expect(semverGreaterThan('1e3.0.0', '0.0.0')).toBe(false);
+  // Whitespace padding: `Number(' 1 ')` is `1`. Must be rejected.
+  expect(semverGreaterThan(' 1.0.0', '0.0.0')).toBe(false);
+});

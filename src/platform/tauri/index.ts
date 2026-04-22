@@ -81,14 +81,19 @@ export const tauriPlatform: Platform = {
     openai: tauriOpenAIHttp,
   },
   logger: {
+    // Swallow rejections explicitly. `void` hides the promise from lint
+    // but doesn't prevent an actual rejection from surfacing as an
+    // unhandled promise rejection; `.catch(() => {})` does. A logger that
+    // throws out of its own call site is worse than one that silently
+    // drops a single message.
     info: (message, ...extras) => {
-      void logInfo(format(message, extras));
+      logInfo(format(message, extras)).catch(() => {});
     },
     warn: (message, ...extras) => {
-      void logWarn(format(message, extras));
+      logWarn(format(message, extras)).catch(() => {});
     },
     error: (message, ...extras) => {
-      void logError(format(message, extras));
+      logError(format(message, extras)).catch(() => {});
     },
   },
   updater: tauriUpdater,
