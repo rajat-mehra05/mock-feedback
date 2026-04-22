@@ -2,12 +2,14 @@ use crate::error::AppError;
 use crate::openai::client::OPENAI_BASE_URL;
 use crate::secrets::read_key;
 use crate::AppState;
-use bytes::Bytes;
 use futures_util::StreamExt;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tauri::{ipc::Channel, State};
+use tauri::{
+    ipc::{Channel, InvokeBody, InvokeResponseBody, Request},
+    State,
+};
 use tokio_util::sync::CancellationToken;
 
 // --- Request / response shapes shared with the frontend ---
@@ -35,14 +37,16 @@ pub struct ChatArgs {
     pub request: ChatRequestBody,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TranscribeArgs {
-    pub request_id: String,
-    pub model: String,
-    pub filename: String,
-    pub content_type: String,
-    pub audio: Vec<u8>,
+/// Delta events sent over the frontend channel during streaming chat.
+///
+/// Tauri's `Channel<T>` serialises each message with serde, so the JS side
+/// receives one of these three variants per callback invocation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ChatDelta {
+    Content { text: String },
+    Done,
+    Error { message: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,14 +64,6 @@ pub struct TtsRequestBody {
 pub struct TtsArgs {
     pub request_id: String,
     pub request: TtsRequestBody,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum TtsEvent {
-    Chunk { bytes: Vec<u8> },
-    Done,
-    Error { message: String },
 }
 
 // --- Cancellation token management ---
@@ -97,28 +93,7 @@ pub async fn openai_chat(args: ChatArgs, state: State<'_, AppState>) -> Result<S
     let token = register_token(&state, &args.request_id);
     let client = state.http.clone();
 
-    // `json!` with `Option::None` emits JSON `null`, which OpenAI rejects for
-    // `temperature` / `max_tokens`. Build the body manually and only insert
-    // optional fields when they're `Some`.
-    let mut body = serde_json::Map::new();
-    body.insert("model".into(), serde_json::Value::String(args.request.model.clone()));
-    body.insert(
-        "messages".into(),
-        serde_json::Value::Array(
-            args.request
-                .messages
-                .iter()
-                .map(|m| json!({ "role": m.role, "content": m.content }))
-                .collect(),
-        ),
-    );
-    if let Some(t) = args.request.temperature {
-        body.insert("temperature".into(), json!(t));
-    }
-    if let Some(n) = args.request.max_tokens {
-        body.insert("max_tokens".into(), json!(n));
-    }
-    let body = serde_json::Value::Object(body);
+    let body = build_chat_body(&args.request, false);
 
     let request = client
         .post(format!("{OPENAI_BASE_URL}/chat/completions"))
@@ -151,34 +126,168 @@ pub async fn openai_chat(args: ChatArgs, state: State<'_, AppState>) -> Result<S
     Ok(content.to_string())
 }
 
+/// Phase 9.1: stream chat completions token-by-token so the frontend can hand
+/// each completed sentence to TTS before the full response finishes. The wire
+/// format is OpenAI's SSE stream — line-buffered events separated by `\n\n`,
+/// each carrying a `data: {...}` JSON payload (or the literal `[DONE]`).
 #[tauri::command]
-pub async fn openai_transcribe(
-    args: TranscribeArgs,
+pub async fn openai_chat_stream(
+    args: ChatArgs,
+    channel: Channel<ChatDelta>,
     state: State<'_, AppState>,
-) -> Result<String, AppError> {
+) -> Result<(), AppError> {
     let key = api_key()?;
     let token = register_token(&state, &args.request_id);
     let client = state.http.clone();
 
-    let part = reqwest::multipart::Part::bytes(args.audio)
-        .file_name(args.filename.clone())
-        .mime_str(&args.content_type)
-        .map_err(|e| AppError::other(e.to_string()))?;
-    let form = reqwest::multipart::Form::new()
-        .text("model", args.model)
-        .part("file", part);
+    let body = build_chat_body(&args.request, true);
 
     let request = client
+        .post(format!("{OPENAI_BASE_URL}/chat/completions"))
+        .header(AUTHORIZATION, format!("Bearer {key}"))
+        .header(CONTENT_TYPE, "application/json")
+        .json(&body);
+
+    let response = tokio::select! {
+        _ = token.cancelled() => {
+            drop_token(&state, &args.request_id);
+            return Err(AppError::Aborted { message: "cancelled".into() });
+        }
+        res = request.send() => res?,
+    };
+
+    let status = response.status();
+    if !status.is_success() {
+        drop_token(&state, &args.request_id);
+        let text = response.text().await.unwrap_or_default();
+        return Err(classify_status(status.as_u16(), text));
+    }
+
+    let mut stream = response.bytes_stream();
+    // Byte buffer, not String — a multi-byte UTF-8 codepoint (em-dash, emoji,
+    // smart quotes) can split across chunks. Searching for `\n\n` as ASCII
+    // bytes is safe regardless, and each complete SSE event is guaranteed to
+    // be valid UTF-8 because OpenAI's JSON payloads are.
+    let mut buffer: Vec<u8> = Vec::new();
+
+    loop {
+        tokio::select! {
+            _ = token.cancelled() => {
+                drop_token(&state, &args.request_id);
+                let _ = channel.send(ChatDelta::Error { message: "cancelled".into() });
+                return Err(AppError::Aborted { message: "cancelled".into() });
+            }
+            next = stream.next() => {
+                match next {
+                    Some(Ok(bytes)) => {
+                        buffer.extend_from_slice(&bytes);
+
+                        // Drain complete SSE events (blank-line terminated).
+                        while let Some(sep) = find_event_boundary(&buffer) {
+                            let event_bytes: Vec<u8> = buffer.drain(..sep + 2).collect();
+                            let Ok(event) = std::str::from_utf8(&event_bytes[..sep]) else {
+                                // A validly-framed SSE event with non-UTF-8 payload would be
+                                // an OpenAI contract violation. Skip and continue rather than
+                                // tearing the whole turn down.
+                                continue;
+                            };
+                            for line in event.lines() {
+                                let Some(data) = line.strip_prefix("data: ") else { continue };
+                                if data == "[DONE]" { continue }
+                                let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data)
+                                else { continue };
+                                let Some(content) = parsed
+                                    .get("choices")
+                                    .and_then(|c| c.get(0))
+                                    .and_then(|c| c.get("delta"))
+                                    .and_then(|d| d.get("content"))
+                                    .and_then(|s| s.as_str())
+                                else { continue };
+                                // OpenAI's first delta is a role marker with empty content.
+                                // Forwarding it would trip the frontend's first_token perf
+                                // mark before any real text arrives.
+                                if content.is_empty() { continue }
+                                if channel
+                                    .send(ChatDelta::Content { text: content.into() })
+                                    .is_err()
+                                {
+                                    drop_token(&state, &args.request_id);
+                                    return Err(AppError::Aborted {
+                                        message: "renderer dropped channel".into(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Some(Err(e)) => {
+                        drop_token(&state, &args.request_id);
+                        let msg = e.to_string();
+                        let _ = channel.send(ChatDelta::Error { message: msg.clone() });
+                        return Err(AppError::Network { message: msg });
+                    }
+                    None => break,
+                }
+            }
+        }
+    }
+
+    drop_token(&state, &args.request_id);
+    let _ = channel.send(ChatDelta::Done);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn openai_transcribe(
+    request: Request<'_>,
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    // Metadata travels in headers so the audio body is transported as raw
+    // bytes (InvokeBody::Raw). JSON-wrapped number[] costs ~4x the bytes and
+    // adds 50-100ms of serialisation on a 1MB upload.
+    let header = |name: &str| -> Result<String, AppError> {
+        request
+            .headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from)
+            .ok_or_else(|| AppError::other(format!("missing or invalid header: {name}")))
+    };
+    let request_id = header("x-request-id")?;
+    let model = header("x-model")?;
+    let filename = header("x-filename")?;
+    let content_type = header("x-content-type")?;
+    let audio = match request.body() {
+        InvokeBody::Raw(bytes) => bytes.clone(),
+        InvokeBody::Json(_) => {
+            return Err(AppError::other(
+                "openai_transcribe requires a raw binary body",
+            ))
+        }
+    };
+
+    let key = api_key()?;
+    let token = register_token(&state, &request_id);
+    let client = state.http.clone();
+
+    let part = reqwest::multipart::Part::bytes(audio)
+        .file_name(filename)
+        .mime_str(&content_type)
+        .map_err(|e| AppError::other(e.to_string()))?;
+    let form = reqwest::multipart::Form::new()
+        .text("model", model)
+        .part("file", part);
+
+    let http_request = client
         .post(format!("{OPENAI_BASE_URL}/audio/transcriptions"))
         .header(AUTHORIZATION, format!("Bearer {key}"))
         .multipart(form);
 
     let result = tokio::select! {
         _ = token.cancelled() => return Err(AppError::Aborted { message: "cancelled".into() }),
-        res = request.send() => res,
+        res = http_request.send() => res,
     };
 
-    drop_token(&state, &args.request_id);
+    drop_token(&state, &request_id);
 
     let response = result?;
     let status = response.status();
@@ -198,7 +307,7 @@ pub async fn openai_transcribe(
 #[tauri::command]
 pub async fn openai_tts(
     args: TtsArgs,
-    channel: Channel<TtsEvent>,
+    channel: Channel<InvokeResponseBody>,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     let key = api_key()?;
@@ -246,17 +355,18 @@ pub async fn openai_tts(
         tokio::select! {
             _ = token.cancelled() => {
                 drop_token(&state, &args.request_id);
-                let _ = channel.send(TtsEvent::Error { message: "cancelled".into() });
+                let _ = channel.send(control_event(json!({ "kind": "error", "message": "cancelled" })));
                 return Err(AppError::Aborted { message: "cancelled".into() });
             }
             next = stream.next() => {
                 match next {
                     Some(Ok(bytes)) => {
-                        let bytes: Bytes = bytes;
-                        // Send as Vec<u8>; cost is a clone but the API is simpler and
-                        // audio chunks are modest in size.
-                        if channel.send(TtsEvent::Chunk { bytes: bytes.to_vec() }).is_err() {
-                            // Renderer side dropped the channel — treat as cancel.
+                        // Raw bytes travel as InvokeResponseBody::Raw, which the
+                        // JS channel callback receives as an ArrayBuffer. The
+                        // alternative (serde-serialised Vec<u8>) expands to a
+                        // JSON number[] and costs ~50ms across a full TTS
+                        // response.
+                        if channel.send(InvokeResponseBody::Raw(bytes.to_vec())).is_err() {
                             drop_token(&state, &args.request_id);
                             return Err(AppError::Aborted { message: "renderer dropped channel".into() });
                         }
@@ -264,7 +374,7 @@ pub async fn openai_tts(
                     Some(Err(e)) => {
                         drop_token(&state, &args.request_id);
                         let msg = e.to_string();
-                        let _ = channel.send(TtsEvent::Error { message: msg.clone() });
+                        let _ = channel.send(control_event(json!({ "kind": "error", "message": msg.clone() })));
                         return Err(AppError::Network { message: msg });
                     }
                     None => break,
@@ -274,8 +384,14 @@ pub async fn openai_tts(
     }
 
     drop_token(&state, &args.request_id);
-    let _ = channel.send(TtsEvent::Done);
+    let _ = channel.send(control_event(json!({ "kind": "done" })));
     Ok(())
+}
+
+fn control_event(value: serde_json::Value) -> InvokeResponseBody {
+    // `to_string` on a known-valid JSON value can't fail; default keeps the
+    // signature infallible at the call site.
+    InvokeResponseBody::Json(serde_json::to_string(&value).unwrap_or_default())
 }
 
 #[tauri::command]
@@ -283,6 +399,42 @@ pub fn cancel_request(request_id: String, state: State<'_, AppState>) {
     if let Some(token) = state.cancel_tokens.lock().remove(&request_id) {
         token.cancel();
     }
+}
+
+/// Shared between `openai_chat` and `openai_chat_stream`. `serde_json`'s default
+/// behaviour with `Option::None` is to emit JSON `null`, which OpenAI rejects
+/// for `temperature` / `max_tokens`, so we build the body by hand and only
+/// insert the optionals when present.
+fn build_chat_body(request: &ChatRequestBody, stream: bool) -> serde_json::Value {
+    let mut body = serde_json::Map::new();
+    body.insert("model".into(), serde_json::Value::String(request.model.clone()));
+    if stream {
+        body.insert("stream".into(), serde_json::Value::Bool(true));
+    }
+    body.insert(
+        "messages".into(),
+        serde_json::Value::Array(
+            request
+                .messages
+                .iter()
+                .map(|m| json!({ "role": m.role, "content": m.content }))
+                .collect(),
+        ),
+    );
+    if let Some(t) = request.temperature {
+        body.insert("temperature".into(), json!(t));
+    }
+    if let Some(n) = request.max_tokens {
+        body.insert("max_tokens".into(), json!(n));
+    }
+    serde_json::Value::Object(body)
+}
+
+/// SSE events are terminated by a blank line (`\n\n`). We search at the byte
+/// level because `bytes_stream()` chunks may split multi-byte UTF-8 codepoints
+/// mid-character; the separators themselves are ASCII so this is safe.
+fn find_event_boundary(buf: &[u8]) -> Option<usize> {
+    buf.windows(2).position(|w| w == b"\n\n")
 }
 
 fn classify_status(status: u16, body: String) -> AppError {

@@ -2,7 +2,7 @@ import { useReducer, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { interviewReducer, initialState } from './reducer';
 import type { InterviewConfig, InterviewState } from './types';
-import { generateNextQuestion } from '@/services/llm/llm';
+import { streamAndSpeakQuestion } from '@/services/llm/streamingQuestion';
 import { speakText } from '@/services/tts/tts';
 import { transcribeAudio } from '@/services/stt/stt';
 import { generateFeedback } from '@/services/feedback/feedback';
@@ -54,15 +54,34 @@ export function useInterviewSession() {
       }
       void (async () => {
         try {
-          const raw = await withRetry(
+          const result = await withRetry(
             (sig) =>
-              generateNextQuestion(state.topicLabel, state.history, sig, state.candidateName),
+              streamAndSpeakQuestion({
+                topic: state.topicLabel,
+                history: state.history,
+                candidateName: state.candidateName,
+                onTextUpdate: (text) => {
+                  dispatch({ type: 'QUESTION_TEXT_PROGRESS', text });
+                },
+                signal: sig,
+              }),
             { ...RETRY_OPTS, signal: effectSignal },
           );
           if (effectSignal.aborted) return;
+          const raw = result.text;
           const isRepeat = raw.includes(REPEAT_QUESTION_PHRASE);
           const question = isRepeat ? raw.replace(REPEAT_QUESTION_PHRASE, '').trim() : raw;
+          // Chat + TTS have both completed at this point. Dispatch the two
+          // actions back-to-back so React 18 batches them into a single
+          // commit and the `ai_speaking` handler below never re-fires TTS.
           dispatch({ type: 'QUESTION_READY', question, isRepeat });
+          if (result.ttsFailed) {
+            // Some sentences didn't play — preserve the existing ttsFallbackText
+            // UX so the user can still read the question.
+            dispatch({ type: 'TTS_FAILED', question });
+          } else {
+            dispatch({ type: 'TTS_DONE' });
+          }
         } catch (error) {
           if (effectSignal.aborted) return;
           onError(error, 'generating');
@@ -70,6 +89,9 @@ export function useInterviewSession() {
       })();
     }
 
+    // Kept for non-streaming fallback paths (e.g. retry from `ai_speaking`
+    // after a TTS_FAILED). The streaming flow above bypasses this branch by
+    // dispatching QUESTION_READY + TTS_DONE together.
     if (state.status === 'ai_speaking' && state.currentQuestion) {
       void (async () => {
         try {
@@ -196,8 +218,11 @@ export function useInterviewSession() {
         });
         if (s.aborted) return;
         dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript });
-      } catch {
+      } catch (error) {
         if (s.aborted) return;
+        // Surface so users have something to paste when transcription breaks;
+        // the state machine still records "[transcription failed]" for the LLM.
+        console.error('[transcribe] failed for question', questionIndex, error);
         dispatch({ type: 'TRANSCRIPT_READY', questionIndex, transcript: '[transcription failed]' });
       }
     })();

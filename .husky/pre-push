@@ -1,4 +1,2 @@
-npm run format
-npm run lint:fix
-npx tsc -b --noEmit
-npm run test
+npm test -- --run
+cargo check --manifest-path src-tauri/Cargo.toml

@@ -69,6 +69,7 @@ export function Session() {
         <StatusIndicator
           status={state.status}
           questionIndex={state.currentQuestionIndex}
+          currentQuestion={state.currentQuestion}
           isPartial={state.isPartial}
         />
 

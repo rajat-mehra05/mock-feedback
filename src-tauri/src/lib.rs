@@ -42,6 +42,7 @@ pub fn run() {
             secrets::secret_has,
             secrets::secret_clear,
             commands::openai::openai_chat,
+            commands::openai::openai_chat_stream,
             commands::openai::openai_transcribe,
             commands::openai::openai_tts,
             commands::openai::cancel_request,

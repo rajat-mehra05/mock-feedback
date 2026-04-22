@@ -70,6 +70,12 @@ export function interviewReducer(
       };
     }
 
+    case 'QUESTION_TEXT_PROGRESS':
+      // Phase 9.1: streaming chat feeds partial text to the UI without
+      // changing status or the question index, so the effect engine's deps
+      // don't re-fire mid-stream.
+      return { ...state, currentQuestion: action.text };
+
     case 'TTS_DONE':
       return { ...state, status: 'user_recording', ttsFallbackText: null };
 

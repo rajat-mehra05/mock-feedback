@@ -41,6 +41,7 @@ export type InterviewAction =
       candidateName?: string;
     }
   | { type: 'QUESTION_READY'; question: string; isRepeat: boolean }
+  | { type: 'QUESTION_TEXT_PROGRESS'; text: string }
   | { type: 'TTS_DONE' }
   | { type: 'TTS_FAILED'; question: string }
   | { type: 'ANSWER_RECORDED' }

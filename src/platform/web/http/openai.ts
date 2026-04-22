@@ -63,6 +63,10 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
       }
     },
 
+    chatStream(req: ChatRequest, signal?: AbortSignal): AsyncIterable<string> {
+      return webChatStream(getClient, req, signal);
+    },
+
     async transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string> {
       const { signal: merged, cleanup } = createTimeoutSignal(
         req.timeoutMs ?? STT_TIMEOUT_MS,
@@ -124,4 +128,36 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
       cachedKey = null;
     },
   };
+}
+
+async function* webChatStream(
+  getClient: () => Promise<OpenAI>,
+  req: ChatRequest,
+  signal?: AbortSignal,
+): AsyncIterable<string> {
+  // Timeout covers the network establishment; once tokens start flowing, the
+  // caller's own signal is responsible for cancellation.
+  const { signal: merged, cleanup } = createTimeoutSignal(req.timeoutMs ?? LLM_TIMEOUT_MS, signal);
+  try {
+    const client = await getClient();
+    const stream = await client.chat.completions.create(
+      {
+        model: req.model,
+        messages: req.messages,
+        temperature: req.temperature,
+        max_tokens: req.maxTokens,
+        stream: true,
+      },
+      { signal: merged },
+    );
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content;
+      if (text) yield text;
+    }
+  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
+    throw classifyOpenAIError(error);
+  } finally {
+    cleanup();
+  }
 }

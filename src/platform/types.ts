@@ -103,8 +103,11 @@ export interface TtsRequest {
 }
 
 export interface OpenAIHttpAdapter {
-  /** Non-streaming chat. Returns the full text. */
+  /** Non-streaming chat. Returns the full text. Used for feedback generation. */
   chat(req: ChatRequest, signal?: AbortSignal): Promise<string>;
+  /** Streaming chat. Yields text chunks as they arrive. Used for the live
+   *  interview turn so TTS can start on sentence 1 before chat completes. */
+  chatStream(req: ChatRequest, signal?: AbortSignal): AsyncIterable<string>;
   /** Transcribes an audio blob. */
   transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string>;
   /** Requests TTS audio. Plays it to completion or rejects on abort. */
