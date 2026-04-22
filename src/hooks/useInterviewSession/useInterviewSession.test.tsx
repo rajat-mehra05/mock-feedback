@@ -33,10 +33,13 @@ vi.mock('@/hooks/useAudioRecorder/useAudioRecorder', () => ({
   }),
 }));
 
-vi.mock('@/services/llm/llm', () => ({
-  generateNextQuestion: vi.fn().mockResolvedValue('What is a closure?'),
+vi.mock('@/services/llm/streamingQuestion', () => ({
+  streamAndSpeakQuestion: vi
+    .fn()
+    .mockResolvedValue({ text: 'What is a closure?', ttsFailed: false }),
 }));
 vi.mock('@/services/tts/tts', () => ({
+  // Still used for the closing-message path in generating_feedback.
   speakText: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/services/stt/stt', () => ({
@@ -52,7 +55,7 @@ const createSession = vi.fn().mockResolvedValue(undefined);
 vi.spyOn(platform.storage.sessions, 'create').mockImplementation(createSession);
 
 const { useInterviewSession } = await import('./useInterviewSession');
-const { generateNextQuestion } = await import('@/services/llm/llm');
+const { streamAndSpeakQuestion } = await import('@/services/llm/streamingQuestion');
 const { speakText } = await import('@/services/tts/tts');
 const { transcribeAudio } = await import('@/services/stt/stt');
 const { generateFeedback } = await import('@/services/feedback/feedback');
@@ -69,7 +72,9 @@ beforeEach(async () => {
   recorderFns.startRecording.mockClear();
   recorderFns.stopRecording.mockClear();
   recorderFns.clearBlob.mockClear();
-  vi.mocked(generateNextQuestion).mockReset().mockResolvedValue('What is a closure?');
+  vi.mocked(streamAndSpeakQuestion)
+    .mockReset()
+    .mockResolvedValue({ text: 'What is a closure?', ttsFailed: false });
   vi.mocked(speakText).mockReset().mockResolvedValue(undefined);
   vi.mocked(transcribeAudio).mockReset().mockResolvedValue('A closure captures variables.');
   vi.mocked(generateFeedback)
@@ -113,8 +118,11 @@ test('full single-question interview: idle → generate → speak → record →
   expect(createSession).toHaveBeenCalledOnce();
 });
 
-test('TTS failure sets ttsFallbackText and still reaches user_recording', async () => {
-  vi.mocked(speakText).mockRejectedValue(new Error('TTS unavailable'));
+test('TTS failure during streaming sets ttsFallbackText and still reaches user_recording', async () => {
+  vi.mocked(streamAndSpeakQuestion).mockResolvedValueOnce({
+    text: 'What is a closure?',
+    ttsFailed: true,
+  });
 
   const { result } = renderHook(() => useInterviewSession(), { wrapper });
 
@@ -238,7 +246,7 @@ test('stop after answering a question generates feedback and completes', async (
 });
 
 test('retry after error re-enters the failed status and resumes', async () => {
-  vi.mocked(generateNextQuestion).mockRejectedValueOnce({
+  vi.mocked(streamAndSpeakQuestion).mockRejectedValueOnce({
     type: 'network',
     message: 'offline',
     retryable: false,
@@ -251,7 +259,10 @@ test('retry after error re-enters the failed status and resumes', async () => {
   await waitFor(() => expect(result.current.state.status).toBe('error'));
   expect(result.current.state.error?.type).toBe('network');
 
-  vi.mocked(generateNextQuestion).mockResolvedValueOnce('Retry question');
+  vi.mocked(streamAndSpeakQuestion).mockResolvedValueOnce({
+    text: 'Retry question',
+    ttsFailed: false,
+  });
 
   act(() => result.current.retry());
 

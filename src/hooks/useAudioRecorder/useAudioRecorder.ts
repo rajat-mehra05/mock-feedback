@@ -3,6 +3,7 @@ import { AUDIO_MIME_TYPES } from '@/constants/openai';
 import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
 import { classifyMicError, micError, type MicError } from '@/lib/micError';
 import { watchMicPermission } from '@/lib/micCheck';
+import { mark, resetPerf } from '@/lib/perf';
 
 /** RMS threshold below which audio is considered silence (0–1 scale).
  * Set above typical laptop fan / ambient noise levels (~0.01-0.04). */
@@ -54,6 +55,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     cleanupSilenceDetector();
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state === 'recording') {
+      // First mark of a turn. resetPerf ensures the delta is relative to
+      // mic_stop, not to whatever logged last on the previous turn.
+      resetPerf();
+      mark('mic_stop');
       recorder.stop();
     }
   }, [cleanupSilenceDetector]);

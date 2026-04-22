@@ -7,6 +7,8 @@
  * decode if MediaSource is unavailable (rare in modern webviews).
  */
 
+import { mark } from '@/lib/perf';
+
 const MIME = 'audio/mpeg';
 
 export interface TtsStreamController {
@@ -19,6 +21,13 @@ export interface TtsStreamController {
 export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController {
   const audio = new Audio();
   audio.autoplay = true;
+  let firstChunk = true;
+  const markFirstChunk = () => {
+    if (firstChunk) {
+      firstChunk = false;
+      mark('first_audio');
+    }
+  };
 
   let resolve!: () => void;
   let reject!: (err: Error) => void;
@@ -48,7 +57,9 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
 
     const controller: TtsStreamController = {
       push(bytes) {
-        if (!ended) fallbackChunks.push(bytes);
+        if (ended) return;
+        markFirstChunk();
+        fallbackChunks.push(bytes);
       },
       end() {
         if (ended) return;
@@ -89,6 +100,10 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   const pending: Uint8Array[] = [];
   let sourceBuffer: SourceBuffer | null = null;
   let endOfStreamRequested = false;
+  // `closed` flips once end() has been called. Late pushes that arrive after
+  // the stream was marked done (e.g. a stray channel delta after `kind: done`)
+  // would otherwise try to append to a closed MediaSource and throw.
+  let closed = false;
   let errored = false;
 
   const cleanupAudio = () => {
@@ -178,12 +193,14 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
 
   return {
     push(bytes) {
-      if (errored) return;
+      if (errored || closed) return;
+      markFirstChunk();
       pending.push(bytes);
       flush();
     },
     end() {
-      if (errored) return;
+      if (errored || closed) return;
+      closed = true;
       endOfStreamRequested = true;
       flush();
     },

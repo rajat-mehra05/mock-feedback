@@ -14,13 +14,18 @@ const STATUS_DISPLAY: Record<string, { label: string; pulse?: boolean; color?: s
 function getStatusDisplay(
   status: InterviewState,
   questionIndex: number,
+  isStreaming: boolean,
   isPartial?: boolean,
 ): { label: string; pulse?: boolean; color?: string } | undefined {
   if (status === 'awaiting_transcript') return { label: 'Processing your answer...' };
-  if (status === 'generating')
+  if (status === 'generating') {
+    // Phase 9.1: while chat is still streaming we already have audio playing
+    // from the sentence-queue TTS, so "AI is speaking..." is the honest label.
+    if (isStreaming) return STATUS_DISPLAY.ai_speaking;
     return {
       label: questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',
     };
+  }
   if (status === 'completed' && isPartial)
     return { label: 'Session ended early — no questions were answered.' };
   if (status === 'generating_feedback')
@@ -31,14 +36,19 @@ function getStatusDisplay(
 export function StatusIndicator({
   status,
   questionIndex,
+  currentQuestion,
   isPartial,
 }: {
   status: InterviewState;
   questionIndex: number;
+  currentQuestion?: string | null;
   isPartial?: boolean;
 }) {
-  const display = getStatusDisplay(status, questionIndex, isPartial);
+  const isStreaming = status === 'generating' && !!currentQuestion;
+  const display = getStatusDisplay(status, questionIndex, isStreaming, isPartial);
   if (!display) return null;
+
+  const showSoundWave = status === 'ai_speaking' || isStreaming;
 
   return (
     <div
@@ -47,11 +57,11 @@ export function StatusIndicator({
       aria-live="polite"
       aria-label="Session status"
     >
-      {status === 'ai_speaking' && <SoundWavePulse />}
+      {showSoundWave && <SoundWavePulse />}
       {display.pulse && display.color && (
         <div className={`h-4 w-4 rounded-full ${display.color} motion-safe:animate-pulse`} />
       )}
-      {!display.pulse && status !== 'completed' && <Spinner />}
+      {!display.pulse && !showSoundWave && status !== 'completed' && <Spinner />}
       <p className="text-sm text-muted-foreground">{display.label}</p>
       {status === 'user_recording' && (
         <p className="text-xs text-muted-foreground">{RECORDING_RULES}</p>
