@@ -30,9 +30,10 @@ test('child throw triggers fallback, logs error, and reload button calls window.
   expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument();
 
-  // componentDidCatch logged the error
+  // componentDidCatch logs via platform.logger.error — on web that calls
+  // console.error with the same args.
   expect(consoleErrorSpy).toHaveBeenCalledWith(
-    'ErrorBoundary caught:',
+    'ErrorBoundary caught',
     expect.any(Error),
     expect.any(String),
   );

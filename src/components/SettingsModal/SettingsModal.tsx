@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
+import { UpdateCheckRow } from './UpdateCheckRow';
 import { APP_NAME } from '@/constants/copy';
 
 interface SettingsModalProps {
@@ -79,6 +80,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </Button>
             )}
           </div>
+
+          {/* Phase 10: desktop only — web has no installed artifact to
+              update. The adapter returns null so we hide the row. */}
+          {import.meta.env.VITE_TARGET === 'tauri' && (
+            <div className="border-t-2 border-black/20 pt-4">
+              <UpdateCheckRow />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

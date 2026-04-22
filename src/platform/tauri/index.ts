@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { error as logError, info as logInfo, warn as logWarn } from '@tauri-apps/plugin-log';
 import {
   createSession,
   deleteAllSessions,
@@ -12,7 +13,29 @@ import {
   saveCandidateName,
 } from '../storage/preferencesDexie';
 import { tauriOpenAIHttp } from './http/openai';
+import { tauriUpdater } from './updater';
 import { SECRET_OPENAI_API_KEY, type Platform } from '../types';
+
+/** Serialise arbitrary log extras (objects, Errors, classified error
+ *  payloads) down to a single string — `@tauri-apps/plugin-log` only takes
+ *  a string message. Falls back to `String(x)` for non-serialisable values
+ *  so a bad extra can't throw out of the logger itself. */
+function stringifyExtras(extras: unknown[]): string {
+  return extras
+    .map((x) => {
+      if (x instanceof Error) return `${x.name}: ${x.message}\n${x.stack ?? ''}`;
+      try {
+        return typeof x === 'string' ? x : JSON.stringify(x);
+      } catch {
+        return String(x);
+      }
+    })
+    .join(' ');
+}
+
+function format(message: string, extras: unknown[]): string {
+  return extras.length === 0 ? message : `${message} ${stringifyExtras(extras)}`;
+}
 
 function requireOpenAIKey(key: string): void {
   if (key !== SECRET_OPENAI_API_KEY) {
@@ -57,4 +80,16 @@ export const tauriPlatform: Platform = {
   http: {
     openai: tauriOpenAIHttp,
   },
+  logger: {
+    info: (message, ...extras) => {
+      void logInfo(format(message, extras));
+    },
+    warn: (message, ...extras) => {
+      void logWarn(format(message, extras));
+    },
+    error: (message, ...extras) => {
+      void logError(format(message, extras));
+    },
+  },
+  updater: tauriUpdater,
 };

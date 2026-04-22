@@ -78,6 +78,19 @@ export const webPlatform: Platform = {
   http: {
     openai: webHttpOpenAI.adapter,
   },
+  logger: {
+    info: (message, ...extras) => console.info(message, ...extras),
+    warn: (message, ...extras) => console.warn(message, ...extras),
+    error: (message, ...extras) => console.error(message, ...extras),
+  },
+  updater: {
+    // Web is served, not installed — there's nothing to update.
+    checkForUpdate: () => Promise.resolve(null),
+    openReleasePage: (url) => {
+      window.open(url, '_blank', 'noopener');
+      return Promise.resolve();
+    },
+  },
 };
 
 /** Test-only: drop caches owned by the web adapter. */

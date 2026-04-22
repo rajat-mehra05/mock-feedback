@@ -62,6 +62,28 @@ export interface AnalyticsAdapter {
   track(name: string, props?: Record<string, string | number | boolean>): Promise<void>;
 }
 
+/** Phase 10: durable diagnostics. On Tauri, messages land in a log file
+ *  under `app_log_dir()` via `tauri-plugin-log` (readable by any process
+ *  running as the same user, backed up by Time Machine, and often shared
+ *  by users when reporting bugs). On web, they go to the browser console.
+ *
+ *  Callers MUST NOT pass anything that may contain secrets or PII:
+ *  - Never pass a raw HTTP `Response`, `Request`, or their bodies.
+ *  - Never pass headers (`Authorization`, cookies).
+ *  - Never pass the OpenAI API key, session tokens, or user input
+ *    (candidate name, transcript, answer text).
+ *  - Error messages from third-party SDKs sometimes echo the request
+ *    payload. Prefer `error.name + error.message` over the full `Error`
+ *    object when the source isn't under our control.
+ *
+ *  When in doubt, log a short human-readable description plus an opaque
+ *  correlation ID. */
+export interface LoggerAdapter {
+  info(message: string, ...extras: unknown[]): void;
+  warn(message: string, ...extras: unknown[]): void;
+  error(message: string, ...extras: unknown[]): void;
+}
+
 // Streaming chat delta emitted by platform.http.openai.chat.
 export interface ChatDelta {
   content?: string;
@@ -150,11 +172,29 @@ export interface HttpAdapter {
   openai: OpenAIHttpAdapter;
 }
 
+/** Phase 10: pluggable update check. Tauri hits GitHub Releases; web returns
+ *  null since there's no installed artifact to update. */
+export interface UpdateInfo {
+  latestVersion: string;
+  htmlUrl: string;
+}
+
+export interface UpdaterAdapter {
+  /** Returns an `UpdateInfo` if a newer release exists, `null` otherwise
+   *  (including the web path and any network/parse failures — callers treat
+   *  "can't check" as "no update" to keep the launch path silent). */
+  checkForUpdate(): Promise<UpdateInfo | null>;
+  /** Opens the release page in the user's default browser. */
+  openReleasePage(url: string): Promise<void>;
+}
+
 export interface Platform {
   target: PlatformTarget;
   storage: StorageAdapter;
   analytics: AnalyticsAdapter;
   http: HttpAdapter;
+  logger: LoggerAdapter;
+  updater: UpdaterAdapter;
 }
 
 /** Canonical identifier for the OpenAI API key in the secrets adapter. */

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TOPIC_LABELS, DEFAULT_QUESTION_COUNT, toValidTopic } from '@/constants/topics';
 import { useInterviewSession } from '@/hooks/useInterviewSession/useInterviewSession';
+import { useQuitGuard } from '@/hooks/useQuitGuard/useQuitGuard';
 import { trackEvent } from '@/lib/analytics';
 import { SessionHeader } from './SessionHeader';
 import { StopDialog } from './StopDialog';
@@ -34,6 +35,15 @@ export function Session() {
   const handleMaxRecording = useCallback(() => {
     stopRecordingOnly();
   }, [stopRecordingOnly]);
+
+  // Phase 10: warn before quit while the user is actively recording so a
+  // Cmd+Q doesn't silently discard the current answer. The reducer only
+  // sits at `user_recording` while the mic is capturing, so this is
+  // precisely "lose the in-flight answer" scope.
+  useQuitGuard(
+    state.status === 'user_recording',
+    'A recording is in progress. Close anyway? The current answer will be lost.',
+  );
 
   const handleRestart = useCallback(() => {
     startedRef.current = true;

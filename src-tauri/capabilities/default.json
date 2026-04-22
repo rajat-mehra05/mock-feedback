@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Base permissions for the main window. User-defined `#[tauri::command]` handlers registered in `invoke_handler` are callable without additional capability entries.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-show"]
+  "permissions": ["core:default", "core:window:allow-show", "shell:allow-open", "log:default"]
 }

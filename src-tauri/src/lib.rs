@@ -73,6 +73,37 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        // Open URLs in the user's default browser (update-check "Download"
+        // action, release notes). Capability declared in default.json.
+        .plugin(tauri_plugin_shell::init())
+        // Route frontend + Rust logs into a file under `app_log_dir()` so a
+        // user who hits a bug can share diagnostics. `LogDir` target lands
+        // at ~/Library/Logs/com.voiceround.app/voiceround.log on macOS.
+        // Cap at 1MB and keep only the active file — diagnostics are
+        // useful for the current session; stale history isn't worth the
+        // disk footprint on a long-running install.
+        //
+        // `Stdout` is added only in debug builds; a packaged `.app` has no
+        // terminal, and piping log output to Console.app in production
+        // adds system-wide noise users don't want from an unrelated app.
+        .plugin({
+            let mut targets: Vec<tauri_plugin_log::Target> = vec![tauri_plugin_log::Target::new(
+                tauri_plugin_log::TargetKind::LogDir {
+                    file_name: Some("voiceround.log".into()),
+                },
+            )];
+            if cfg!(debug_assertions) {
+                targets.push(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ));
+            }
+            tauri_plugin_log::Builder::new()
+                .targets(targets)
+                .max_file_size(1_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .level(log::LevelFilter::Info)
+                .build()
+        })
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             secrets::secret_set,
