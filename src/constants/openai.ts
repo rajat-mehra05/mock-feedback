@@ -25,9 +25,3 @@ export const TTS_RESPONSE_FORMAT = 'mp3' as const;
 export const INTERVIEW_CLOSING_MESSAGE =
   'Thank you for taking part in this interview. That was the last question. ' +
   'Your detailed feedback will be ready in just a moment.';
-
-// Audio recording MIME types by browser capability
-export const AUDIO_MIME_TYPES = {
-  WEBM: 'audio/webm;codecs=opus',
-  MP4: 'audio/mp4',
-} as const;

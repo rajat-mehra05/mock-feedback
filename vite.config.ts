@@ -70,6 +70,18 @@ export default defineConfig(({ mode }) => {
           'src/pages/Session/RecordingTimer.tsx',
           'src/pages/Session/ConversationLog.tsx',
           'src/pages/Session/Session.tsx',
+          // Tauri IPC adapters need `window.__TAURI_INTERNALS__` plus
+          // MediaSource/HTMLAudioElement; jsdom provides none. Contract
+          // coverage happens at the service boundary via stt.test.ts,
+          // streamingQuestion.test.ts, and useInterviewSession.test.tsx.
+          // The pure state machine that drove ttsPlayback's edge cases
+          // lives in src/lib/ttsChunkQueue.ts where it IS tested.
+          'src/platform/tauri/http/**',
+          // Thin OpenAI SDK wrapper — tested at the service boundary
+          // (stt.test.ts uses MSW; streamingQuestion.test.ts spies on
+          // `platform.http.openai.chatStream`). Adding another test layer
+          // here would only verify the SDK itself.
+          'src/platform/web/http/openai.ts',
         ],
       },
     },

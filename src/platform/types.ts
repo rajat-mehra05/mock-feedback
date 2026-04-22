@@ -102,6 +102,36 @@ export interface TtsRequest {
   timeoutMs?: number;
 }
 
+/** Metadata needed to commit a streamed transcription. */
+export interface TranscribeCommitRequest {
+  requestId: string;
+  model: string;
+  filename: string;
+  contentType: string;
+  /** Phase 9.3: set when the buffered chunks are raw 16-bit mono PCM at
+   *  this rate. The backend prepends a WAV header before uploading. Omit
+   *  for self-contained container formats. */
+  sampleRate?: number;
+}
+
+/** Optional capability: push audio bytes to the backend during recording so
+ *  the final upload doesn't have to ship the entire blob across IPC at
+ *  mic-stop time. Implemented by the Tauri adapter; the web path has no
+ *  intermediate backend to pre-buffer into and leaves these undefined. */
+export interface TranscribeStreamingOps {
+  /** Push a chunk of captured audio to the backend-side buffer.
+   *
+   *  `chunk` is raw 16-bit little-endian mono PCM produced by the Phase 9.3
+   *  AudioWorklet (`public/audio/downsample-worklet.js`) at
+   *  `CAPTURE_SAMPLE_RATE` (16kHz). The Rust side concatenates chunks in
+   *  arrival order and prepends a WAV header on commit. */
+  pushChunk(requestId: string, chunk: Uint8Array): Promise<void>;
+  /** Called on mic-stop. Returns the transcript. */
+  commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string>;
+  /** Called when a recording is abandoned without a commit. Idempotent. */
+  discard(requestId: string): Promise<void>;
+}
+
 export interface OpenAIHttpAdapter {
   /** Non-streaming chat. Returns the full text. Used for feedback generation. */
   chat(req: ChatRequest, signal?: AbortSignal): Promise<string>;
@@ -110,6 +140,8 @@ export interface OpenAIHttpAdapter {
   chatStream(req: ChatRequest, signal?: AbortSignal): AsyncIterable<string>;
   /** Transcribes an audio blob. */
   transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string>;
+  /** Phase 9.2: optional streamed-upload path. `undefined` on web. */
+  transcribeStreaming?: TranscribeStreamingOps;
   /** Requests TTS audio. Plays it to completion or rejects on abort. */
   speak(req: TtsRequest, signal?: AbortSignal): Promise<void>;
 }
