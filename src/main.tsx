@@ -35,6 +35,15 @@ async function boot(): Promise<void> {
         .catch((err) => console.error('[tauri] failed to show window:', err));
     });
   }
+
+  // Phase 9.4: warm the AudioWorklet so the first recording's `addModule`
+  // call is a cache hit. Fire after first paint so the preload doesn't
+  // contend with the initial render.
+  requestAnimationFrame(() => {
+    void import('@/lib/workletPreload').then(({ preloadDownsampleWorklet }) =>
+      preloadDownsampleWorklet(),
+    );
+  });
 }
 
 void boot();

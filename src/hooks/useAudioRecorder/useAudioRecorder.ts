@@ -1,15 +1,18 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { AUDIO_MIME_TYPES } from '@/constants/openai';
 import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
+import { CAPTURE_SAMPLE_RATE } from '@/constants/audio';
 import { classifyMicError, micError, type MicError } from '@/lib/micError';
 import { watchMicPermission } from '@/lib/micCheck';
 import { mark, resetPerf } from '@/lib/perf';
+import { platform } from '@/platform';
+import { encodeWavFromInt16 } from '@/lib/wavEncoder';
 
 /** RMS threshold below which audio is considered silence (0–1 scale).
  * Set above typical laptop fan / ambient noise levels (~0.01-0.04). */
 const SILENCE_THRESHOLD = 0.06;
 /** How often (ms) we sample the audio level to check for silence. */
 const POLL_INTERVAL_MS = 200;
+const WORKLET_URL = `${import.meta.env.BASE_URL}audio/downsample-worklet.js`;
 
 interface UseAudioRecorderReturn {
   startRecording: () => Promise<void>;
@@ -17,94 +20,158 @@ interface UseAudioRecorderReturn {
   clearBlob: () => void;
   isRecording: boolean;
   audioBlob: Blob | null;
+  /** Phase 9.2: when running against an adapter that supports streamed
+   *  transcribe buffering (Tauri today, undefined on web), this is the id
+   *  the caller passes to `transcribeStreaming.commit` after mic-stop. */
+  streamingId: string | null;
   error: MicError | null;
-}
-
-function getSupportedMimeType(): string {
-  if (typeof MediaRecorder === 'undefined') return '';
-  if (MediaRecorder.isTypeSupported(AUDIO_MIME_TYPES.WEBM)) return AUDIO_MIME_TYPES.WEBM;
-  if (MediaRecorder.isTypeSupported(AUDIO_MIME_TYPES.MP4)) return AUDIO_MIME_TYPES.MP4;
-  return '';
 }
 
 export function useAudioRecorder(): UseAudioRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<MicError | null>(null);
+  const [streamingId, setStreamingId] = useState<string | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const pcmChunksRef = useRef<Int16Array[]>([]);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const disconnectedRef = useRef(false);
   const permissionUnsubscribeRef = useRef<(() => void) | null>(null);
+  /** Id used to push chunks to the Rust-side buffer and to commit the final
+   *  upload. Regenerated per recording; null on web (no streaming backend). */
+  const streamingIdRef = useRef<string | null>(null);
+  /** First chunk marks `transcribe_start` in the perf log so stage deltas
+   *  are measured from the moment Rust starts accumulating audio. */
+  const firstChunkMarkedRef = useRef(false);
 
-  const cleanupSilenceDetector = useCallback(() => {
+  const releaseCaptureGraph = useCallback(() => {
     if (silenceTimerRef.current) {
       clearInterval(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
-    if (audioContextRef.current) {
-      void audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
+    workletNodeRef.current?.port.close();
+    workletNodeRef.current?.disconnect();
+    workletNodeRef.current = null;
+    sourceNodeRef.current?.disconnect();
+    sourceNodeRef.current = null;
+    const ctx = audioContextRef.current;
+    if (ctx && ctx.state !== 'closed') void ctx.close();
+    audioContextRef.current = null;
   }, []);
 
-  const stopRecording = useCallback(() => {
-    cleanupSilenceDetector();
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state === 'recording') {
-      // First mark of a turn. resetPerf ensures the delta is relative to
-      // mic_stop, not to whatever logged last on the previous turn.
-      resetPerf();
-      mark('mic_stop');
-      recorder.stop();
+  const buildWavBlob = useCallback((): Blob | null => {
+    const chunks = pcmChunksRef.current;
+    if (chunks.length === 0) return null;
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const merged = new Int16Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      merged.set(c, offset);
+      offset += c.length;
     }
-  }, [cleanupSilenceDetector]);
+    pcmChunksRef.current = [];
+    // Cast via `unknown as BlobPart` because TS 5.9's Uint8Array type is
+    // parameterised on `ArrayBufferLike` and Blob accepts `ArrayBufferView<ArrayBuffer>`.
+    // The runtime Uint8Array is always `ArrayBuffer`-backed here.
+    const wav = encodeWavFromInt16(merged, CAPTURE_SAMPLE_RATE) as unknown as BlobPart;
+    return new Blob([wav], { type: 'audio/wav' });
+  }, []);
+
+  // Hoisted so `finishRecording` can stash a finaliser callback that the
+  // worklet's port.onmessage handler calls once the 'flushed' sentinel
+  // lands (see startRecording for the handler).
+  const finalizeRef = useRef<(() => void) | null>(null);
+
+  const finishRecording = useCallback(() => {
+    // Called from silence detection, blur, or explicit stop. Idempotent on
+    // a non-recording graph (workletNodeRef is null).
+    if (!workletNodeRef.current || finalizeRef.current) return;
+    mark('mic_stop');
+
+    // Stop the mic track + silence polling immediately so the caller sees
+    // `isRecording` go to false right away, but keep the worklet's port
+    // open long enough to drain the trailing batch. The finaliser (below)
+    // tears down the audio graph once the 'flushed' sentinel arrives.
+    if (silenceTimerRef.current) {
+      clearInterval(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    permissionUnsubscribeRef.current?.();
+    permissionUnsubscribeRef.current = null;
+    setIsRecording(false);
+
+    finalizeRef.current = () => {
+      finalizeRef.current = null;
+      const blob = buildWavBlob();
+      releaseCaptureGraph();
+      if (!disconnectedRef.current && blob) setAudioBlob(blob);
+    };
+
+    // Ask the worklet to post its tail, followed by the 'flushed' sentinel
+    // that triggers finalizeRef.current() in the onmessage handler. Audio
+    // thread is separate from the main thread, so awaiting this roundtrip
+    // is the only way to capture the full recording.
+    workletNodeRef.current.port.postMessage('flush');
+  }, [buildWavBlob, releaseCaptureGraph]);
+
+  const stopRecording = useCallback(() => {
+    finishRecording();
+  }, [finishRecording]);
 
   const abortWithError = useCallback(
     (err: MicError) => {
-      cleanupSilenceDetector();
-      // Wipe chunks so the onstop handler doesn't emit a partial blob.
-      chunksRef.current = [];
+      pcmChunksRef.current = [];
       disconnectedRef.current = true;
-      const rec = mediaRecorderRef.current;
-      if (rec && rec.state === 'recording') rec.stop();
+      finalizeRef.current = null; // any pending 'flushed' sentinel is now a no-op
+      releaseCaptureGraph();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      const id = streamingIdRef.current;
+      if (id) void platform.http.openai.transcribeStreaming?.discard(id);
+      streamingIdRef.current = null;
+      setStreamingId(null);
+      setIsRecording(false);
       setError(err);
     },
-    [cleanupSilenceDetector],
+    [releaseCaptureGraph],
   );
 
   const startRecording = useCallback(async () => {
-    // Guard against overlapping recording sessions
-    const existing = mediaRecorderRef.current;
-    if (existing && existing.state !== 'inactive') return;
+    if (workletNodeRef.current) return; // already recording
 
     setError(null);
     setAudioBlob(null);
+    resetPerf();
+    firstChunkMarkedRef.current = false;
+    pcmChunksRef.current = [];
 
-    const mimeType = getSupportedMimeType();
-    if (!mimeType) {
-      setError(micError('unsupported'));
-      return;
-    }
+    const streaming = platform.http.openai.transcribeStreaming;
+    const newStreamingId = streaming ? crypto.randomUUID() : null;
+    streamingIdRef.current = newStreamingId;
+    setStreamingId(newStreamingId);
 
     try {
+      // Request 16kHz mono at the source so the worklet has less to resample
+      // when the browser honours the hint (Chrome/Firefox do; Safari picks
+      // hardware default and the worklet handles the rest).
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
+          sampleRate: CAPTURE_SAMPLE_RATE,
+          channelCount: 1,
           noiseSuppression: true,
           echoCancellation: true,
           autoGainControl: true,
         },
       });
       streamRef.current = stream;
-      chunksRef.current = [];
-
-      // Detect mid-recording device disconnect (e.g. AirPods removed / Bluetooth drops)
       disconnectedRef.current = false;
+
       const track = stream.getAudioTracks()[0];
       if (track) {
         track.addEventListener('ended', () => {
@@ -112,65 +179,75 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         });
       }
 
-      // Watch for OS-level permission revocation mid-session.
       permissionUnsubscribeRef.current?.();
       permissionUnsubscribeRef.current = watchMicPermission((state) => {
-        if (state === 'denied' && mediaRecorderRef.current?.state === 'recording') {
+        if (state === 'denied' && workletNodeRef.current) {
           abortWithError(micError('permission-revoked'));
         }
       });
 
-      const recorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        // On device disconnect, the ended handler already set the error —
-        // don't emit a blob that would race with the error state.
-        if (!disconnectedRef.current) {
-          setAudioBlob(new Blob(chunksRef.current, { type: mimeType }));
-        }
-        setIsRecording(false);
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-        permissionUnsubscribeRef.current?.();
-        permissionUnsubscribeRef.current = null;
-      };
-
-      recorder.onerror = () => {
-        abortWithError(micError('unknown'));
-        setIsRecording(false);
-      };
-
-      recorder.start();
-      setIsRecording(true);
-
-      // Native silence detection via Web Audio API AnalyserNode
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
+
+      // Phase 9.3: AudioWorkletNode runs the downsample+Int16 pipeline on the
+      // audio thread. `addModule` is a no-op if the module is already
+      // registered against this context (Phase 9.4 preloads it at boot).
+      await audioContext.audioWorklet.addModule(WORKLET_URL);
+      const workletNode = new AudioWorkletNode(audioContext, 'downsample-processor');
+      workletNodeRef.current = workletNode;
+
+      workletNode.port.onmessage = (event: MessageEvent<Int16Array | { kind: 'flushed' }>) => {
+        const data = event.data;
+        // Control message: the worklet has drained its tail and is ready
+        // for teardown. See finishRecording for why this is async.
+        if (!(data instanceof Int16Array)) {
+          if (data?.kind === 'flushed') finalizeRef.current?.();
+          return;
+        }
+
+        const chunk = data;
+        if (chunk.length === 0) return;
+        pcmChunksRef.current.push(chunk);
+
+        if (streaming && newStreamingId) {
+          if (!firstChunkMarkedRef.current) {
+            firstChunkMarkedRef.current = true;
+            mark('transcribe_start');
+          }
+          // Wrap in a fresh Uint8Array so the underlying buffer is the exact
+          // PCM range; Tauri's binary IPC ships it zero-copy.
+          const bytes = new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+          void streaming.pushChunk(newStreamingId, bytes).catch(() => {
+            // Individual push failures are recoverable — commit surfaces a
+            // classified error later.
+          });
+        }
+      };
+
       const source = audioContext.createMediaStreamSource(stream);
+      sourceNodeRef.current = source;
+      source.connect(workletNode);
+      // Do NOT connect workletNode → destination — we don't want to play the
+      // user's mic back through their speakers. The worklet still runs
+      // because the graph is active via source→worklet.
+
+      // Silence detection via AnalyserNode on the same context. Parallel
+      // branch off `source` so we get the raw 48kHz frames (more accurate
+      // RMS at the source rate).
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
       source.connect(analyser);
-
-      const dataArray = new Float32Array(analyser.fftSize);
+      const rmsSamples = new Float32Array(analyser.fftSize);
       let silentSince: number | null = null;
       let speechDetected = false;
       const recordingStartedAt = Date.now();
-
       let pollCount = 0;
-      silenceTimerRef.current = setInterval(() => {
-        analyser.getFloatTimeDomainData(dataArray);
 
-        // Calculate RMS (root mean square) volume level
+      silenceTimerRef.current = setInterval(() => {
+        analyser.getFloatTimeDomainData(rmsSamples);
         let sumSquares = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sumSquares += dataArray[i] * dataArray[i];
-        }
-        const rms = Math.sqrt(sumSquares / dataArray.length);
+        for (let i = 0; i < rmsSamples.length; i++) sumSquares += rmsSamples[i] * rmsSamples[i];
+        const rms = Math.sqrt(sumSquares / rmsSamples.length);
 
         if (import.meta.env.DEV && ++pollCount % 5 === 0) {
           const silentFor = silentSince ? ((Date.now() - silentSince) / 1000).toFixed(1) : '0';
@@ -186,56 +263,52 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
           if (silentSince === null) {
             silentSince = Date.now();
           } else if (Date.now() - silentSince >= SILENCE_TIMEOUT_SECONDS * 1000) {
-            stopRecording();
+            finishRecording();
           }
         } else if (Date.now() - recordingStartedAt >= SILENCE_TIMEOUT_SECONDS * 1000) {
-          stopRecording();
+          finishRecording();
         }
       }, POLL_INTERVAL_MS);
+
+      setIsRecording(true);
     } catch (err) {
-      cleanupSilenceDetector();
-      const rec = mediaRecorderRef.current;
-      if (rec && rec.state !== 'inactive') {
-        rec.ondataavailable = null;
-        rec.onstop = null;
-        rec.onerror = null;
-        rec.stop();
-      }
-      mediaRecorderRef.current = null;
+      releaseCaptureGraph();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      const id = streamingIdRef.current;
+      if (id) void platform.http.openai.transcribeStreaming?.discard(id);
+      streamingIdRef.current = null;
+      setStreamingId(null);
       setIsRecording(false);
       setError(classifyMicError(err));
     }
-  }, [stopRecording, cleanupSilenceDetector, abortWithError]);
+  }, [finishRecording, releaseCaptureGraph, abortWithError]);
 
   // Release all resources on unmount
   useEffect(() => {
     return () => {
-      cleanupSilenceDetector();
-      const recorder = mediaRecorderRef.current;
-      if (recorder && recorder.state === 'recording') {
-        recorder.stop();
-      }
+      finalizeRef.current = null;
+      releaseCaptureGraph();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       permissionUnsubscribeRef.current?.();
       permissionUnsubscribeRef.current = null;
+      const id = streamingIdRef.current;
+      if (id) void platform.http.openai.transcribeStreaming?.discard(id);
+      streamingIdRef.current = null;
     };
-  }, [cleanupSilenceDetector]);
+  }, [releaseCaptureGraph]);
 
-  // Stop recording when the window loses focus. Prevents silent
-  // background recording when the user switches tabs or apps.
-  // Captured audio is preserved via the onstop handler.
+  // Stop recording when the window loses focus. Prevents silent background
+  // recording when the user switches tabs or apps. Captured audio is
+  // preserved via the finishRecording handler.
   useEffect(() => {
     const handleBlur = () => {
-      if (mediaRecorderRef.current?.state === 'recording') {
-        stopRecording();
-      }
+      if (workletNodeRef.current) finishRecording();
     };
     window.addEventListener('blur', handleBlur);
     return () => window.removeEventListener('blur', handleBlur);
-  }, [stopRecording]);
+  }, [finishRecording]);
 
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 
@@ -245,6 +318,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     clearBlob,
     isRecording,
     audioBlob,
+    streamingId,
     error,
   };
 }

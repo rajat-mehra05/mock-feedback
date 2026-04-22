@@ -304,6 +304,128 @@ pub async fn openai_transcribe(
     Ok(text.to_string())
 }
 
+// --- Phase 9.2: streamed mic chunks ---
+//
+// The recorder hands raw MediaRecorder chunks to Rust during the user's turn,
+// keyed by the request id it will later commit. Eliminates the JS → Rust IPC
+// transit of the full blob after mic-stop (~50-150ms for a 1MB recording on
+// Tauri's binary IPC) and moves `transcribe_start` in the perf log from
+// "after mic_stop" to "during recording".
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranscribeCommitArgs {
+    pub request_id: String,
+    pub model: String,
+    pub filename: String,
+    pub content_type: String,
+    /// Phase 9.3: when set, the buffered bytes are treated as raw 16-bit
+    /// little-endian mono PCM captured at this rate, and the command
+    /// prepends a WAV header before uploading so OpenAI gets a valid file.
+    /// Omitted for the (pre-9.3) "buffer already contains a self-contained
+    /// container format like webm/mp4" path.
+    #[serde(default)]
+    pub sample_rate: Option<u32>,
+}
+
+/// Append a chunk of audio bytes to the buffer for this request id. Metadata
+/// (the request id) travels in headers so the body stays raw.
+#[tauri::command]
+pub async fn transcribe_push_chunk(
+    request: Request<'_>,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let request_id = request
+        .headers()
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| AppError::other("transcribe_push_chunk missing x-request-id header"))?
+        .to_string();
+    let chunk = match request.body() {
+        InvokeBody::Raw(bytes) => bytes,
+        InvokeBody::Json(_) => {
+            return Err(AppError::other(
+                "transcribe_push_chunk requires a raw binary body",
+            ))
+        }
+    };
+    let mut buffers = state.transcribe_buffers.lock();
+    buffers.entry(request_id).or_default().extend_from_slice(chunk);
+    Ok(())
+}
+
+/// Drain the buffered chunks for this request id, build a multipart upload
+/// and send it to OpenAI. Buffer is removed whether the upload succeeds or
+/// fails so we don't leak memory on error.
+#[tauri::command]
+pub async fn transcribe_commit(
+    args: TranscribeCommitArgs,
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    let pcm = state
+        .transcribe_buffers
+        .lock()
+        .remove(&args.request_id)
+        .ok_or_else(|| AppError::other("no buffered audio for request id"))?;
+    if pcm.is_empty() {
+        return Err(AppError::other("transcribe_commit received empty buffer"));
+    }
+
+    // If the recorder streamed raw Int16 PCM (Phase 9.3), wrap it in a RIFF
+    // WAVE header so OpenAI's multipart parser sees a valid .wav upload.
+    // Without a sample rate the buffer is already a self-contained
+    // container (webm/mp4/etc.) and we upload as-is.
+    let audio = match args.sample_rate {
+        Some(rate) => wrap_pcm_in_wav(&pcm, rate),
+        None => pcm,
+    };
+
+    let key = api_key()?;
+    let token = register_token(&state, &args.request_id);
+    let client = state.http.clone();
+
+    let part = reqwest::multipart::Part::bytes(audio)
+        .file_name(args.filename)
+        .mime_str(&args.content_type)
+        .map_err(|e| AppError::other(e.to_string()))?;
+    let form = reqwest::multipart::Form::new()
+        .text("model", args.model)
+        .part("file", part);
+
+    let http_request = client
+        .post(format!("{OPENAI_BASE_URL}/audio/transcriptions"))
+        .header(AUTHORIZATION, format!("Bearer {key}"))
+        .multipart(form);
+
+    let result = tokio::select! {
+        _ = token.cancelled() => return Err(AppError::Aborted { message: "cancelled".into() }),
+        res = http_request.send() => res,
+    };
+
+    drop_token(&state, &args.request_id);
+
+    let response = result?;
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(classify_status(status.as_u16(), text));
+    }
+
+    let body: serde_json::Value = response.json().await?;
+    let text = body
+        .get("text")
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AppError::other("empty transcription response"))?;
+    Ok(text.to_string())
+}
+
+/// Drop the buffer without uploading. Called when a recording is aborted or
+/// abandoned so memory doesn't leak across stopped sessions.
+#[tauri::command]
+pub fn transcribe_discard(request_id: String, state: State<'_, AppState>) {
+    state.transcribe_buffers.lock().remove(&request_id);
+}
+
 #[tauri::command]
 pub async fn openai_tts(
     args: TtsArgs,
@@ -399,6 +521,9 @@ pub fn cancel_request(request_id: String, state: State<'_, AppState>) {
     if let Some(token) = state.cancel_tokens.lock().remove(&request_id) {
         token.cancel();
     }
+    // Also drop any in-progress transcribe buffer keyed by this id so we
+    // don't leak memory if the renderer cancels a recording before commit.
+    state.transcribe_buffers.lock().remove(&request_id);
 }
 
 /// Shared between `openai_chat` and `openai_chat_stream`. `serde_json`'s default
@@ -428,6 +553,35 @@ fn build_chat_body(request: &ChatRequestBody, stream: bool) -> serde_json::Value
         body.insert("max_tokens".into(), json!(n));
     }
     serde_json::Value::Object(body)
+}
+
+/// Wrap little-endian 16-bit mono PCM in a RIFF/WAVE header. 44 bytes of
+/// header + the original samples. Shape matches the front-end's wavEncoder
+/// so a round-trip produces identical output regardless of which side
+/// constructs the WAV.
+fn wrap_pcm_in_wav(pcm: &[u8], sample_rate: u32) -> Vec<u8> {
+    const SAMPLE_BYTES: u32 = 2;
+    const CHANNELS: u16 = 1;
+    let data_bytes = pcm.len() as u32;
+    let byte_rate = sample_rate * u32::from(CHANNELS) * SAMPLE_BYTES;
+    let block_align = CHANNELS * SAMPLE_BYTES as u16;
+
+    let mut out = Vec::with_capacity(44 + pcm.len());
+    out.extend_from_slice(b"RIFF");
+    out.extend_from_slice(&(36u32 + data_bytes).to_le_bytes());
+    out.extend_from_slice(b"WAVE");
+    out.extend_from_slice(b"fmt ");
+    out.extend_from_slice(&16u32.to_le_bytes()); // fmt chunk size
+    out.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    out.extend_from_slice(&CHANNELS.to_le_bytes());
+    out.extend_from_slice(&sample_rate.to_le_bytes());
+    out.extend_from_slice(&byte_rate.to_le_bytes());
+    out.extend_from_slice(&block_align.to_le_bytes());
+    out.extend_from_slice(&((SAMPLE_BYTES as u16) * 8).to_le_bytes()); // bits per sample
+    out.extend_from_slice(b"data");
+    out.extend_from_slice(&data_bytes.to_le_bytes());
+    out.extend_from_slice(pcm);
+    out
 }
 
 /// SSE events are terminated by a blank line. The spec (W3C) requires clients

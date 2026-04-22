@@ -1,5 +1,12 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
-import type { ChatRequest, OpenAIHttpAdapter, TranscribeRequest, TtsRequest } from '../../types';
+import type {
+  ChatRequest,
+  OpenAIHttpAdapter,
+  TranscribeCommitRequest,
+  TranscribeRequest,
+  TranscribeStreamingOps,
+  TtsRequest,
+} from '../../types';
 import { classifyOpenAIError } from '@/services/openai/openaiErrors';
 import { playMediaSourceStream } from './ttsPlayback';
 
@@ -104,6 +111,8 @@ export const tauriOpenAIHttp: OpenAIHttpAdapter = {
       unbind();
     }
   },
+
+  transcribeStreaming: makeTranscribeStreaming(),
 
   async speak(req: TtsRequest, signal?: AbortSignal): Promise<void> {
     const requestId = newRequestId();
@@ -253,6 +262,56 @@ async function* tauriChatStream(req: ChatRequest, signal?: AbortSignal): AsyncIt
     // the caller's throw by however long Rust takes to notice the cancel.
     void invokePromise;
   }
+}
+
+/**
+ * Phase 9.2: binds the `transcribe_push_chunk` / `transcribe_commit` /
+ * `transcribe_discard` commands to a front-end-friendly shape. `pushChunk`
+ * ships each MediaRecorder chunk straight into a Rust buffer during the
+ * turn, so `commit` after mic-stop just drains the buffer into a multipart
+ * POST without re-shipping the whole blob across IPC.
+ */
+function makeTranscribeStreaming(): TranscribeStreamingOps {
+  return {
+    async pushChunk(requestId, chunk) {
+      try {
+        await invoke('transcribe_push_chunk', chunk, {
+          headers: { 'x-request-id': requestId },
+        });
+      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
+        throw classifyOpenAIError(toOpenAIError(error));
+      }
+    },
+
+    async commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string> {
+      const unbind = bindAbort(signal, req.requestId);
+      try {
+        return await invoke<string>('transcribe_commit', {
+          args: {
+            requestId: req.requestId,
+            model: req.model,
+            filename: req.filename,
+            contentType: req.contentType,
+            sampleRate: req.sampleRate,
+          },
+        });
+      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
+        throw classifyOpenAIError(toOpenAIError(error));
+      } finally {
+        unbind();
+      }
+    },
+
+    async discard(requestId) {
+      try {
+        await invoke('transcribe_discard', { requestId });
+      } catch {
+        // Best-effort cleanup; a failing discard isn't worth surfacing.
+      }
+    },
+  };
 }
 
 // Rust errors arrive as `{ code: 'auth' | 'rate_limit' | ..., status?: number, message: string }`.

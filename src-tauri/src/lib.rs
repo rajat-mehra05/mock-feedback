@@ -16,15 +16,23 @@ mod secrets;
 /// The mutex is synchronous (`parking_lot`) because the cancel path never
 /// awaits — holding a `tokio::sync::Mutex` here would force `.lock().await`
 /// across a trivial critical section.
+///
+/// `transcribe_buffers` accumulates audio chunks as the recorder streams them
+/// in during a session's recording phase (Phase 9.2). On mic-stop the matching
+/// `transcribe_commit` drains the buffer straight into a multipart upload,
+/// avoiding the JS → Rust IPC transit of the full blob after the user stops
+/// talking. Buffers are dropped on commit or cancel.
 pub struct AppState {
     pub http: Client,
     pub cancel_tokens: Mutex<HashMap<String, CancellationToken>>,
+    pub transcribe_buffers: Mutex<HashMap<String, Vec<u8>>>,
 }
 
 pub fn run() {
     let state = AppState {
         http: openai::client::build(),
         cancel_tokens: Mutex::new(HashMap::new()),
+        transcribe_buffers: Mutex::new(HashMap::new()),
     };
 
     tauri::Builder::default()
@@ -44,6 +52,9 @@ pub fn run() {
             commands::openai::openai_chat,
             commands::openai::openai_chat_stream,
             commands::openai::openai_transcribe,
+            commands::openai::transcribe_push_chunk,
+            commands::openai::transcribe_commit,
+            commands::openai::transcribe_discard,
             commands::openai::openai_tts,
             commands::openai::cancel_request,
         ])

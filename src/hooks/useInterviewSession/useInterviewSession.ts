@@ -30,6 +30,29 @@ export function useInterviewSession() {
   const abortRef = useRef<AbortController>(new AbortController());
   const recorder = useAudioRecorder();
 
+  // Phase 9.5: streaming chat can emit 50+ tokens per response. Dispatching
+  // QUESTION_TEXT_PROGRESS per token re-renders the transcript component that
+  // often and spins fans on laptops. Buffer the latest cumulative text in a
+  // ref and flush once per animation frame so the cost is ~16ms between
+  // re-renders regardless of token arrival rate.
+  const pendingTextRef = useRef<string | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const flushPendingText = useCallback(() => {
+    rafIdRef.current = null;
+    const text = pendingTextRef.current;
+    pendingTextRef.current = null;
+    if (text !== null) dispatch({ type: 'QUESTION_TEXT_PROGRESS', text });
+  }, []);
+  const scheduleTextUpdate = useCallback(
+    (text: string) => {
+      pendingTextRef.current = text;
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(flushPendingText);
+      }
+    },
+    [flushPendingText],
+  );
+
   const getSignal = () => abortRef.current.signal;
 
   const onError = (error: unknown, failedStatus: InterviewState) => {
@@ -60,9 +83,7 @@ export function useInterviewSession() {
                 topic: state.topicLabel,
                 history: state.history,
                 candidateName: state.candidateName,
-                onTextUpdate: (text) => {
-                  dispatch({ type: 'QUESTION_TEXT_PROGRESS', text });
-                },
+                onTextUpdate: scheduleTextUpdate,
                 signal: sig,
               }),
             { ...RETRY_OPTS, signal: effectSignal },
@@ -197,6 +218,9 @@ export function useInterviewSession() {
   useEffect(() => {
     if (!recorder.audioBlob || state.status !== 'user_recording') return;
     const blob = recorder.audioBlob;
+    // Snapshot the streaming id before clearBlob resets it — `transcribeAudio`
+    // needs it to commit the Rust-side buffer (Phase 9.2).
+    const streamingId = recorder.streamingId;
     recorder.clearBlob();
 
     // Skip STT for silent/empty blobs — prevents Whisper hallucination
@@ -212,7 +236,7 @@ export function useInterviewSession() {
     const s = getSignal();
     void (async () => {
       try {
-        const transcript = await withRetry((sig) => transcribeAudio(blob, sig), {
+        const transcript = await withRetry((sig) => transcribeAudio(blob, sig, streamingId), {
           ...RETRY_OPTS,
           signal: s,
         });
@@ -237,7 +261,16 @@ export function useInterviewSession() {
   }, [state.status, state.sessionId, navigate]);
 
   // Cleanup on unmount
-  useEffect(() => () => abortRef.current.abort(), []);
+  useEffect(
+    () => () => {
+      abortRef.current.abort();
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    },
+    [],
+  );
 
   const start = useCallback((config: InterviewConfig) => {
     abortRef.current.abort();

@@ -1,15 +1,46 @@
 import { platform } from '@/platform';
 import { STT_MODEL } from '@/constants/openai';
+import { CAPTURE_SAMPLE_RATE } from '@/constants/audio';
 import { mark } from '@/lib/perf';
 
 /**
  * Transcribes an audio blob using OpenAI's STT model.
  * Returns the transcript text. The adapter handles network timeouts and
  * keychain-backed authentication on Tauri.
+ *
+ * `streamingId` is set by the recorder when chunks were pre-shipped to the
+ * Rust-side buffer (Phase 9.2). In that case we commit the buffer instead of
+ * re-uploading the blob — the transcript round-trip is just the HTTP POST
+ * to OpenAI plus the last chunk's IPC, not the whole blob.
  */
-export async function transcribeAudio(blob: Blob, signal?: AbortSignal): Promise<string> {
-  mark('transcribe_start');
+export async function transcribeAudio(
+  blob: Blob,
+  signal?: AbortSignal,
+  streamingId?: string | null,
+): Promise<string> {
+  const streaming = platform.http.openai.transcribeStreaming;
+
+  // `transcribe_start` is marked by the recorder on the first chunk for the
+  // streaming path; mark it here only when we're falling back to the
+  // full-blob upload so the stage still appears in the perf log.
+  if (!streaming || !streamingId) mark('transcribe_start');
+
   try {
+    if (streaming && streamingId) {
+      return await streaming.commit(
+        {
+          requestId: streamingId,
+          model: STT_MODEL,
+          // Rust prepends a WAV header when sampleRate is set, so the
+          // filename/content-type must advertise WAV regardless of what
+          // the recorder's fallback blob reports.
+          filename: 'recording.wav',
+          contentType: 'audio/wav',
+          sampleRate: CAPTURE_SAMPLE_RATE,
+        },
+        signal,
+      );
+    }
     return await platform.http.openai.transcribe(
       { model: STT_MODEL, audio: blob, filename: filenameFor(blob) },
       signal,
