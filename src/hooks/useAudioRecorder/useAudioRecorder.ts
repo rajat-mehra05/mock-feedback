@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AUDIO_MIME_TYPES } from '@/constants/openai';
 import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
+import { classifyMicError, micError, type MicError } from '@/lib/micError';
+import { watchMicPermission } from '@/lib/micCheck';
 
 /** RMS threshold below which audio is considered silence (0–1 scale).
  * Set above typical laptop fan / ambient noise levels (~0.01-0.04). */
@@ -14,7 +16,7 @@ interface UseAudioRecorderReturn {
   clearBlob: () => void;
   isRecording: boolean;
   audioBlob: Blob | null;
-  error: string | null;
+  error: MicError | null;
 }
 
 function getSupportedMimeType(): string {
@@ -27,7 +29,7 @@ function getSupportedMimeType(): string {
 export function useAudioRecorder(): UseAudioRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MicError | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -35,6 +37,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const audioContextRef = useRef<AudioContext | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const disconnectedRef = useRef(false);
+  const permissionUnsubscribeRef = useRef<(() => void) | null>(null);
 
   const cleanupSilenceDetector = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -55,6 +58,21 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     }
   }, [cleanupSilenceDetector]);
 
+  const abortWithError = useCallback(
+    (err: MicError) => {
+      cleanupSilenceDetector();
+      // Wipe chunks so the onstop handler doesn't emit a partial blob.
+      chunksRef.current = [];
+      disconnectedRef.current = true;
+      const rec = mediaRecorderRef.current;
+      if (rec && rec.state === 'recording') rec.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setError(err);
+    },
+    [cleanupSilenceDetector],
+  );
+
   const startRecording = useCallback(async () => {
     // Guard against overlapping recording sessions
     const existing = mediaRecorderRef.current;
@@ -65,7 +83,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
     const mimeType = getSupportedMimeType();
     if (!mimeType) {
-      setError('Your browser does not support audio recording.');
+      setError(micError('unsupported'));
       return;
     }
 
@@ -85,16 +103,17 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const track = stream.getAudioTracks()[0];
       if (track) {
         track.addEventListener('ended', () => {
-          disconnectedRef.current = true;
-          cleanupSilenceDetector();
-          chunksRef.current = [];
-          const rec = mediaRecorderRef.current;
-          if (rec && rec.state === 'recording') {
-            rec.stop();
-          }
-          setError('Microphone disconnected. Please reconnect and try again.');
+          abortWithError(micError('disconnected'));
         });
       }
+
+      // Watch for OS-level permission revocation mid-session.
+      permissionUnsubscribeRef.current?.();
+      permissionUnsubscribeRef.current = watchMicPermission((state) => {
+        if (state === 'denied' && mediaRecorderRef.current?.state === 'recording') {
+          abortWithError(micError('permission-revoked'));
+        }
+      });
 
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
@@ -112,16 +131,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setIsRecording(false);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
+        permissionUnsubscribeRef.current?.();
+        permissionUnsubscribeRef.current = null;
       };
 
       recorder.onerror = () => {
-        cleanupSilenceDetector();
-        chunksRef.current = [];
-        setAudioBlob(null);
+        abortWithError(micError('unknown'));
         setIsRecording(false);
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-        setError('Recording failed unexpectedly.');
       };
 
       recorder.start();
@@ -183,14 +199,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       mediaRecorderRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-      const msg =
-        err instanceof DOMException && err.name === 'NotAllowedError'
-          ? 'Microphone access is required. Please allow microphone access in your browser settings.'
-          : 'Failed to start recording.';
       setIsRecording(false);
-      setError(msg);
+      setError(classifyMicError(err));
     }
-  }, [stopRecording, cleanupSilenceDetector]);
+  }, [stopRecording, cleanupSilenceDetector, abortWithError]);
 
   // Release all resources on unmount
   useEffect(() => {
@@ -202,6 +214,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      permissionUnsubscribeRef.current?.();
+      permissionUnsubscribeRef.current = null;
     };
   }, [cleanupSilenceDetector]);
 
@@ -220,5 +234,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 
-  return { startRecording, stopRecording, clearBlob, isRecording, audioBlob, error };
+  return {
+    startRecording,
+    stopRecording,
+    clearBlob,
+    isRecording,
+    audioBlob,
+    error,
+  };
 }

@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Feedback } from './Feedback';
-import { db } from '@/db/sessions/sessions';
+import { db } from '@/platform/storage/sessionsDexie';
 import { makeSession } from '@/test/factories';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 

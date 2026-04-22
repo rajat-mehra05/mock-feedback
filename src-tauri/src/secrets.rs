@@ -9,6 +9,8 @@ const SERVICE: &str = "com.voiceround.app";
 // compromise in the webview tries to write unrelated secrets.
 const ALLOWED_KEYS: &[&str] = &["openai_api_key"];
 
+pub const OPENAI_KEY: &str = "openai_api_key";
+
 fn validate(key: &str) -> Result<(), String> {
     if ALLOWED_KEYS.contains(&key) {
         Ok(())
@@ -43,5 +45,15 @@ pub fn secret_clear(key: String) -> Result<(), String> {
     match entry(&key)?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Rust-only keychain read. No `get_api_key` command exists — the renderer
+/// must never see the key. Used inline by the OpenAI command handlers.
+pub fn read_key() -> Result<Option<String>, keyring::Error> {
+    match Entry::new(SERVICE, OPENAI_KEY)?.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e),
     }
 }

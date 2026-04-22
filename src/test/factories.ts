@@ -1,4 +1,4 @@
-import type { Session } from '@/db/sessions/sessions';
+import type { Session } from '@/platform';
 
 export function makeSession(overrides: Partial<Session> = {}): Session {
   const questions = overrides.questions ?? [

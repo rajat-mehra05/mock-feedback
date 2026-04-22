@@ -1,11 +1,10 @@
-import { getOpenAIClient } from '@/services/openai/openai';
-import { classifyOpenAIError, createTimeoutSignal } from '@/services/openai/openaiErrors';
+import { platform } from '@/platform';
 import { parseFeedbackJSON } from '@/services/feedback/feedbackParser';
 import {
-  FEEDBACK_MODEL,
-  FEEDBACK_TIMEOUT_MS,
-  FEEDBACK_TEMPERATURE,
   FEEDBACK_MAX_TOKENS,
+  FEEDBACK_MODEL,
+  FEEDBACK_TEMPERATURE,
+  FEEDBACK_TIMEOUT_MS,
 } from '@/constants/feedback';
 import { buildFeedbackPrompt } from '@/constants/prompts';
 import type { ConversationTurn, FeedbackResult } from '@/services/types';
@@ -18,34 +17,23 @@ export async function generateFeedback(
   turns: ConversationTurn[],
   signal?: AbortSignal,
 ): Promise<FeedbackResult> {
-  const client = await getOpenAIClient();
   const systemPrompt = buildFeedbackPrompt({ topic });
-  const { signal: mergedSignal, cleanup } = createTimeoutSignal(FEEDBACK_TIMEOUT_MS, signal);
-
   const userContent = turns
     .map((t, i) => `Question ${i + 1}: ${t.question}\nAnswer: ${t.answer}`)
     .join('\n\n');
 
-  try {
-    const response = await client.chat.completions.create(
-      {
-        model: FEEDBACK_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        temperature: FEEDBACK_TEMPERATURE,
-        max_tokens: FEEDBACK_MAX_TOKENS,
-      },
-      { signal: mergedSignal },
-    );
-    const raw = response.choices[0]?.message?.content;
-    if (!raw) throw new Error('Empty response from feedback generation');
-    return parseFeedbackJSON(raw);
-  } catch (error) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- intentionally throws classified OpenAIServiceError object
-    throw classifyOpenAIError(error);
-  } finally {
-    cleanup();
-  }
+  const raw = await platform.http.openai.chat(
+    {
+      model: FEEDBACK_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      temperature: FEEDBACK_TEMPERATURE,
+      maxTokens: FEEDBACK_MAX_TOKENS,
+      timeoutMs: FEEDBACK_TIMEOUT_MS,
+    },
+    signal,
+  );
+  return parseFeedbackJSON(raw);
 }

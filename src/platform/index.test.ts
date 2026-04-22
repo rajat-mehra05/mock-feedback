@@ -1,17 +1,24 @@
 import { expect, test, vi } from 'vitest';
 
-vi.mock('@vercel/analytics', () => ({ track: vi.fn() }));
+test('web platform delegates analytics through to the underlying SDK wrapper', async ({
+  onTestFinished,
+}) => {
+  const trackMock = vi.fn();
+  vi.doMock('@vercel/analytics', () => ({ track: trackMock }));
+  vi.resetModules();
+  onTestFinished(() => {
+    vi.doUnmock('@vercel/analytics');
+    vi.resetModules();
+  });
 
-test('web platform delegates analytics through to the underlying SDK wrapper', async () => {
   const { platform } = await import('./index');
-  const { track } = await import('@vercel/analytics');
 
   expect(platform.target).toBe('web');
 
   await platform.analytics.track('platform_test_event', { topic: 'rust' });
 
-  expect(track).toHaveBeenCalledOnce();
-  const [name, props] = vi.mocked(track).mock.calls[0];
+  expect(trackMock).toHaveBeenCalledOnce();
+  const [name, props] = trackMock.mock.calls[0] as [string, Record<string, unknown>];
   expect(name).toBe('platform_test_event');
   expect(props).toMatchObject({ topic: 'rust' });
 });
@@ -21,7 +28,10 @@ test('tauri platform routes secrets through IPC commands and silences analytics'
 }) => {
   vi.stubEnv('VITE_TARGET', 'tauri');
   const invokeMock = vi.fn<(cmd: string, args?: unknown) => Promise<unknown>>();
-  vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+  vi.doMock('@tauri-apps/api/core', () => ({
+    invoke: invokeMock,
+    Channel: class {},
+  }));
   vi.resetModules();
   onTestFinished(() => {
     vi.unstubAllEnvs();

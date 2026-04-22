@@ -2,13 +2,15 @@ import { expect, test, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { saveApiKey } from '@/db/apiKey/apiKey';
+import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 
 // --- Dynamic audioRecorder mock ---
+import type { MicError } from '@/lib/micError';
+
 const recorderState = {
   audioBlob: null as Blob | null,
   isRecording: false,
-  error: null as string | null,
+  error: null as MicError | null,
 };
 const recorderFns = {
   startRecording: vi.fn(),
@@ -46,23 +48,21 @@ vi.mock('@/services/feedback/feedback', () => ({
     summary: 'Well done.',
   }),
 }));
-vi.mock('@/db/sessions/sessions', () => ({
-  createSession: vi.fn().mockResolvedValue('mock-session-id'),
-}));
+const createSession = vi.fn().mockResolvedValue('mock-session-id');
+vi.spyOn(platform.storage.sessions, 'create').mockImplementation(createSession);
 
 const { useInterviewSession } = await import('./useInterviewSession');
 const { generateNextQuestion } = await import('@/services/llm/llm');
 const { speakText } = await import('@/services/tts/tts');
 const { transcribeAudio } = await import('@/services/stt/stt');
 const { generateFeedback } = await import('@/services/feedback/feedback');
-const { createSession } = await import('@/db/sessions/sessions');
 
 function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
 beforeEach(async () => {
-  await saveApiKey('sk-test');
+  await platform.storage.secrets.set(SECRET_OPENAI_API_KEY, 'sk-test');
   recorderState.audioBlob = null;
   recorderState.isRecording = false;
   recorderState.error = null;
@@ -78,7 +78,7 @@ beforeEach(async () => {
       questions: [{ rating: 8, feedback: 'Good.', confidence: 'high', modelAnswer: 'Model.' }],
       summary: 'Well done.',
     });
-  vi.mocked(createSession).mockReset().mockResolvedValue('mock-session-id');
+  createSession.mockReset().mockResolvedValue('mock-session-id');
 });
 
 test('full single-question interview: idle → generate → speak → record → feedback → completed', async () => {
@@ -266,7 +266,7 @@ test('recorder error surfaces into session error state', async () => {
   await waitFor(() => expect(result.current.state.status).toBe('user_recording'));
 
   // Simulate recorder error while in user_recording
-  recorderState.error = 'Microphone disconnected';
+  recorderState.error = { kind: 'disconnected', message: 'Microphone disconnected' };
   rerender();
 
   await waitFor(() => expect(result.current.state.status).toBe('error'));

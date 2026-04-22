@@ -1,7 +1,6 @@
 import { createContext } from 'react';
 
 export interface ApiKeyState {
-  apiKey: string | null;
   hasKey: boolean;
   isLoading: boolean;
   save: (key: string) => Promise<void>;

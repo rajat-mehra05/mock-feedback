@@ -21,6 +21,16 @@ tauri-plugin-single-instance = "2"
 # if targeting macOS/Windows only.
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 
+# Phase 7: Rust-proxied OpenAI calls.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2", "json", "stream", "multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+futures-util = "0.3"
+bytes = "1"
+thiserror = "1"
+parking_lot = "0.12"
+uuid = { version = "1", features = ["v4"] }
+
 [profile.release]
 lto = true
 codegen-units = 1

@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { History } from './History';
-import { db } from '@/db/sessions/sessions';
+import { db } from '@/platform/storage/sessionsDexie';
 import { makeSession } from '@/test/factories';
 
 test('user sees empty state when no sessions exist', async () => {

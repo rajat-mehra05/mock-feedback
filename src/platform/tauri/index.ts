@@ -1,4 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
+import {
+  createSession,
+  deleteAllSessions,
+  deleteSession,
+  getAllSessions,
+  getSession,
+} from '../storage/sessionsDexie';
+import {
+  getCandidateName,
+  getOrCreateDeviceId,
+  saveCandidateName,
+} from '../storage/preferencesDexie';
+import { tauriOpenAIHttp } from './http/openai';
 import { SECRET_OPENAI_API_KEY, type Platform } from '../types';
 
 function requireOpenAIKey(key: string): void {
@@ -24,10 +37,24 @@ export const tauriPlatform: Platform = {
         await invoke('secret_clear', { key });
       },
     },
+    sessions: {
+      create: createSession,
+      get: getSession,
+      getAll: getAllSessions,
+      delete: deleteSession,
+      deleteAll: deleteAllSessions,
+    },
+    preferences: {
+      saveCandidateName,
+      getCandidateName,
+      getOrCreateDeviceId,
+    },
   },
   analytics: {
     // Desktop stays silent per Phase 6. No-op rather than stub.
     track: () => Promise.resolve(),
   },
-  http: {},
+  http: {
+    openai: tauriOpenAIHttp,
+  },
 };

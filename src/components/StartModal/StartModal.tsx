@@ -28,7 +28,7 @@ import {
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
 import { API_KEY_DESCRIPTION } from '@/constants/copy';
-import { getCandidateName, saveCandidateName } from '@/db/preferences/preferences';
+import { platform } from '@/platform';
 import { trackEvent } from '@/lib/analytics';
 
 interface StartModalProps {
@@ -54,7 +54,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
 
   useEffect(() => {
     let mounted = true;
-    void getCandidateName().then((saved) => {
+    void platform.storage.preferences.getCandidateName().then((saved) => {
       if (mounted && saved) setName(saved);
     });
     return () => {
@@ -72,7 +72,7 @@ export function StartModal({ open, onOpenChange }: StartModalProps) {
   function handleStart() {
     /* v8 ignore next */ if (!topic || !hasKey) return;
     const trimmedName = name.trim();
-    if (trimmedName) void saveCandidateName(trimmedName);
+    if (trimmedName) void platform.storage.preferences.saveCandidateName(trimmedName);
     void trackEvent('session_started', {
       topic,
       questionCount: Number(questionCount),

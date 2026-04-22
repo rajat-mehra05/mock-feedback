@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getSession, type Session } from '@/db/sessions/sessions';
+import { platform } from '@/platform';
+import type { Session } from '@/platform';
 import { scoreColor, scoreBg } from '@/lib/score';
 import { trackEvent } from '@/lib/analytics';
 import type { ConfidenceLevel } from '@/services/types';
@@ -33,7 +34,8 @@ export function Feedback() {
 
   useEffect(() => {
     if (!id) return;
-    getSession(id)
+    platform.storage.sessions
+      .get(id)
       .then((s) => {
         setSession(s ?? null);
         if (s) void trackEvent('feedback_viewed');
