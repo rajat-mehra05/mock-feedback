@@ -53,9 +53,7 @@ class DownsampleProcessor extends AudioWorkletProcessor {
     // copying via `slice` — saves ~4KB of copy work per 250ms. Partial
     // flushes (final drain) still need the slice.
     const out =
-      this.batchOffset === this.batch.length
-        ? this.batch
-        : this.batch.slice(0, this.batchOffset);
+      this.batchOffset === this.batch.length ? this.batch : this.batch.slice(0, this.batchOffset);
     this.port.postMessage(out, [out.buffer]);
     this.batch = new Int16Array(BATCH_SAMPLES);
     this.batchOffset = 0;
