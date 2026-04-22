@@ -7,6 +7,9 @@ export async function playAudioArrayBuffer(
   buffer: ArrayBuffer,
   signal?: AbortSignal,
 ): Promise<void> {
+  if (signal?.aborted) {
+    throw new DOMException('Audio playback aborted', 'AbortError');
+  }
   const audioContext = new AudioContext();
   const closeContext = () => {
     if (audioContext.state !== 'closed') void audioContext.close();
@@ -17,6 +20,9 @@ export async function playAudioArrayBuffer(
     audioBuffer = await audioContext.decodeAudioData(buffer);
   } catch (error) {
     closeContext();
+    if (signal?.aborted) {
+      throw new DOMException('Audio playback aborted', 'AbortError');
+    }
     throw error;
   }
 

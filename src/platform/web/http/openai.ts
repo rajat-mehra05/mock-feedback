@@ -37,12 +37,12 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
 
   const adapter: OpenAIHttpAdapter = {
     async chat(req: ChatRequest, signal?: AbortSignal): Promise<string> {
-      const client = await getClient();
       const { signal: merged, cleanup } = createTimeoutSignal(
         req.timeoutMs ?? LLM_TIMEOUT_MS,
         signal,
       );
       try {
+        const client = await getClient();
         const response = await client.chat.completions.create(
           {
             model: req.model,
@@ -64,15 +64,15 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
     },
 
     async transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string> {
-      const client = await getClient();
-      const file = new File([req.audio], req.filename ?? 'recording.webm', {
-        type: req.audio.type,
-      });
       const { signal: merged, cleanup } = createTimeoutSignal(
         req.timeoutMs ?? STT_TIMEOUT_MS,
         signal,
       );
       try {
+        const client = await getClient();
+        const file = new File([req.audio], req.filename ?? 'recording.webm', {
+          type: req.audio.type,
+        });
         const response = await client.audio.transcriptions.create(
           { model: req.model, file },
           { signal: merged },
@@ -87,7 +87,6 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
     },
 
     async speak(req: TtsRequest, signal?: AbortSignal): Promise<void> {
-      const client = await getClient();
       // Network timeout covers only the fetch. Playback is cancellable via the
       // caller's signal so long responses never get cut off mid-speech.
       const { signal: networkSignal, cleanup } = createTimeoutSignal(
@@ -96,20 +95,14 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
       );
       let arrayBuffer: ArrayBuffer;
       try {
+        const client = await getClient();
         const response = await client.audio.speech.create(
           {
             model: req.model,
             voice: req.voice,
             input: req.input,
             instructions: req.instructions,
-            response_format: req.responseFormat as
-              | 'mp3'
-              | 'opus'
-              | 'aac'
-              | 'flac'
-              | 'wav'
-              | 'pcm'
-              | undefined,
+            response_format: req.responseFormat,
           },
           { signal: networkSignal },
         );

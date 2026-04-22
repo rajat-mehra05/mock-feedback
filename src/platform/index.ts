@@ -33,5 +33,6 @@ export type {
   StorageAdapter,
   TranscribeRequest,
   TtsRequest,
+  TtsResponseFormat,
 } from './types';
 export { SECRET_OPENAI_API_KEY } from './types';

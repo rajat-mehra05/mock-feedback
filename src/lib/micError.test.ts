@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest';
 import { canOpenMicSettings, classifyMicError, openMicSettings, micError } from './micError';
 
-test('classifyMicError maps realistic getUserMedia failures into discriminated kinds', () => {
+test('browser mic failures become structured errors with kind-specific messages, and raw internal detail never leaks into user-facing copy', () => {
   const cases: Array<[string, 'permission-denied' | 'no-device' | 'device-in-use' | 'constraint']> =
     [
       ['NotAllowedError', 'permission-denied'],
@@ -22,13 +22,13 @@ test('classifyMicError maps realistic getUserMedia failures into discriminated k
   // Unknown DOMException falls back to `unknown`.
   expect(classifyMicError(new DOMException('x', 'AbortError')).kind).toBe('unknown');
 
-  // Non-DOMException uses its message if present.
-  expect(classifyMicError(new Error('specific failure message'))).toMatchObject({
-    kind: 'unknown',
-    message: 'specific failure message',
-  });
+  // Non-DOMException exposes raw text via `detail` but keeps the generic
+  // user-facing `message` so internal errors never surface in the UI.
+  const fromOpaqueError = classifyMicError(new Error('specific failure message'));
+  expect(fromOpaqueError.kind).toBe('unknown');
+  expect(fromOpaqueError.detail).toBe('specific failure message');
+  expect(fromOpaqueError.message).not.toContain('specific failure message');
 
-  // Empty-message or non-Error inputs fall back to the canonical unknown copy.
   expect(classifyMicError(undefined).kind).toBe('unknown');
   expect(classifyMicError({}).kind).toBe('unknown');
 
@@ -36,7 +36,7 @@ test('classifyMicError maps realistic getUserMedia failures into discriminated k
   expect(micError('no-device', 'custom').message).toBe('custom');
 });
 
-test('openMicSettings targets the correct OS URL scheme and no-ops on unsupported platforms', ({
+test('"Open System Settings" opens the mic pane on macOS and Windows, and stays disabled on platforms without a reliable deep link', ({
   onTestFinished,
 }) => {
   const originalUA = navigator.userAgent;

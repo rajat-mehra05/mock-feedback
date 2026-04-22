@@ -42,19 +42,17 @@ impl AppError {
 }
 
 impl From<reqwest::Error> for AppError {
+    // `classify_status` in commands/openai.rs is the single source of truth for
+    // HTTP status classification (including the 429 → quota/rate-limit split).
+    // This impl only handles reqwest-level failures (network / decode / timeout);
+    // an HTTP error reaches us here only if a non-success response was not
+    // captured by the caller's status check.
     fn from(e: reqwest::Error) -> Self {
         if e.is_timeout() {
             return AppError::Timeout { message: e.to_string() };
         }
         if let Some(status) = e.status() {
-            let status_u16 = status.as_u16();
-            let message = e.to_string();
-            return match status_u16 {
-                401 => AppError::Auth { message, status: status_u16 },
-                404 => AppError::NotFound { message, status: status_u16 },
-                429 => AppError::RateLimit { message, status: status_u16 },
-                _ => AppError::Upstream { message, status: status_u16 },
-            };
+            return AppError::Upstream { message: e.to_string(), status: status.as_u16() };
         }
         AppError::Network { message: e.to_string() }
     }

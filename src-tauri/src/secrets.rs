@@ -4,12 +4,12 @@ use keyring::Entry;
 // multiple Tauri apps does not get cross-app collisions.
 const SERVICE: &str = "com.voiceround.app";
 
+pub const OPENAI_KEY: &str = "openai_api_key";
+
 // Allowlist of keys the frontend can touch. Prevents the generic adapter
 // surface from being used as arbitrary keychain storage if a bug or
 // compromise in the webview tries to write unrelated secrets.
-const ALLOWED_KEYS: &[&str] = &["openai_api_key"];
-
-pub const OPENAI_KEY: &str = "openai_api_key";
+const ALLOWED_KEYS: &[&str] = &[OPENAI_KEY];
 
 fn validate(key: &str) -> Result<(), String> {
     if ALLOWED_KEYS.contains(&key) {

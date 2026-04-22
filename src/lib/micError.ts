@@ -16,7 +16,10 @@ export type MicErrorKind =
 
 export interface MicError {
   kind: MicErrorKind;
+  /** User-facing copy. Safe to render in the UI. */
   message: string;
+  /** Raw error text for logs and debugging. Not shown to users. */
+  detail?: string;
 }
 
 const MESSAGES: Record<MicErrorKind, string> = {
@@ -57,8 +60,8 @@ export function classifyMicError(err: unknown): MicError {
         return micError('constraint');
     }
   }
-  const message = err instanceof Error ? err.message : String(err);
-  return { kind: 'unknown', message: message || MESSAGES.unknown };
+  const detail = err instanceof Error ? err.message : String(err);
+  return { kind: 'unknown', message: MESSAGES.unknown, detail: detail || undefined };
 }
 
 /**

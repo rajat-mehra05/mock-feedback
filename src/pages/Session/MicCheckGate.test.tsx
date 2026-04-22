@@ -18,7 +18,7 @@ function stubGetUserMedia(impl: () => Promise<MediaStream>) {
     });
 }
 
-test('shows the "no microphone" error when no audio input device is present', async ({
+test('when no audio input device is connected, the user is told to plug one in and offered a retry', async ({
   onTestFinished,
 }) => {
   vi.spyOn(micCheck, 'checkMediaRecorderSupport').mockReturnValue(true);
@@ -36,7 +36,7 @@ test('shows the "no microphone" error when no audio input device is present', as
   expect(screen.queryByRole('button', { name: /open system settings/i })).not.toBeInTheDocument();
 });
 
-test('permission-denied failure surfaces a settings button that opens the OS URL scheme', async ({
+test('when mic access is blocked, the user sees an explanation and a button that opens system settings', async ({
   onTestFinished,
 }) => {
   Object.defineProperty(navigator, 'userAgent', {
@@ -67,7 +67,9 @@ test('permission-denied failure surfaces a settings button that opens the OS URL
   expect(clicks.at(-1)).toContain('x-apple.systempreferences');
 });
 
-test('retry re-runs the checks and renders children on success', async ({ onTestFinished }) => {
+test('user can retry after a mic problem and proceed into the interview once the mic is available', async ({
+  onTestFinished,
+}) => {
   vi.spyOn(micCheck, 'checkMediaRecorderSupport').mockReturnValue(true);
   const devices = vi.spyOn(micCheck, 'checkMicDevices');
   devices.mockResolvedValueOnce(false).mockResolvedValue(true);
@@ -86,7 +88,7 @@ test('retry re-runs the checks and renders children on success', async ({ onTest
   expect(screen.getByText('done')).toBeInTheDocument();
 });
 
-test('NotReadableError during the getUserMedia prompt maps to the device-in-use message', async ({
+test('when another app is using the microphone, the user is told to close it and retry', async ({
   onTestFinished,
 }) => {
   vi.spyOn(micCheck, 'checkMediaRecorderSupport').mockReturnValue(true);

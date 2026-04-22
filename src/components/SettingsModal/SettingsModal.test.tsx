@@ -55,13 +55,14 @@ test('user without a key sees guidance message, saves a key, and guidance disapp
   expect(screen.getByText(/key configured/i)).toBeInTheDocument();
 });
 
-test('user sees error message when saving key fails', async () => {
+test('user sees error message when saving key fails', async ({ onTestFinished }) => {
   await platform.storage.secrets.clear(SECRET_OPENAI_API_KEY);
   await platform.storage.secrets.set(SECRET_OPENAI_API_KEY, 'sk-existing');
   const user = userEvent.setup();
   const spy = vi
     .spyOn(platform.storage.secrets, 'set')
     .mockRejectedValueOnce(new Error('DB write failed'));
+  onTestFinished(() => spy.mockRestore());
 
   renderWithProviders(<SettingsModal open={true} onOpenChange={() => {}} />);
 
@@ -72,6 +73,4 @@ test('user sees error message when saving key fails', async () => {
   await user.click(screen.getByRole('button', { name: /^save$/i }));
 
   await waitFor(() => expect(screen.getByText(/failed to save key/i)).toBeInTheDocument());
-
-  spy.mockRestore();
 });

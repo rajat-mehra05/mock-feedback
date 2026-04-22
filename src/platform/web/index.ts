@@ -21,12 +21,16 @@ function requireOpenAIKey(key: string): void {
   }
 }
 
-let cachedDeviceId: string | null = null;
-async function ensureDeviceId(): Promise<string> {
-  if (!cachedDeviceId) {
-    cachedDeviceId = await getOrCreateDeviceId();
+// Cache the in-flight promise, not just the resolved value — concurrent
+// callers (two analytics events fired during boot) must all await the same
+// `getOrCreateDeviceId` call, otherwise they race and each generates and
+// persists a distinct UUID.
+let deviceIdPromise: Promise<string> | null = null;
+function ensureDeviceId(): Promise<string> {
+  if (!deviceIdPromise) {
+    deviceIdPromise = getOrCreateDeviceId();
   }
-  return cachedDeviceId;
+  return deviceIdPromise;
 }
 
 const webHttpOpenAI = makeWebOpenAIHttp(getApiKey);
@@ -78,6 +82,6 @@ export const webPlatform: Platform = {
 
 /** Test-only: drop caches owned by the web adapter. */
 export function _resetWebPlatformForTests(): void {
-  cachedDeviceId = null;
+  deviceIdPromise = null;
   webHttpOpenAI.clearCache();
 }

@@ -10,8 +10,14 @@ async function boot(): Promise<void> {
   // transient "no key configured" flash while the migration runs in the
   // background.
   if (import.meta.env.VITE_TARGET === 'tauri') {
-    const { migrateIndexedDbKeyToKeychain } = await import('@/platform/tauri/migrateApiKey');
-    await migrateIndexedDbKeyToKeychain();
+    // Migration is best-effort: if the import or keychain fails, log and
+    // continue booting. The app still works, it just retries next launch.
+    try {
+      const { migrateIndexedDbKeyToKeychain } = await import('@/platform/tauri/migrateApiKey');
+      await migrateIndexedDbKeyToKeychain();
+    } catch (err) {
+      console.error('[tauri] keychain migration failed:', err);
+    }
   }
 
   createRoot(document.getElementById('root')!).render(

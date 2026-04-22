@@ -31,6 +31,21 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
     // Fallback: buffer everything then decode+play.
     const fallbackChunks: Uint8Array[] = [];
     let ended = false;
+
+    const onFallbackAbort = () => {
+      if (ended) return;
+      ended = true;
+      signal?.removeEventListener('abort', onFallbackAbort);
+      reject(new DOMException('Audio playback aborted', 'AbortError'));
+    };
+    if (signal) {
+      if (signal.aborted) {
+        onFallbackAbort();
+      } else {
+        signal.addEventListener('abort', onFallbackAbort, { once: true });
+      }
+    }
+
     const controller: TtsStreamController = {
       push(bytes) {
         if (!ended) fallbackChunks.push(bytes);
@@ -38,6 +53,7 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
       end() {
         if (ended) return;
         ended = true;
+        signal?.removeEventListener('abort', onFallbackAbort);
         void (async () => {
           try {
             const total = fallbackChunks.reduce((n, c) => n + c.byteLength, 0);
@@ -58,6 +74,7 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
       fail(error) {
         if (ended) return;
         ended = true;
+        signal?.removeEventListener('abort', onFallbackAbort);
         reject(error);
       },
       finished,
@@ -66,12 +83,24 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
   }
 
   const mediaSource = new MediaSource();
-  audio.src = URL.createObjectURL(mediaSource);
+  const objectUrl = URL.createObjectURL(mediaSource);
+  audio.src = objectUrl;
 
   const pending: Uint8Array[] = [];
   let sourceBuffer: SourceBuffer | null = null;
   let endOfStreamRequested = false;
   let errored = false;
+
+  const cleanupAudio = () => {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    URL.revokeObjectURL(objectUrl);
+    // Explicitly unregister so we don't accumulate listeners across a
+    // session's speak() calls when playback completes naturally (natural
+    // completion doesn't trigger `once: true` removal).
+    if (signal) signal.removeEventListener('abort', onAbort);
+  };
 
   const flush = () => {
     if (!sourceBuffer || sourceBuffer.updating) return;
@@ -81,6 +110,7 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
         sourceBuffer.appendBuffer(next.buffer as ArrayBuffer);
       } catch (err) {
         errored = true;
+        cleanupAudio();
         reject(err instanceof Error ? err : new Error('appendBuffer failed'));
       }
       return;
@@ -101,15 +131,10 @@ export function playMediaSourceStream(signal?: AbortSignal): TtsStreamController
       flush();
     } catch (err) {
       errored = true;
+      cleanupAudio();
       reject(err instanceof Error ? err : new Error('addSourceBuffer failed'));
     }
   });
-
-  const cleanupAudio = () => {
-    audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
-  };
 
   audio.addEventListener('ended', () => {
     cleanupAudio();

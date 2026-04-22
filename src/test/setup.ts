@@ -11,9 +11,26 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(async () => {
   cleanup();
   server.resetHandlers();
-  await platform.storage.sessions.deleteAll();
-  await platform.storage.secrets.clear(SECRET_OPENAI_API_KEY);
-  _resetWebPlatformForTests();
+  // Run every cleanup step even if one throws — otherwise a single failing
+  // test can leave secrets or caches polluted for the next test and hide the
+  // real failure behind cascading symptoms.
+  const errors: unknown[] = [];
+  try {
+    await platform.storage.sessions.deleteAll();
+  } catch (e) {
+    errors.push(e);
+  }
+  try {
+    await platform.storage.secrets.clear(SECRET_OPENAI_API_KEY);
+  } catch (e) {
+    errors.push(e);
+  }
+  try {
+    _resetWebPlatformForTests();
+  } catch (e) {
+    errors.push(e);
+  }
+  if (errors.length > 0) throw errors[0];
 });
 
 afterAll(() => server.close());

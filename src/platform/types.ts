@@ -90,12 +90,14 @@ export interface TranscribeRequest {
   timeoutMs?: number;
 }
 
+export type TtsResponseFormat = 'mp3' | 'opus' | 'aac' | 'flac' | 'wav' | 'pcm';
+
 export interface TtsRequest {
   model: string;
   voice: string;
   input: string;
   instructions?: string;
-  responseFormat?: string;
+  responseFormat?: TtsResponseFormat;
   /** Network timeout in ms. Playback is governed by the caller's abort signal. */
   timeoutMs?: number;
 }

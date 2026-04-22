@@ -10,6 +10,10 @@ pub fn build() -> Client {
         // this is just an upper bound.
         .pool_idle_timeout(Some(Duration::from_secs(90)))
         .connect_timeout(Duration::from_secs(15))
+        // Request-level safety net. The renderer can still cancel earlier via
+        // `cancel_request`, but this guarantees no invoke hangs forever if the
+        // upstream stops responding mid-stream.
+        .timeout(Duration::from_secs(60))
         .build()
         .expect("reqwest client build")
 }

@@ -53,6 +53,11 @@ test('generateNextQuestion returns a question, supports candidateName, and throw
   useChatHandler('');
   await expect(generateNextQuestion('React', [])).rejects.toMatchObject({ type: 'unknown' });
 
+  // Whitespace-only LLM response must also be rejected — otherwise the
+  // session would advance with a blank question and the TTS would speak nothing.
+  useChatHandler('   \n\t  ');
+  await expect(generateNextQuestion('React', [])).rejects.toMatchObject({ type: 'unknown' });
+
   // 401 auth error
   server.use(
     http.post(`${BASE_URL}/chat/completions`, () => {
