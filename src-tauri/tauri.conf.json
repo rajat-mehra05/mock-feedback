@@ -22,7 +22,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://api.openai.com"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://api.openai.com https://api.github.com"
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": "^https://github\\.com/rajat-mehra05/voice-round/releases(/.*)?$"
     }
   },
   "bundle": {

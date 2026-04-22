@@ -22,6 +22,7 @@ export type {
   ChatMessage,
   ChatRequest,
   HttpAdapter,
+  LoggerAdapter,
   OpenAIHttpAdapter,
   Platform,
   PlatformTarget,
@@ -34,5 +35,7 @@ export type {
   TranscribeRequest,
   TtsRequest,
   TtsResponseFormat,
+  UpdaterAdapter,
+  UpdateInfo,
 } from './types';
 export { SECRET_OPENAI_API_KEY } from './types';

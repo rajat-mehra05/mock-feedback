@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { platform } from '@/platform';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,22 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, info.componentStack);
+    // Phase 10: route through the platform logger so Tauri builds land in
+    // the app's log file (~/Library/Logs/com.voiceround.app/ on macOS) and
+    // web builds continue to hit the browser console unchanged.
+    //
+    // Bound stack + componentStack length. The log file is capped at 1MB
+    // with KeepOne rotation; a single pathological stack (Tauri webview
+    // + React + minified bundle + source-map) can easily exceed 100KB
+    // and flush older diagnostics we'd rather keep. 4KB is plenty to
+    // identify the failure site.
+    const STACK_LIMIT = 4_000;
+    platform.logger.error('ErrorBoundary caught', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack?.slice(0, STACK_LIMIT) ?? '',
+      componentStack: info.componentStack?.slice(0, STACK_LIMIT) ?? '',
+    });
   }
 
   render() {

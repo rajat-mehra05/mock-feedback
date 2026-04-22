@@ -6,6 +6,7 @@ import { ApiKeyProvider } from '@/hooks/ApiKeyContext/ApiKeyContext';
 import { AppRouter } from '@/components/AppRouter/AppRouter';
 import { Layout } from '@/components/Layout/Layout';
 import { ErrorBoundary, SessionErrorFallback } from '@/components/ErrorBoundary/ErrorBoundary';
+import { UpdateToast } from '@/components/UpdateToast/UpdateToast';
 import { Spinner } from '@/components/ui/spinner';
 import { Home } from '@/pages/Home/Home';
 const Session = lazy(() => import('@/pages/Session/Session').then((m) => ({ default: m.Session })));
@@ -88,6 +89,7 @@ export default function App() {
           <AppRoutes />
         </ApiKeyProvider>
       </AppRouter>
+      <UpdateToast />
       {import.meta.env.VITE_TARGET !== 'tauri' && <Analytics />}
       {import.meta.env.DEV && <Agentation />}
     </ErrorBoundary>

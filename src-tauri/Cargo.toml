@@ -29,6 +29,9 @@ futures-util = "0.3"
 bytes = "1"
 thiserror = "1"
 parking_lot = "0.12"
+tauri-plugin-shell = "2"
+tauri-plugin-log = "2"
+log = "0.4.29"
 
 [profile.release]
 lto = true

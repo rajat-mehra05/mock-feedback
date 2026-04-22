@@ -28,8 +28,19 @@ export default defineConfig(({ mode }) => {
       // Tauri uses an evergreen webview (WebView2 / WKWebView 15+), so we can
       // target modern baselines and skip the heavier browserslist defaults.
       target: isTauri ? ['chrome110', 'safari15'] : undefined,
-      rollupOptions: {
+      rolldownOptions: {
         output: {
+          // Phase 10: strip `console.*` calls and `debugger` statements in
+          // Tauri production bundles only. On Tauri the platform logger
+          // routes through `tauri-plugin-log` (file sink), so console
+          // calls are purely noise. On web, the platform logger IS
+          // `console.*` — stripping would silence ErrorBoundary's durable
+          // diagnostics in web production, which is a regression. Dev /
+          // test builds never run minify so silence-detect logs and
+          // perf-mark traces stay visible regardless.
+          minify: {
+            compress: { dropConsole: isTauri, dropDebugger: true },
+          },
           manualChunks(id) {
             if (
               id.includes('node_modules/react-dom') ||
