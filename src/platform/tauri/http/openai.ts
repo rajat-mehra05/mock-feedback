@@ -285,6 +285,12 @@ function makeTranscribeStreaming(): TranscribeStreamingOps {
     },
 
     async commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string> {
+      // Short-circuit on an already-aborted signal so we don't pay the
+      // invoke round-trip only for Rust to cancel immediately. `bindAbort`
+      // further down would catch a mid-flight abort via `cancel_request`.
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
       const unbind = bindAbort(signal, req.requestId);
       try {
         return await invoke<string>('transcribe_commit', {
