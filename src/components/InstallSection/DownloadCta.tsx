@@ -44,14 +44,16 @@ export function DownloadCta({ platform, onSwitch }: DownloadCtaProps) {
     setStatus('fetching');
     try {
       const release = await fetchLatestRelease();
-      const asset = pickAssetForPlatform(release.assets ?? [], target);
+      const asset = pickAssetForPlatform(release.assets, target);
       if (!asset) {
         throw new Error(`No ${target === 'mac' ? '.dmg' : '.exe'} asset on the latest release`);
       }
       triggerDownload(asset.browser_download_url, asset.name);
       setStatus('idle');
     } catch {
-      window.open(GITHUB_RELEASES_URL, '_blank', 'noopener,noreferrer');
+      // No auto window.open: user activation is consumed by the await chain,
+      // so popup blockers treat it as programmatic. The error-state button
+      // exposes a synchronous retry that keeps activation intact.
       setStatus('error');
     }
   }

@@ -45,7 +45,6 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
     const token = ++requestIdRef.current;
     const isActive = () => mountedRef.current && token === requestIdRef.current;
 
-    // Phase 1: Browser compatibility
     setPhase('browser');
     if (!checkMediaRecorderSupport()) {
       if (!isActive()) return;
@@ -54,7 +53,6 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
       return;
     }
 
-    // Phase 2: Mic device detection
     if (!isActive()) return;
     setPhase('devices');
     try {
@@ -72,7 +70,6 @@ export function MicCheckGate({ onReady, children }: { onReady: () => void; child
       return;
     }
 
-    // Phase 3: Mic permission
     if (!isActive()) return;
     setPhase('permission');
 

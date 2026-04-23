@@ -9,13 +9,9 @@ type CheckState =
   | { kind: 'available'; version: string; url: string }
   | { kind: 'error' };
 
-/**
- * Phase 10: explicit "check for updates" path in Settings. Unlike the
- * on-launch toast (which is silent on errors to avoid pestering users on
- * flaky networks), this surfaces check failures so the user knows whether
- * their build is actually up to date or the check just didn't reach
- * GitHub.
- */
+// Explicit "check for updates" row. Unlike the silent launch toast, this
+// surfaces check failures so the user can tell "up to date" apart from
+// "couldn't reach GitHub".
 export function UpdateCheckRow() {
   const [state, setState] = useState<CheckState>({ kind: 'idle' });
 

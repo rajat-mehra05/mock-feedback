@@ -127,9 +127,9 @@ pub async fn openai_chat(args: ChatArgs, state: State<'_, AppState>) -> Result<S
     Ok(content.to_string())
 }
 
-/// Phase 9.1: stream chat completions token-by-token so the frontend can hand
-/// each completed sentence to TTS before the full response finishes. The wire
-/// format is OpenAI's SSE stream — line-buffered events separated by `\n\n`,
+/// Stream chat completions token-by-token so the frontend can hand each
+/// completed sentence to TTS before the full response finishes. Wire format
+/// is OpenAI's SSE stream — line-buffered events separated by `\n\n`,
 /// each carrying a `data: {...}` JSON payload (or the literal `[DONE]`).
 #[tauri::command]
 pub async fn openai_chat_stream(
@@ -305,7 +305,7 @@ pub async fn openai_transcribe(
     Ok(text.to_string())
 }
 
-// --- Phase 9.2: streamed mic chunks ---
+// --- Streamed mic chunks ---
 //
 // The recorder hands raw MediaRecorder chunks to Rust during the user's turn,
 // keyed by the request id it will later commit. Eliminates the JS → Rust IPC
@@ -320,11 +320,10 @@ pub struct TranscribeCommitArgs {
     pub model: String,
     pub filename: String,
     pub content_type: String,
-    /// Phase 9.3: when set, the buffered bytes are treated as raw 16-bit
-    /// little-endian mono PCM captured at this rate, and the command
-    /// prepends a WAV header before uploading so OpenAI gets a valid file.
-    /// Omitted for the (pre-9.3) "buffer already contains a self-contained
-    /// container format like webm/mp4" path.
+    /// When set, the buffered bytes are treated as raw 16-bit little-endian
+    /// mono PCM captured at this rate; the command prepends a WAV header
+    /// before uploading. Omit when the buffer is already a self-contained
+    /// container format (webm / mp4).
     #[serde(default)]
     pub sample_rate: Option<u32>,
 }
@@ -401,10 +400,10 @@ pub async fn transcribe_commit(
         return Err(AppError::other("transcribe_commit received empty buffer"));
     }
 
-    // If the recorder streamed raw Int16 PCM (Phase 9.3), wrap it in a RIFF
-    // WAVE header so OpenAI's multipart parser sees a valid .wav upload.
-    // Without a sample rate the buffer is already a self-contained
-    // container (webm/mp4/etc.) and we upload as-is.
+    // If the recorder streamed raw Int16 PCM, wrap it in a RIFF WAVE header
+    // so OpenAI's multipart parser sees a valid .wav upload. Without a
+    // sample rate the buffer is already a self-contained container
+    // (webm/mp4/etc.) and we upload as-is.
     let audio = match args.sample_rate {
         Some(rate) => wrap_pcm_in_wav(&pcm, rate),
         None => pcm,

@@ -1,11 +1,7 @@
-/**
- * Wrap 16-bit little-endian mono PCM samples in a minimal RIFF/WAVE header.
- * OpenAI's transcription endpoint accepts WAV, so this is how we ship the
- * AudioWorklet's PCM output (Phase 9.3) without transcoding through a
- * heavier encoder.
- *
- * Reference: http://soundfile.sapp.org/doc/WaveFormat/
- */
+// Wrap 16-bit little-endian mono PCM samples in a minimal RIFF/WAVE header.
+// Lets us ship the AudioWorklet's PCM output to OpenAI's transcription
+// endpoint without transcoding through a heavier encoder.
+// Reference: http://soundfile.sapp.org/doc/WaveFormat/
 const SAMPLE_BYTES = 2; // Int16
 const CHANNELS = 1;
 

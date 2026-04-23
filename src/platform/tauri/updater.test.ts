@@ -5,6 +5,7 @@ test('a newer GitHub tag surfaces as an UpdateInfo with leading v stripped from 
   const info = computeUpdateInfo('0.1.0', {
     tag_name: 'v0.2.0',
     html_url: 'https://github.com/example/repo/releases/tag/v0.2.0',
+    assets: [],
   });
   expect(info).toEqual({
     latestVersion: '0.2.0',
@@ -17,6 +18,7 @@ test('a tag equal to the running version returns null so the toast never fires o
     computeUpdateInfo('0.1.0', {
       tag_name: 'v0.1.0',
       html_url: 'https://github.com/example/repo/releases/tag/v0.1.0',
+      assets: [],
     }),
   ).toBeNull();
 });
@@ -28,6 +30,7 @@ test('an older tag returns null so a downgrade notification is impossible', () =
     computeUpdateInfo('0.3.0', {
       tag_name: 'v0.2.0',
       html_url: 'https://github.com/example/repo/releases/tag/v0.2.0',
+      assets: [],
     }),
   ).toBeNull();
 });

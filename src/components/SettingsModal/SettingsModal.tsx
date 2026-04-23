@@ -81,8 +81,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             )}
           </div>
 
-          {/* Phase 10: desktop only — web has no installed artifact to
-              update. The adapter returns null so we hide the row. */}
+          {/* Desktop only; web has no installed artifact to update. */}
           {import.meta.env.VITE_TARGET === 'tauri' && (
             <div className="border-t-2 border-black/20 pt-4">
               <UpdateCheckRow />

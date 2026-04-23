@@ -46,7 +46,7 @@ export const INSTALL_MACOS_STEPS: string[] = [
 export const INSTALL_MACOS_FALLBACK =
   'If right-click → Open does not offer the trust option, run this once in Terminal:';
 export const INSTALL_MACOS_FALLBACK_COMMAND =
-  'xattr -d com.apple.quarantine /Applications/VoiceRound.app';
+  'xattr -dr com.apple.quarantine /Applications/VoiceRound.app';
 
 export const INSTALL_MACOS_NOTE =
   'macOS shows an "unidentified developer" warning because the build is unsigned. Expected for open-source apps without a paid Apple Developer certificate.';

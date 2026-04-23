@@ -187,7 +187,7 @@ Builds are **unsigned**, so the OS shows a one-time warning the first time you l
 If right-click → Open doesn't offer the trust option (happens on some newer macOS builds), run this once in Terminal:
 
 ```bash
-xattr -d com.apple.quarantine /Applications/VoiceRound.app
+xattr -dr com.apple.quarantine /Applications/VoiceRound.app
 ```
 
 ### Installing on Windows

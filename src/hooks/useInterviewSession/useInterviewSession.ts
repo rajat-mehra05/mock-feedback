@@ -30,11 +30,9 @@ export function useInterviewSession() {
   const abortRef = useRef<AbortController>(new AbortController());
   const recorder = useAudioRecorder();
 
-  // Phase 9.5: streaming chat can emit 50+ tokens per response. Dispatching
-  // QUESTION_TEXT_PROGRESS per token re-renders the transcript component that
-  // often and spins fans on laptops. Buffer the latest cumulative text in a
-  // ref and flush once per animation frame so the cost is ~16ms between
-  // re-renders regardless of token arrival rate.
+  // Streaming chat emits 50+ tokens per response; dispatching on every
+  // token re-renders the transcript that often. Buffer cumulative text
+  // in a ref and flush once per animation frame (~16ms) instead.
   const pendingTextRef = useRef<string | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const flushPendingText = useCallback(() => {
@@ -229,8 +227,8 @@ export function useInterviewSession() {
   useEffect(() => {
     if (!recorder.audioBlob || state.status !== 'user_recording') return;
     const blob = recorder.audioBlob;
-    // Snapshot the streaming id before clearBlob resets it — `transcribeAudio`
-    // needs it to commit the Rust-side buffer (Phase 9.2).
+    // Snapshot the streaming id before clearBlob resets it; `transcribeAudio`
+    // needs it to commit the Rust-side buffer.
     const streamingId = recorder.streamingId;
     recorder.clearBlob();
 

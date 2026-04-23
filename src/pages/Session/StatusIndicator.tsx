@@ -19,8 +19,8 @@ function getStatusDisplay(
 ): { label: string; pulse?: boolean; color?: string } | undefined {
   if (status === 'awaiting_transcript') return { label: 'Processing your answer...' };
   if (status === 'generating') {
-    // Phase 9.1: while chat is still streaming we already have audio playing
-    // from the sentence-queue TTS, so "AI is speaking..." is the honest label.
+    // Sentence-queue TTS is already playing while chat still streams, so
+    // "AI is speaking..." is the honest label.
     if (isStreaming) return STATUS_DISPLAY.ai_speaking;
     return {
       label: questionIndex === 0 ? 'Generating first question...' : 'Generating next question...',

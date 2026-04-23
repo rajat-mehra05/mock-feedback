@@ -11,9 +11,9 @@ export interface GitHubReleaseAsset {
 export interface GitHubRelease {
   tag_name: string;
   html_url: string;
-  // Optional: the Tauri update check only reads tag_name / html_url.
-  // `fetchLatestRelease` normalises to `[]` so asset consumers can skip the null check.
-  assets?: GitHubReleaseAsset[];
+  // `fetchLatestRelease` normalises to `[]` when the upstream payload omits it,
+  // so asset consumers can skip the null check.
+  assets: GitHubReleaseAsset[];
 }
 
 // Throws on any failure so callers can distinguish "here's the latest"

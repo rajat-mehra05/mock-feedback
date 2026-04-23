@@ -78,16 +78,17 @@ test('falls back to opening the releases page when the latest release has no mat
 
   await user.click(screen.getByRole('button', { name: /download for windows/i }));
 
-  expect(openSpy).toHaveBeenCalledWith(
-    'https://github.com/rajat-mehra05/voice-round/releases/latest',
-    '_blank',
-    'noopener,noreferrer',
-  );
+  // First click: fetch fails, state flips to `error`. We do NOT call
+  // window.open here because the click's user-activation has been
+  // consumed by the awaited fetch; popup blockers would reject it.
+  expect(openSpy).not.toHaveBeenCalled();
   expect(downloadSpy).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: /open releases page/i })).toBeInTheDocument();
 
-  // Second click must honour the "Open releases page" label: no re-fetch.
-  // Swap to a handler that *would* succeed so a regression triggers a real download.
+  // Second click runs synchronously (no await before `window.open`) so
+  // user activation is preserved and the popup opens. Swap the handler
+  // to one that *would* succeed so a regression (re-fetching instead
+  // of honouring the label) would trigger a real download.
   server.use(
     http.get(RELEASES_API, () =>
       HttpResponse.json({
@@ -99,7 +100,12 @@ test('falls back to opening the releases page when the latest release has no mat
   );
   await user.click(screen.getByRole('button', { name: /open releases page/i }));
   expect(downloadSpy).not.toHaveBeenCalled();
-  expect(openSpy).toHaveBeenCalledTimes(2);
+  expect(openSpy).toHaveBeenCalledTimes(1);
+  expect(openSpy).toHaveBeenCalledWith(
+    'https://github.com/rajat-mehra05/voice-round/releases/latest',
+    '_blank',
+    'noopener,noreferrer',
+  );
 
   vi.restoreAllMocks();
 });

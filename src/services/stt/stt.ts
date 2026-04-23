@@ -9,9 +9,9 @@ import { mark } from '@/lib/perf';
  * keychain-backed authentication on Tauri.
  *
  * `streamingId` is set by the recorder when chunks were pre-shipped to the
- * Rust-side buffer (Phase 9.2). In that case we commit the buffer instead of
- * re-uploading the blob — the transcript round-trip is just the HTTP POST
- * to OpenAI plus the last chunk's IPC, not the whole blob.
+ * Rust-side buffer. In that case we commit the buffer instead of re-uploading
+ * the blob; the transcript round-trip becomes just the OpenAI HTTP POST plus
+ * the last chunk's IPC.
  */
 export async function transcribeAudio(
   blob: Blob,
