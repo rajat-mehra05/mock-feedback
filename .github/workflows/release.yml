@@ -28,12 +28,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Single macOS job builds a universal .dmg (arm64 + x86_64 in
-          # one artifact) so Intel users aren't stranded. The arm64 host
-          # cross-compiles x86_64 via the pre-installed targets below.
+          # Two macOS jobs ship per-arch .dmg files instead of one
+          # universal binary. A universal .dmg is roughly twice the
+          # download size since it embeds both slices. Per-arch keeps
+          # each user's download to ~3 MB at the cost of two assets
+          # on the release page.
           - platform: macos-latest
-            args: --target universal-apple-darwin
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust-targets: x86_64-apple-darwin
           # Windows job produces an NSIS .exe with the WebView2
           # bootstrapper (default). Small installer; WebView2 is
           # downloaded at install time on older Windows builds.

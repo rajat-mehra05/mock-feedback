@@ -16,9 +16,9 @@ Most mock interview tools I found were paid and I couldn't customize them to foc
 - **Styling:** Tailwind CSS v4 + shadcn/ui
 - **AI / Voice:** OpenAI (GPT-4o mini for LLM + STT, gpt-4o-mini-tts for TTS)
 - **Storage:** IndexedDB (Dexie.js). Fully local, no backend
-- **Desktop (optional):** Tauri v2 shell for macOS and Windows
+- **Desktop (optional):** Tauri v2 shell for macOS and Windows (lightweight native installers, no Electron)
 - **Testing:** Vitest + React Testing Library + MSW
-- **CI:** GitHub Actions (lint + format + unit tests + build; tag pushes build the macOS universal `.dmg` and Windows NSIS `.exe` release matrix)
+- **CI:** GitHub Actions (lint + format + unit tests + build; tag pushes build per-arch macOS `.dmg` files (aarch64 + x64) and a Windows NSIS `.exe` release matrix)
 - **Quality:** Lighthouse CI (performance + accessibility)
 - **Pre-commit:** Husky + lint-staged
 - **Analytics:** Vercel Analytics (web only)
@@ -173,14 +173,19 @@ Session saved to IndexedDB → navigate to Feedback page
 
 ## Download
 
-Prebuilt desktop installers for macOS (Apple Silicon + Intel, universal) and Windows (x64) are attached to every tagged release on the [Releases page](https://github.com/rajat-mehra05/voice-round/releases/latest).
+Prebuilt desktop installers for macOS (Apple Silicon and Intel, separate builds) and Windows (x64) are attached to every tagged release on the [Releases page](https://github.com/rajat-mehra05/voice-round/releases/latest).
 
 Builds are **unsigned**, so the OS shows a one-time warning the first time you launch. This is expected. The bypass below is needed only once per install.
 
 ### Installing on macOS
 
-1. Download the `.dmg` from the latest release and open it.
-2. Drag VoiceRound into Applications.
+1. Pick the right `.dmg` for your Mac:
+   - **Apple Silicon (M1, M2, M3, M4):** `VoiceRound_x.y.z_aarch64.dmg`
+   - **Intel:** `VoiceRound_x.y.z_x64.dmg`
+
+   Not sure which you have? Click the Apple menu in the top-left, then **About This Mac**. If the chip line says "Apple", you want the aarch64 build. If it says "Intel", you want the x64 build.
+
+2. Open the DMG and drag VoiceRound into Applications.
 3. First launch will say **"VoiceRound cannot be opened because the developer cannot be verified."** Click Cancel.
 4. In Finder, **right-click** (or Ctrl-click) the VoiceRound app in Applications and choose **Open**. Click **Open** again in the confirmation dialog. macOS trusts the app from then on.
 
