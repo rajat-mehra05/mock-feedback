@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StartModal } from '@/components/StartModal/StartModal';
+import { InstallSection } from '@/components/InstallSection/InstallSection';
 import { FEATURES } from '@/constants/home';
 import {
   HOME_BADGE,
@@ -9,9 +10,12 @@ import {
   HOME_HERO_TAGLINE,
   HOME_START_LABEL,
   HOME_CTA_HINT,
+  HOME_DESKTOP_CTA_HINT,
+  HOME_DESKTOP_CTA_LABEL,
   HOME_FOOTER_OPEN_SOURCE,
   GITHUB_REPO_URL,
   GITHUB_ISSUES_URL,
+  GITHUB_RELEASES_URL,
 } from '@/constants/copy';
 
 function preloadSession() {
@@ -100,6 +104,9 @@ export function Home() {
         </div>
       </section>
 
+      {/* Install section — web-only. Desktop users already have the app. */}
+      {import.meta.env.VITE_TARGET !== 'tauri' && <InstallSection />}
+
       {/* Footer */}
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-4 text-center text-sm font-bold text-black/60">
         <span>{HOME_FOOTER_OPEN_SOURCE}</span>
@@ -125,6 +132,24 @@ export function Home() {
         >
           Open an issue
         </a>
+        {/* Desktop download CTA — web-only. Desktop users are already
+            running the native app, so the pitch is moot there. */}
+        {import.meta.env.VITE_TARGET !== 'tauri' && (
+          <>
+            <span aria-hidden="true" className="text-black/20">
+              |
+            </span>
+            <a
+              href={GITHUB_RELEASES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-black"
+              title={`${HOME_DESKTOP_CTA_HINT} macOS · Windows`}
+            >
+              {HOME_DESKTOP_CTA_LABEL}
+            </a>
+          </>
+        )}
       </footer>
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />

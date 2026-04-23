@@ -26,3 +26,42 @@ export const HOME_CTA_HINT = 'Ready when you are.';
 export const HOME_FOOTER_OPEN_SOURCE = 'Fully Open source ❤️';
 export const GITHUB_REPO_URL = 'https://github.com/rajat-mehra05/voice-round';
 export const GITHUB_ISSUES_URL = 'https://github.com/rajat-mehra05/voice-round/issues';
+export const GITHUB_RELEASES_URL = 'https://github.com/rajat-mehra05/voice-round/releases/latest';
+export const HOME_DESKTOP_CTA_HINT = 'Prefer native?';
+export const HOME_DESKTOP_CTA_LABEL = 'Get the desktop app';
+
+// Install section (web-only) — desktop users already have the app.
+export const INSTALL_HEADING = 'Installation';
+export const INSTALL_SUBHEADING =
+  'Native desktop app for macOS and Windows. Unsigned, so the OS will warn once.';
+
+export const INSTALL_MACOS_STEPS: string[] = [
+  'Download the .dmg below and open it.',
+  'Drag VoiceRound into Applications.',
+  'First launch shows "developer cannot be verified". Click Cancel.',
+  'Right-click the app in Applications → Open → Open again. Trusted from then on.',
+  'Grant microphone access and enter your OpenAI API key on first launch.',
+];
+
+export const INSTALL_MACOS_FALLBACK =
+  'If right-click → Open does not offer the trust option, run this once in Terminal:';
+export const INSTALL_MACOS_FALLBACK_COMMAND =
+  'xattr -d com.apple.quarantine /Applications/VoiceRound.app';
+
+export const INSTALL_MACOS_NOTE =
+  'macOS shows an "unidentified developer" warning because the build is unsigned. Expected for open-source apps without a paid Apple Developer certificate.';
+
+export const INSTALL_WINDOWS_STEPS: string[] = [
+  'Download the .exe below and run it.',
+  'SmartScreen shows "Windows protected your PC". Click More info → Run anyway.',
+  'The installer fetches the Microsoft WebView2 runtime automatically if needed.',
+  'Grant microphone access and enter your OpenAI API key on first launch.',
+];
+
+export const INSTALL_WINDOWS_NOTE =
+  'Windows SmartScreen warns on unsigned apps. Clicking "More info" reveals the "Run anyway" button.';
+
+export const INSTALL_DOWNLOAD_HEADING = 'Download';
+export const INSTALL_DOWNLOAD_PRIMARY_MAC = 'Download for macOS';
+export const INSTALL_DOWNLOAD_PRIMARY_WINDOWS = 'Download for Windows';
+export const INSTALL_DOWNLOAD_ALSO_FOR = 'Also available for';

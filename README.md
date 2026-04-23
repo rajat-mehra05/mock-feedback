@@ -18,14 +18,17 @@ Most mock interview tools I found were paid and I couldn't customize them to foc
 - **Storage:** IndexedDB (Dexie.js). Fully local, no backend
 - **Desktop (optional):** Tauri v2 shell for macOS and Windows
 - **Testing:** Vitest + React Testing Library + MSW
-- **CI:** GitHub Actions (lint + format + unit tests + build)
+- **CI:** GitHub Actions (lint + format + unit tests + build; tag pushes build the macOS universal `.dmg` and Windows NSIS `.exe` release matrix)
 - **Quality:** Lighthouse CI (performance + accessibility)
 - **Pre-commit:** Husky + lint-staged
 - **Analytics:** Vercel Analytics (web only)
 
 ## BYOK (Bring Your Own Key)
 
-This app requires your own OpenAI API key. Your key is stored in IndexedDB on your device and is only sent to OpenAI directly from the browser. No keys are shipped, hardcoded or proxied.
+This app requires your own OpenAI API key. No keys are shipped or hardcoded. Where the key lives and how it travels depends on the build:
+
+- **Web:** the key is stored in IndexedDB on your device and is sent directly from the browser to OpenAI.
+- **Desktop (Tauri):** the key is stored in the system keychain (Keychain on macOS, Credential Manager on Windows). All OpenAI traffic is routed through the bundled Rust proxy so the key never reaches the renderer.
 
 ## How It Works
 
@@ -168,6 +171,44 @@ Session saved to IndexedDB → navigate to Feedback page
 - **Concepts (6):** System Design (Frontend), System Design (Backend), System Design (Full-Stack), Docker & Kubernetes, AWS & Cloud, GraphQL
 - **Behavioral (1):** Behavioral & STAR
 
+## Download
+
+Prebuilt desktop installers for macOS (Apple Silicon + Intel, universal) and Windows (x64) are attached to every tagged release on the [Releases page](https://github.com/rajat-mehra05/voice-round/releases/latest).
+
+Builds are **unsigned**, so the OS shows a one-time warning the first time you launch. This is expected. The bypass below is needed only once per install.
+
+### Installing on macOS
+
+1. Download the `.dmg` from the latest release and open it.
+2. Drag VoiceRound into Applications.
+3. First launch will say **"VoiceRound cannot be opened because the developer cannot be verified."** Click Cancel.
+4. In Finder, **right-click** (or Ctrl-click) the VoiceRound app in Applications and choose **Open**. Click **Open** again in the confirmation dialog. macOS trusts the app from then on.
+
+If right-click → Open doesn't offer the trust option (happens on some newer macOS builds), run this once in Terminal:
+
+```bash
+xattr -d com.apple.quarantine /Applications/VoiceRound.app
+```
+
+### Installing on Windows
+
+1. Download the `.exe` from the latest release and run it.
+2. Windows SmartScreen shows **"Windows protected your PC."** Click **More info**, then **Run anyway**.
+3. The installer downloads the Microsoft WebView2 runtime if it isn't already installed (small, one-time). Follow the prompts.
+
+### Updates and diagnostics
+
+The app checks GitHub Releases on launch and shows a non-blocking toast when a newer version is available. **Settings → Check for updates** runs the same check on demand and surfaces errors (unlike the silent launch check).
+
+Crash traces and stage-duration logs are written via `tauri-plugin-log` to:
+
+- macOS: `~/Library/Logs/com.voiceround.app/voiceround.log`
+- Windows: `%LOCALAPPDATA%\com.voiceround.app\logs\voiceround.log`
+
+The file is capped at 1 MB with one-file rotation so the on-disk footprint stays bounded.
+
+Quitting (Cmd+Q, menu quit, or closing the window) during an active recording shows a confirmation dialog so an in-flight answer isn't lost silently.
+
 ## Getting Started
 
 ```bash
@@ -181,7 +222,7 @@ Running the native desktop shell requires a [Rust toolchain](https://www.rust-la
 
 ```bash
 npm run tauri:dev     # dev loop, hot reloads the frontend, rebuilds Rust on change
-npm run tauri:build   # produces a .dmg (macOS) or .msi (Windows) in src-tauri/target/release/bundle/
+npm run tauri:build   # produces a .dmg (macOS) or NSIS .exe (Windows) in src-tauri/target/release/bundle/
 ```
 
 First `tauri:build` takes a few minutes while Cargo fetches and builds Tauri's crate graph. Subsequent builds are much faster.
@@ -196,12 +237,12 @@ The project supports two build targets. The active target is selected via `VITE_
 | `npm run build:web`    | `tsc -b && vite build`              | web build                                                                                |
 | `npm run build:tauri`  | `tsc -b && vite build --mode tauri` | frontend bundle only, consumed by `tauri:build`                                          |
 | `npm run tauri:dev`    | `tauri dev`                         | launches the native desktop app with the dev server                                      |
-| `npm run tauri:build`  | `tauri build`                       | produces a packaged `.dmg` or `.msi` desktop installer                                   |
+| `npm run tauri:build`  | `tauri build`                       | produces a packaged `.dmg` (macOS) or NSIS `.exe` (Windows) desktop installer            |
 | `npm run sync-version` | `node scripts/sync-version.mjs`     | syncs version across `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` |
 
 Tauri configuration is gated behind `mode === 'tauri'` in `vite.config.ts`: relative `base`, modern webview target, and the `TAURI_*` env prefix.
 
-In application code, read the current target via `import.meta.env.VITE_TARGET` or import the selected adapter via `@/platform`. The Rust shell lives in `src-tauri/` and currently wraps the existing web build without a Rust proxy. API calls still go direct from the renderer to OpenAI using the user-provided key.
+In application code, read the current target via `import.meta.env.VITE_TARGET` or import the selected adapter via `@/platform`. The Rust shell lives in `src-tauri/` and owns OpenAI traffic on desktop: the renderer invokes Tauri commands, Rust pulls the key from the system keychain and runs the HTTP request (including streaming chat + TTS responses) outside the webview. The web build keeps the direct-from-browser path unchanged.
 
 ## Error Handling
 
@@ -216,16 +257,17 @@ In application code, read the current target via `import.meta.env.VITE_TARGET` o
 
 - Browser compatibility check (MediaRecorder API) before session start
 - Mic device detection and permission gating
-- Native silence detection via Web Audio API `AnalyserNode` (RMS amplitude) — auto-stops recording after 6 seconds of silence
+- Native silence detection via Web Audio API `AnalyserNode` (RMS amplitude). Auto-stops recording after 6 seconds of silence
 - Max recording duration: 4 minutes per answer (with 30s warning)
-- Transcription runs in the background — next question generates after transcript is ready
-- Supported formats: WebM/Opus (Chrome/Firefox), MP4/AAC (Safari)
-- All in-flight API calls cancelled via AbortController on navigation/stop
-
-## Accessibility
-
-Accessibility has been a priority from the start. The app is designed to meet WCAG 2.1 AA standards — all interactive elements are fully keyboard-navigable and screen readers are kept informed of recording and session state changes.
+- Transcription runs in the background. The next question generates as soon as the transcript is ready
+- Supported formats on web: WebM/Opus (Chrome/Firefox), MP4/AAC (Safari)
+- On desktop (Tauri): an `AudioWorklet` downsamples 48kHz stereo to 16kHz mono PCM and streams chunks to the Rust proxy during recording so the upload isn't waiting for mic-stop. The worklet is preloaded at app boot so first-record latency matches subsequent recordings
+- All in-flight API calls cancelled via `AbortController` on navigation/stop
 
 ## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request — whether it's a bug fix, a new feature idea, or just a suggestion to improve the experience. All input is appreciated.
+
+## License
+
+[MIT](LICENSE)

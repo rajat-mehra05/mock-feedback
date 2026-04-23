@@ -1,0 +1,85 @@
+name: Release
+
+# Triggered by pushing a semver tag like `v0.1.0`. The Phase 10 updater
+# strips the leading `v` before comparing, so this pattern matches the
+# contract both ways (tag → release → update check).
+#
+# The release is created as a DRAFT so a human reviews release notes
+# before publishing. GitHub's `/releases/latest` endpoint excludes drafts,
+# so a tag push does NOT prematurely trigger the in-app update toast for
+# existing users — that only happens after manual publish.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      # Required so tauri-action can create/update the GitHub Release.
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Single macOS job builds a universal .dmg (arm64 + x86_64 in
+          # one artifact) so Intel users aren't stranded. The arm64 host
+          # cross-compiles x86_64 via the pre-installed targets below.
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          # Windows job produces an NSIS .exe with the WebView2
+          # bootstrapper (default). Small installer; WebView2 is
+          # downloaded at install time on older Windows builds.
+          - platform: windows-latest
+            args: ''
+            rust-targets: ''
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend deps
+        run: npm ci
+
+      # tauri-action runs `beforeBuildCommand` (`npm run build:tauri`, which
+      # runs `tsc -b && vite build --mode tauri`) then `tauri build`, then
+      # uploads the resulting bundles to the release matching `tagName`.
+      # On first run for a given tag it creates the release as a draft.
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'VoiceRound ${{ github.ref_name }}'
+          releaseBody: |
+            See [README](https://github.com/rajat-mehra05/voice-round#download) for install instructions.
+
+            First launch shows an OS warning because the build is unsigned — the README explains how to bypass it on macOS and Windows.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
