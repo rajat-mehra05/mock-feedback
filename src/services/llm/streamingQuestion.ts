@@ -1,21 +1,33 @@
 import { platform } from '@/platform';
-import { LLM_MAX_TOKENS, LLM_MODEL, LLM_TEMPERATURE } from '@/constants/openai';
+import {
+  LLM_MAX_TOKENS,
+  LLM_MODEL,
+  LLM_TEMPERATURE,
+  TTS_MODEL,
+  TTS_VOICE,
+  TTS_INSTRUCTIONS,
+  TTS_RESPONSE_FORMAT,
+} from '@/constants/openai';
 import { buildInterviewPrompt } from '@/constants/prompts';
 import { classifyOpenAIError } from '@/services/openai/openaiErrors';
 import { speakText } from '@/services/tts/tts';
+import { playAudioArrayBuffer } from '@/services/tts/playback';
 import { mark } from '@/lib/perf';
 import type { ConversationTurn } from '@/services/types';
 import { SentenceAccumulator } from './sentenceSplitter';
 
-// Stream the next interview question and speak it sentence by sentence,
-// overlapping TTS with the rest of the LLM response. Resolves once both
-// chat streaming and all sentence playback have completed.
+/*
+  Streams the next interview question and speaks it sentence by sentence,
+  overlapping TTS with the rest of the LLM response.
+*/
 export interface StreamingQuestionOptions {
   topic: string;
   history: ConversationTurn[];
   candidateName?: string;
-  /** Fires every time the accumulated text grows, so the UI can display the
-   *  question as it streams in rather than waiting for chat_end. */
+  /**
+    Fires every time the accumulated text grows, so the UI can display the
+    question as it streams in rather than waiting for chat_end.
+  */
   onTextUpdate?: (fullText: string) => void;
   signal?: AbortSignal;
 }
@@ -23,9 +35,11 @@ export interface StreamingQuestionOptions {
 export interface StreamingQuestionResult {
   /** Full question text, with leading/trailing whitespace trimmed. */
   text: string;
-  /** True if the chat stream completed but at least one TTS sentence failed.
-   *  Callers should surface the text as fallback (ttsFallbackText) and let the
-   *  user continue without re-throwing. Chat errors are always thrown. */
+  /**
+    True if the chat stream completed but at least one TTS sentence failed.
+    Callers should surface the text as fallback (ttsFallbackText) and let the
+    user continue without re-throwing. Chat errors are always thrown.
+  */
   ttsFailed: boolean;
 }
 
@@ -42,13 +56,16 @@ export async function streamAndSpeakQuestion(
     ]),
   ];
 
-  // Internal controller lets a mid-stream failure on either side (chat or TTS)
-  // tear down both halves in sync.
+  /*
+    Internal controller lets a mid-stream failure on either side (chat or TTS)
+    tear down both halves in sync.
+  */
   const ctrl = new AbortController();
   const turnSignal = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
 
   const splitter = new SentenceAccumulator();
-  const queue: string[] = [];
+  const sentenceQueue: string[] = [];
+  const audioQueue: Promise<ArrayBuffer>[] = [];
   let chatDone = false;
   let wake: (() => void) | null = null;
   const notify = () => {
@@ -62,14 +79,61 @@ export async function streamAndSpeakQuestion(
   let fullText = '';
   let firstTokenSeen = false;
 
-  // Consumer: speak sentences one at a time, in order. Sequential playback
-  // matches the existing TTS UX (one voice at a time) and avoids overlap.
+  /*
+    Web: kick off each sentence's TTS fetch as soon as the splitter emits it, so
+    sentence N+1 is already downloading while sentence N plays. Tauri has no
+    fetchSpeech and keeps the sequential speakText path.
+  */
+  const fetchSpeech = platform.http.openai.fetchSpeech;
+  const enqueueSentence = (sentence: string): void => {
+    if (fetchSpeech) {
+      const p = fetchSpeech(
+        {
+          model: TTS_MODEL,
+          voice: TTS_VOICE,
+          input: sentence,
+          instructions: TTS_INSTRUCTIONS,
+          responseFormat: TTS_RESPONSE_FORMAT,
+        },
+        turnSignal,
+      );
+      /*
+        Mark handled so an early rejection isn't flagged as unhandled. The
+        consumer still observes the rejection when it awaits this promise.
+      */
+      p.catch(() => {});
+      audioQueue.push(p);
+    } else {
+      sentenceQueue.push(sentence);
+    }
+    notify();
+  };
+
   const consumerPromise = (async () => {
+    if (!fetchSpeech) {
+      while (true) {
+        if (turnSignal.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (sentenceQueue.length > 0) {
+          await speakText(sentenceQueue.shift()!, turnSignal);
+          continue;
+        }
+        if (chatDone) return;
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+      }
+    }
+
     while (true) {
       if (turnSignal.aborted) throw new DOMException('Aborted', 'AbortError');
-      if (queue.length > 0) {
-        const sentence = queue.shift()!;
-        await speakText(sentence, turnSignal);
+      if (audioQueue.length > 0) {
+        const buffer = await audioQueue.shift()!;
+        mark('tts_start');
+        try {
+          await playAudioArrayBuffer(buffer, turnSignal);
+        } finally {
+          mark('playback_end');
+        }
         continue;
       }
       if (chatDone) return;
@@ -78,10 +142,10 @@ export async function streamAndSpeakQuestion(
       });
     }
   })();
-  // If speakText rejects while the chat-side for-await is still pumping, the
-  // rejection is in flight but no handler is attached yet. Node/vitest flag
-  // that as an unhandled rejection. Attach a no-op catch to mark it handled;
-  // `await consumerPromise` below still propagates the original error state.
+  /*
+    Marks any early consumer rejection as handled while chat still pumps.
+    The `await consumerPromise` below still surfaces the real error.
+  */
   consumerPromise.catch(() => {});
 
   let chatError: unknown = null;
@@ -91,8 +155,10 @@ export async function streamAndSpeakQuestion(
       { model: LLM_MODEL, messages, temperature: LLM_TEMPERATURE, maxTokens: LLM_MAX_TOKENS },
       turnSignal,
     )) {
-      // Defensive: adapters should filter empty deltas, but if one slips
-      // through we don't want it to trip `first_token` before real text.
+      /*
+        Defensive: drop empty deltas so they don't trip `first_token`
+        before the first real token arrives.
+      */
       if (!chunk) continue;
       if (!firstTokenSeen) {
         mark('first_token');
@@ -101,15 +167,13 @@ export async function streamAndSpeakQuestion(
       fullText += chunk;
       onTextUpdate?.(fullText);
       for (const sentence of splitter.push(chunk)) {
-        queue.push(sentence);
-        notify();
+        enqueueSentence(sentence);
       }
     }
     mark('last_token');
     const tail = splitter.flush();
     if (tail) {
-      queue.push(tail);
-      notify();
+      enqueueSentence(tail);
     }
   } catch (error) {
     chatError = error;
@@ -124,9 +188,10 @@ export async function streamAndSpeakQuestion(
   try {
     await consumerPromise;
   } catch (consumerError) {
-    // Chat errors take precedence; if chat already failed, the consumer's
-    // cascade error is noise. Otherwise re-throw aborts (user cancelled) and
-    // treat any other TTS failure as soft so the text fallback still renders.
+    /*
+      Chat errors take precedence. Re-throw user aborts; treat other TTS
+      failures as soft so the text fallback renders.
+    */
     if (!chatError) {
       if (isAbortError(consumerError)) throw consumerError;
       ttsFailed = true;
@@ -134,9 +199,10 @@ export async function streamAndSpeakQuestion(
   }
 
   if (chatError) {
-    // Once TTS has started speaking sentence 1, a retry would play the
-    // question's audio a second time. Force `retryable: false` on any error
-    // that happened after the first token arrived so `withRetry` bails out.
+    /*
+      After the first token, a retry would replay already-spoken audio.
+      Force retryable:false so withRetry bails out.
+    */
     const classified = classifyOpenAIError(chatError);
     if (firstTokenSeen) classified.retryable = false;
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
@@ -152,9 +218,10 @@ export async function streamAndSpeakQuestion(
 }
 
 function isAbortError(error: unknown): boolean {
-  // Duck-type on `.name` rather than `instanceof Error` so aborts that crossed
-  // a realm boundary (workers, iframes, jsdom's separate realm in tests) still
-  // match. Any object with `name === 'AbortError'` counts.
+  /*
+    Duck-type on .name so AbortErrors from other realms (workers, jsdom) still
+    match. Any object with name === 'AbortError' counts.
+  */
   return (
     typeof error === 'object' &&
     error !== null &&

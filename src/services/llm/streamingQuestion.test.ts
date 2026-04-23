@@ -1,12 +1,14 @@
 import { expect, test, vi } from 'vitest';
 import { platform } from '@/platform';
 
-vi.mock('@/services/tts/tts', () => ({
-  speakText: vi.fn().mockResolvedValue(undefined),
+// Both TTS halves are stubbed: fetchSpeech is the network side, playAudioArrayBuffer
+// is the playback side. jsdom has no AudioContext so the real playback would throw.
+vi.mock('@/services/tts/playback', () => ({
+  playAudioArrayBuffer: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { streamAndSpeakQuestion } = await import('./streamingQuestion');
-const { speakText } = await import('@/services/tts/tts');
+const { playAudioArrayBuffer } = await import('@/services/tts/playback');
 
 function streamOf(chunks: string[]): AsyncIterable<string> {
   let i = 0;
@@ -35,7 +37,10 @@ test('streaming turn speaks each sentence as it completes and returns the full q
         ' and how React uses it?',
       ]),
     );
-  vi.mocked(speakText).mockClear();
+  const fetchSpeech = vi
+    .spyOn(platform.http.openai, 'fetchSpeech')
+    .mockResolvedValue(new ArrayBuffer(0));
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
 
   const textUpdates: string[] = [];
   const result = await streamAndSpeakQuestion({
@@ -49,30 +54,34 @@ test('streaming turn speaks each sentence as it completes and returns the full q
   );
   expect(result.ttsFailed).toBe(false);
 
-  // Two sentences — the splitter emits the first at the period+space boundary
-  // and the second on flush. TTS is invoked once per sentence, in order.
-  const spoken = vi.mocked(speakText).mock.calls.map(([text]) => text);
-  expect(spoken).toEqual([
+  // Two sentences — splitter emits the first at period+space, the second on flush.
+  // Web path calls fetchSpeech per sentence and plays each buffer in order.
+  const fetched = fetchSpeech.mock.calls.map(([req]) => req.input);
+  expect(fetched).toEqual([
     'Hello there candidate.',
     'Can you describe the virtual DOM and how React uses it?',
   ]);
+  expect(vi.mocked(playAudioArrayBuffer).mock.calls.length).toBe(2);
 
   // UI receives incremental text updates as chunks arrive.
   expect(textUpdates.length).toBeGreaterThanOrEqual(3);
   expect(textUpdates.at(-1)).toBe(result.text);
 
   chatStream.mockRestore();
+  fetchSpeech.mockRestore();
 });
 
 test('tts failure after a valid chat completes flags ttsFailed instead of throwing', async () => {
   const chatStream = vi
     .spyOn(platform.http.openai, 'chatStream')
     .mockReturnValue(streamOf(['A short question for you. ', 'Explain Suspense in React.']));
-  // First sentence speaks fine; the second one blows up.
-  vi.mocked(speakText)
-    .mockReset()
-    .mockResolvedValueOnce(undefined)
+  // First fetch succeeds; the second one blows up. ttsFailed should be true
+  // but the chat text still returns cleanly.
+  const fetchSpeech = vi
+    .spyOn(platform.http.openai, 'fetchSpeech')
+    .mockResolvedValueOnce(new ArrayBuffer(0))
     .mockRejectedValueOnce(new Error('audio device unavailable'));
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
 
   const result = await streamAndSpeakQuestion({ topic: 'React', history: [] });
 
@@ -80,6 +89,7 @@ test('tts failure after a valid chat completes flags ttsFailed instead of throwi
   expect(result.text).toBe('A short question for you. Explain Suspense in React.');
 
   chatStream.mockRestore();
+  fetchSpeech.mockRestore();
 });
 
 test('chat-stream error aborts the turn and is rethrown as a classified error', async () => {
@@ -98,22 +108,66 @@ test('chat-stream error aborts the turn and is rethrown as a classified error', 
     },
   };
   const chatStream = vi.spyOn(platform.http.openai, 'chatStream').mockReturnValue(failingStream);
-  vi.mocked(speakText).mockReset().mockResolvedValue(undefined);
+  const fetchSpeech = vi
+    .spyOn(platform.http.openai, 'fetchSpeech')
+    .mockResolvedValue(new ArrayBuffer(0));
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
 
   await expect(streamAndSpeakQuestion({ topic: 'React', history: [] })).rejects.toMatchObject({
     type: 'unknown',
   });
 
   chatStream.mockRestore();
+  fetchSpeech.mockRestore();
 });
 
 test('empty chat stream throws a classified error instead of resolving with blank text', async () => {
   const chatStream = vi.spyOn(platform.http.openai, 'chatStream').mockReturnValue(streamOf(['']));
-  vi.mocked(speakText).mockReset().mockResolvedValue(undefined);
+  const fetchSpeech = vi
+    .spyOn(platform.http.openai, 'fetchSpeech')
+    .mockResolvedValue(new ArrayBuffer(0));
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
 
   await expect(streamAndSpeakQuestion({ topic: 'React', history: [] })).rejects.toMatchObject({
     type: 'unknown',
   });
 
   chatStream.mockRestore();
+  fetchSpeech.mockRestore();
+});
+
+test('sentence N+1 fetch is pipelined in parallel with sentence N playback', async () => {
+  const chatStream = vi
+    .spyOn(platform.http.openai, 'chatStream')
+    .mockReturnValue(streamOf(['First sentence here. ', 'Second sentence here.']));
+
+  /*
+    Hold sentence 1's audio deferred so the consumer can't finish playing it.
+    Sentence 2's fetch must still be kicked off (pipeline lookahead).
+  */
+  let resolveS1!: (buf: ArrayBuffer) => void;
+  const s1Deferred = new Promise<ArrayBuffer>((resolve) => {
+    resolveS1 = resolve;
+  });
+  const fetchSpeech = vi
+    .spyOn(platform.http.openai, 'fetchSpeech')
+    .mockReturnValueOnce(s1Deferred)
+    .mockResolvedValueOnce(new ArrayBuffer(0));
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
+
+  const pending = streamAndSpeakQuestion({ topic: 'React', history: [] });
+
+  await vi.waitFor(() => {
+    expect(fetchSpeech.mock.calls.length).toBe(2);
+  });
+  expect(vi.mocked(playAudioArrayBuffer).mock.calls.length).toBe(0);
+
+  resolveS1(new ArrayBuffer(0));
+  const result = await pending;
+  expect(result.text).toBe('First sentence here. Second sentence here.');
+  expect(result.ttsFailed).toBe(false);
+  expect(vi.mocked(playAudioArrayBuffer).mock.calls.length).toBe(2);
+
+  chatStream.mockRestore();
+  fetchSpeech.mockRestore();
 });
