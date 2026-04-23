@@ -1,10 +1,9 @@
 /**
  * Incremental sentence splitter for streaming LLM output.
  *
- * Streaming chat produces tokens one at a time. For Phase 9.1 we want to hand
- * completed sentences to TTS the moment they're done, without waiting for the
- * full response. `push` accepts a chunk (which may contain zero, one, or many
- * sentence boundaries) and returns the sentences that are now complete.
+ * Streaming chat produces tokens one at a time; we hand completed sentences
+ * to TTS the moment they're done without waiting for the full response.
+ * `push` accepts a chunk and returns the sentences that are now complete.
  * `flush` returns whatever text is still buffered as a final sentence.
  *
  * Boundary rules:

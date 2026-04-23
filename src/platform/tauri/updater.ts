@@ -3,22 +3,7 @@ import { error as logError } from '@tauri-apps/plugin-log';
 import { open as openShellUrl } from '@tauri-apps/plugin-shell';
 import type { UpdateInfo, UpdaterAdapter } from '../types';
 import { semverGreaterThan } from '@/lib/semverCompare';
-
-/**
- * GitHub Releases update check. `releases/latest` excludes drafts and
- * prereleases automatically, which matches the plan's stable-only release
- * strategy. Unauthenticated API rate limit is 60/hour/IP — one launch check
- * per app start plus occasional manual checks stays well within it.
- *
- * Public read endpoints on github.com/api no longer require `User-Agent`
- * for webview clients, and fetch forbids setting it from JS anyway. We
- * rely on the webview's default UA.
- */
-const RELEASES_URL = 'https://api.github.com/repos/rajat-mehra05/voice-round/releases/latest';
-/** Cap the check so a slow / stalled connection can't leave the toast
- *  spinning forever. 8s is long enough for a cold TLS handshake on mobile
- *  networks, short enough that the launch path stays responsive. */
-const FETCH_TIMEOUT_MS = 8_000;
+import { fetchLatestRelease, type GitHubRelease } from '@/lib/githubLatestRelease';
 
 /** Exposed for test. Returns true only for an `https://github.com/…` URL
  *  under this repo's `/releases` path. Parses with `URL` so a spoofed
@@ -39,38 +24,7 @@ export function isAllowedReleaseUrl(url: string): boolean {
   );
 }
 
-interface GitHubRelease {
-  tag_name: string;
-  html_url: string;
-}
-
-/** Exposed for test: the HTTP branch that talks to GitHub. Throws on any
- *  failure (non-2xx, network error, timeout, missing fields, JSON parse
- *  error). The caller is responsible for translating failures into
- *  user-facing state — the launch toast swallows them to stay silent on
- *  flaky networks; the Settings row surfaces them as an error. */
-export async function fetchLatestRelease(): Promise<GitHubRelease> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(RELEASES_URL, {
-      headers: { Accept: 'application/vnd.github+json' },
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub releases returned HTTP ${response.status}`);
-    }
-    const body = (await response.json()) as Partial<GitHubRelease>;
-    if (typeof body.tag_name !== 'string' || typeof body.html_url !== 'string') {
-      throw new Error('GitHub releases response missing tag_name or html_url');
-    }
-    return { tag_name: body.tag_name, html_url: body.html_url };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Exposed for test: same logic with injectable dependencies. */
+/** Exposed for test: pure comparison with injectable dependencies. */
 export function computeUpdateInfo(
   currentVersion: string,
   latestRelease: GitHubRelease | null,

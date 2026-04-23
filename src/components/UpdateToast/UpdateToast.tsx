@@ -3,15 +3,9 @@ import { Button } from '@/components/ui/button';
 import { platform } from '@/platform';
 import type { UpdateInfo } from '@/platform';
 
-/**
- * Phase 10: non-blocking toast that fires once per launch when a newer
- * GitHub release exists. Silent on network / API / parse failures so we
- * don't pester users on flaky connections — the Settings "Check for
- * updates" button is the explicit path that surfaces errors.
- *
- * Render this once in `App.tsx`. On web it no-ops via the adapter
- * returning `null` from `checkForUpdate`.
- */
+// Non-blocking toast: once per launch when a newer GitHub release exists.
+// Silent on check failures; the Settings "Check for updates" row is the
+// explicit error path. Web no-ops since the adapter always returns null.
 export function UpdateToast() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [dismissed, setDismissed] = useState(false);

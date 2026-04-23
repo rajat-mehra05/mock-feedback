@@ -1,16 +1,7 @@
-/**
- * Platform surface contracts. Web and Tauri adapters implement these.
- * Surfaces are fleshed out across phases:
- *   - storage: Phase 5 (secrets, sessions, preferences)
- *   - analytics: Phase 6
- *   - http (OpenAI): Phase 7
- *   - updater: Phase 10
- */
-
+// Platform surface contracts. Web and Tauri adapters implement these.
 import type { ConfidenceLevel } from '@/services/types';
 
 export type PlatformTarget = 'web' | 'tauri';
-
 export interface SecretsAdapter {
   set(key: string, value: string): Promise<void>;
   has(key: string): Promise<boolean>;
@@ -62,22 +53,14 @@ export interface AnalyticsAdapter {
   track(name: string, props?: Record<string, string | number | boolean>): Promise<void>;
 }
 
-/** Phase 10: durable diagnostics. On Tauri, messages land in a log file
- *  under `app_log_dir()` via `tauri-plugin-log` (readable by any process
- *  running as the same user, backed up by Time Machine, and often shared
- *  by users when reporting bugs). On web, they go to the browser console.
- *
- *  Callers MUST NOT pass anything that may contain secrets or PII:
- *  - Never pass a raw HTTP `Response`, `Request`, or their bodies.
- *  - Never pass headers (`Authorization`, cookies).
- *  - Never pass the OpenAI API key, session tokens, or user input
- *    (candidate name, transcript, answer text).
- *  - Error messages from third-party SDKs sometimes echo the request
- *    payload. Prefer `error.name + error.message` over the full `Error`
- *    object when the source isn't under our control.
- *
- *  When in doubt, log a short human-readable description plus an opaque
- *  correlation ID. */
+// Durable diagnostics. Tauri writes to `app_log_dir()` via `tauri-plugin-log`;
+// web writes to the browser console.
+//
+// Callers MUST NOT pass secrets or PII: no raw `Response`/`Request`, no
+// headers, no API keys, session tokens, or user input (candidate name,
+// transcript, answer text). Third-party SDK error messages sometimes echo
+// the request payload — prefer `error.name + error.message` over the full
+// `Error` object when the source isn't under our control.
 export interface LoggerAdapter {
   info(message: string, ...extras: unknown[]): void;
   warn(message: string, ...extras: unknown[]): void;
@@ -130,9 +113,9 @@ export interface TranscribeCommitRequest {
   model: string;
   filename: string;
   contentType: string;
-  /** Phase 9.3: set when the buffered chunks are raw 16-bit mono PCM at
-   *  this rate. The backend prepends a WAV header before uploading. Omit
-   *  for self-contained container formats. */
+  // Set when buffered chunks are raw 16-bit mono PCM at this rate; the
+  // backend prepends a WAV header before uploading. Omit for self-contained
+  // container formats.
   sampleRate?: number;
 }
 
@@ -141,12 +124,9 @@ export interface TranscribeCommitRequest {
  *  mic-stop time. Implemented by the Tauri adapter; the web path has no
  *  intermediate backend to pre-buffer into and leaves these undefined. */
 export interface TranscribeStreamingOps {
-  /** Push a chunk of captured audio to the backend-side buffer.
-   *
-   *  `chunk` is raw 16-bit little-endian mono PCM produced by the Phase 9.3
-   *  AudioWorklet (`public/audio/downsample-worklet.js`) at
-   *  `CAPTURE_SAMPLE_RATE` (16kHz). The Rust side concatenates chunks in
-   *  arrival order and prepends a WAV header on commit. */
+  // `chunk` is raw 16-bit little-endian mono PCM at CAPTURE_SAMPLE_RATE
+  // (16kHz) from `public/audio/downsample-worklet.js`. Rust concatenates
+  // chunks in arrival order and prepends a WAV header on commit.
   pushChunk(requestId: string, chunk: Uint8Array): Promise<void>;
   /** Called on mic-stop. Returns the transcript. */
   commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string>;
@@ -162,7 +142,7 @@ export interface OpenAIHttpAdapter {
   chatStream(req: ChatRequest, signal?: AbortSignal): AsyncIterable<string>;
   /** Transcribes an audio blob. */
   transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string>;
-  /** Phase 9.2: optional streamed-upload path. `undefined` on web. */
+  // Optional streamed-upload path. `undefined` on web.
   transcribeStreaming?: TranscribeStreamingOps;
   /** Requests TTS audio. Plays it to completion or rejects on abort. */
   speak(req: TtsRequest, signal?: AbortSignal): Promise<void>;
@@ -172,8 +152,8 @@ export interface HttpAdapter {
   openai: OpenAIHttpAdapter;
 }
 
-/** Phase 10: pluggable update check. Tauri hits GitHub Releases; web returns
- *  null since there's no installed artifact to update. */
+// Pluggable update check. Tauri hits GitHub Releases; web returns null
+// since there's no installed artifact to update.
 export interface UpdateInfo {
   latestVersion: string;
   htmlUrl: string;

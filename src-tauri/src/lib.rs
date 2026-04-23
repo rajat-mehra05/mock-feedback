@@ -29,7 +29,7 @@ pub struct TranscribeBuffer {
 /// across a trivial critical section.
 ///
 /// `transcribe_buffers` accumulates audio chunks as the recorder streams them
-/// in during a session's recording phase (Phase 9.2). On mic-stop the matching
+/// in during a session's recording phase. On mic-stop the matching
 /// `transcribe_commit` drains the buffer straight into a multipart upload,
 /// avoiding the JS → Rust IPC transit of the full blob after the user stops
 /// talking. Buffers are dropped on commit or cancel.

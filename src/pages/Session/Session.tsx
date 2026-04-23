@@ -36,10 +36,8 @@ export function Session() {
     stopRecordingOnly();
   }, [stopRecordingOnly]);
 
-  // Phase 10: warn before quit while the user is actively recording so a
-  // Cmd+Q doesn't silently discard the current answer. The reducer only
-  // sits at `user_recording` while the mic is capturing, so this is
-  // precisely "lose the in-flight answer" scope.
+  // Warn before quit while the mic is capturing; `user_recording` is
+  // exactly the "lose the in-flight answer" window.
   useQuitGuard(
     state.status === 'user_recording',
     'A recording is in progress. Close anyway? The current answer will be lost.',

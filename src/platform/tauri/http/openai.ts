@@ -32,7 +32,7 @@ interface TtsStartArgs {
 }
 
 // TTS channel delivers raw mp3 chunks as ArrayBuffer and control events
-// (done / error) as parsed JSON. See Phase 9 binary-IPC note in
+// (done / error) as parsed JSON. See the binary-IPC note in
 // src-tauri/src/commands/openai.rs.
 type TtsMessage = ArrayBuffer | { kind: 'done' } | { kind: 'error'; message: string };
 
@@ -264,13 +264,9 @@ async function* tauriChatStream(req: ChatRequest, signal?: AbortSignal): AsyncIt
   }
 }
 
-/**
- * Phase 9.2: binds the `transcribe_push_chunk` / `transcribe_commit` /
- * `transcribe_discard` commands to a front-end-friendly shape. `pushChunk`
- * ships each MediaRecorder chunk straight into a Rust buffer during the
- * turn, so `commit` after mic-stop just drains the buffer into a multipart
- * POST without re-shipping the whole blob across IPC.
- */
+// `pushChunk` streams each audio chunk into a Rust-side buffer during the
+// turn so `commit` after mic-stop just drains it into a multipart POST
+// without re-shipping the whole blob across IPC.
 function makeTranscribeStreaming(): TranscribeStreamingOps {
   return {
     async pushChunk(requestId: string, chunk: Uint8Array) {

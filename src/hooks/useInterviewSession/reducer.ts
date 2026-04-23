@@ -71,11 +71,10 @@ export function interviewReducer(
     }
 
     case 'QUESTION_TEXT_PROGRESS':
-      // Phase 9.1: streaming chat feeds partial text to the UI without
-      // changing status or the question index, so the effect engine's deps
-      // don't re-fire mid-stream. Ignore late callbacks that arrive after
-      // stop/error so they can't overwrite a settled state, and drop any
-      // prior turn's fallback text now that a fresh question is streaming.
+      // Streaming chat feeds partial text without changing status or the
+      // question index so the effect engine's deps don't re-fire mid-stream.
+      // Ignore late callbacks after stop/error and drop any prior turn's
+      // fallback text now that a fresh question is streaming.
       if (state.status !== 'generating') return state;
       return { ...state, currentQuestion: action.text, ttsFallbackText: null };
 

@@ -7,11 +7,9 @@ import { mark } from '@/lib/perf';
 import type { ConversationTurn } from '@/services/types';
 import { SentenceAccumulator } from './sentenceSplitter';
 
-/**
- * Phase 9.1: stream the next interview question and speak it sentence by
- * sentence, overlapping TTS with the rest of the LLM response. Resolves when
- * both chat streaming and all sentence playback have completed.
- */
+// Stream the next interview question and speak it sentence by sentence,
+// overlapping TTS with the rest of the LLM response. Resolves once both
+// chat streaming and all sentence playback have completed.
 export interface StreamingQuestionOptions {
   topic: string;
   history: ConversationTurn[];

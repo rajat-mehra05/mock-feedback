@@ -1,16 +1,6 @@
-/**
- * Phase 9.4: warm the AudioWorklet pipeline before the first recording.
- *
- * The first `audioWorklet.addModule(...)` call on a fresh context pays three
- * costs: HTTP fetch of the worklet JS, parse/compile, and the context's own
- * init. We create a throwaway AudioContext at boot and register the module
- * against it. The file lands in the HTTP cache and the engine's parse cache,
- * so the recorder's per-session `addModule` call is near-instant.
- *
- * Best-effort: if the context can't be constructed (SSR, locked-down
- * webview) we silently skip — the recorder's own `addModule` will run cold
- * instead of throwing.
- */
+// Warm the AudioWorklet before the first recording so the recorder's
+// `addModule` hits the HTTP + engine parse caches. Silently skips when the
+// context can't be constructed (SSR, locked-down webviews).
 const WORKLET_URL = `${import.meta.env.BASE_URL}audio/downsample-worklet.js`;
 
 let preloadPromise: Promise<void> | null = null;

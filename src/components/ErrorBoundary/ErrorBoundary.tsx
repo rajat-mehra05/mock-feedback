@@ -23,15 +23,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Phase 10: route through the platform logger so Tauri builds land in
-    // the app's log file (~/Library/Logs/com.voiceround.app/ on macOS) and
-    // web builds continue to hit the browser console unchanged.
-    //
-    // Bound stack + componentStack length. The log file is capped at 1MB
-    // with KeepOne rotation; a single pathological stack (Tauri webview
-    // + React + minified bundle + source-map) can easily exceed 100KB
-    // and flush older diagnostics we'd rather keep. 4KB is plenty to
-    // identify the failure site.
+    // Bound stack length: log file is capped at 1MB with KeepOne
+    // rotation and a pathological stack can exceed 100KB on its own.
     const STACK_LIMIT = 4_000;
     platform.logger.error('ErrorBoundary caught', {
       errorName: error.name,

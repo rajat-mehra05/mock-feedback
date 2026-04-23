@@ -3,7 +3,7 @@ import { SILENCE_TIMEOUT_SECONDS } from '@/constants/session';
 import { CAPTURE_SAMPLE_RATE } from '@/constants/audio';
 import { classifyMicError, micError, type MicError } from '@/lib/micError';
 import { watchMicPermission } from '@/lib/micCheck';
-import { mark, resetPerf } from '@/lib/perf';
+import { mark } from '@/lib/perf';
 import { platform } from '@/platform';
 import { encodeWavFromInt16 } from '@/lib/wavEncoder';
 
@@ -20,9 +20,8 @@ interface UseAudioRecorderReturn {
   clearBlob: () => void;
   isRecording: boolean;
   audioBlob: Blob | null;
-  /** Phase 9.2: when running against an adapter that supports streamed
-   *  transcribe buffering (Tauri today, undefined on web), this is the id
-   *  the caller passes to `transcribeStreaming.commit` after mic-stop. */
+  // When the adapter supports streamed transcribe buffering (Tauri), this
+  // is the id to pass to `transcribeStreaming.commit` after mic-stop.
   streamingId: string | null;
   error: MicError | null;
 }
@@ -171,7 +170,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
     setError(null);
     setAudioBlob(null);
-    resetPerf();
     firstChunkMarkedRef.current = false;
     pcmChunksRef.current = [];
     pendingPushesRef.current = [];
@@ -214,9 +212,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
-      // Phase 9.3: AudioWorkletNode runs the downsample+Int16 pipeline on the
-      // audio thread. `addModule` is a no-op if the module is already
-      // registered against this context (Phase 9.4 preloads it at boot).
+      // AudioWorkletNode runs the downsample+Int16 pipeline on the audio
+      // thread. `addModule` is a no-op when the module is already registered
+      // (it's preloaded at app boot).
       await audioContext.audioWorklet.addModule(WORKLET_URL);
       const workletNode = new AudioWorkletNode(audioContext, 'downsample-processor');
       workletNodeRef.current = workletNode;
@@ -269,20 +267,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       let silentSince: number | null = null;
       let speechDetected = false;
       const recordingStartedAt = Date.now();
-      let pollCount = 0;
 
       silenceTimerRef.current = setInterval(() => {
         analyser.getFloatTimeDomainData(rmsSamples);
         let sumSquares = 0;
         for (let i = 0; i < rmsSamples.length; i++) sumSquares += rmsSamples[i] * rmsSamples[i];
         const rms = Math.sqrt(sumSquares / rmsSamples.length);
-
-        if (import.meta.env.DEV && ++pollCount % 5 === 0) {
-          const silentFor = silentSince ? ((Date.now() - silentSince) / 1000).toFixed(1) : '0';
-          console.debug(
-            `[silence-detect] rms=${rms.toFixed(4)} threshold=${SILENCE_THRESHOLD} speechDetected=${speechDetected} silentFor=${silentFor}s`,
-          );
-        }
 
         if (rms > SILENCE_THRESHOLD) {
           speechDetected = true;

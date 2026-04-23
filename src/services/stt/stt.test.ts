@@ -23,9 +23,9 @@ test('a recording round-trips into a transcript, and rate-limit responses surfac
   await expect(transcribeAudio(blob)).rejects.toMatchObject({ type: 'rate_limit' });
 });
 
-// Phase 9.2: when the recorder has been streaming chunks into a Rust-side
-// buffer during the turn, the blob is already in Rust — the post-mic-stop
-// transcribe path should commit the buffer instead of re-uploading the blob.
+// When the recorder has been streaming chunks to a Rust-side buffer, the
+// post-mic-stop transcribe path should commit the buffer instead of
+// re-uploading the blob.
 test('recordings streamed during the turn commit by id instead of re-uploading the blob', async ({
   onTestFinished,
 }) => {
@@ -47,9 +47,8 @@ test('recordings streamed during the turn commit by id instead of re-uploading t
   expect(commit).toHaveBeenCalledTimes(1);
   const [commitArgs] = commit.mock.calls[0] as [Record<string, unknown>];
   expect(commitArgs.requestId).toBe('req-123');
-  // Phase 9.3: the recorder streams raw 16kHz mono PCM chunks, so the
-  // commit tells the backend to wrap them in a WAV header regardless of
-  // what the recorder's fallback blob type was.
+  // Recorder streams raw 16kHz mono PCM; commit tells the backend to wrap
+  // it in a WAV header regardless of the recorder's fallback blob type.
   expect(commitArgs.filename).toBe('recording.wav');
   expect(commitArgs.contentType).toBe('audio/wav');
   expect(commitArgs.sampleRate).toBe(16000);

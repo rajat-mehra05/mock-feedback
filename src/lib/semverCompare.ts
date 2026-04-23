@@ -1,12 +1,6 @@
-/**
- * Minimal semver "greater than" comparison for the Phase 10 update check.
- * Handles `x.y.z` with an optional leading `v` (GitHub tags commonly do).
- * Pre-release identifiers (`-rc.1`) are ignored — our release process
- * ships stable-only tags per plan.md.
- *
- * Returns `true` when `a > b`. Bails to `false` on any malformed input so
- * a mangled tag name never falsely triggers the "update available" toast.
- */
+// Minimal `a > b` for `x.y.z` tags with an optional leading `v`. Ignores
+// pre-release identifiers (we ship stable-only). Returns false on any
+// malformed input so a mangled tag can't trigger a false update toast.
 export function semverGreaterThan(a: string, b: string): boolean {
   const parsed = (v: string): [number, number, number] | null => {
     const clean = v.startsWith('v') ? v.slice(1) : v;

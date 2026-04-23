@@ -74,7 +74,7 @@ export const tauriPlatform: Platform = {
     },
   },
   analytics: {
-    // Desktop stays silent per Phase 6. No-op rather than stub.
+    // Desktop stays silent. No-op rather than stub.
     track: () => Promise.resolve(),
   },
   http: {

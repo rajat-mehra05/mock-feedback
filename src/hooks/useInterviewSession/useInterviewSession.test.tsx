@@ -323,10 +323,9 @@ test('feedback generation error transitions to error state', async () => {
   expect(result.current.state.retryFromStatus).toBe('generating_feedback');
 });
 
-// Phase 9.2/9.3: when the recorder streamed chunks to the Rust-side buffer
-// but the audio blob turns out to be silence, the Rust buffer would linger
-// without these discards — the 9.2/9.3 pipeline has no reason to commit on
-// a "no response" turn.
+// When the recorder streamed chunks to the Rust-side buffer but the audio
+// blob turns out to be silence, the buffer would linger without these
+// discards — no reason to commit on a "no response" turn.
 test('a silent recording that skips STT still drops the streamed Rust buffer', async ({
   onTestFinished,
 }) => {
