@@ -90,36 +90,43 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
       }
     },
 
+    fetchSpeech: fetchSpeechImpl,
+
     async speak(req: TtsRequest, signal?: AbortSignal): Promise<void> {
-      // Network timeout covers only the fetch. Playback is cancellable via the
-      // caller's signal so long responses never get cut off mid-speech.
-      const { signal: networkSignal, cleanup } = createTimeoutSignal(
-        req.timeoutMs ?? TTS_TIMEOUT_MS,
-        signal,
-      );
-      let arrayBuffer: ArrayBuffer;
-      try {
-        const client = await getClient();
-        const response = await client.audio.speech.create(
-          {
-            model: req.model,
-            voice: req.voice,
-            input: req.input,
-            instructions: req.instructions,
-            response_format: req.responseFormat,
-          },
-          { signal: networkSignal },
-        );
-        arrayBuffer = await response.arrayBuffer();
-      } catch (error) {
-        cleanup();
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
-        throw classifyOpenAIError(error);
-      }
-      cleanup();
+      const arrayBuffer = await fetchSpeechImpl(req, signal);
       await playAudioArrayBuffer(arrayBuffer, signal);
     },
   };
+
+  async function fetchSpeechImpl(req: TtsRequest, signal?: AbortSignal): Promise<ArrayBuffer> {
+    /*
+      Network timeout covers only the fetch. Playback-side aborts use the
+      caller's signal directly so long responses don't get cut off mid-speech.
+    */
+    const { signal: networkSignal, cleanup } = createTimeoutSignal(
+      req.timeoutMs ?? TTS_TIMEOUT_MS,
+      signal,
+    );
+    try {
+      const client = await getClient();
+      const response = await client.audio.speech.create(
+        {
+          model: req.model,
+          voice: req.voice,
+          input: req.input,
+          instructions: req.instructions,
+          response_format: req.responseFormat,
+        },
+        { signal: networkSignal },
+      );
+      return await response.arrayBuffer();
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
+      throw classifyOpenAIError(error);
+    } finally {
+      cleanup();
+    }
+  }
 
   return {
     adapter,

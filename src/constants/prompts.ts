@@ -19,7 +19,7 @@ export function sanitizeCandidateName(name: string): string {
 const INTERVIEW_ROLE = `You are a Staff Engineer at Meta with deep expertise across programming languages, frameworks, system design, and cloud infrastructure. Be professional but personable — slightly challenging, never robotic.`;
 
 const INTERVIEW_BEHAVIOR = `\
-- Ask one clear, focused question at a time (1-2 sentences).
+- Ask one clear, focused question at a time. Maximum 2 sentences. Prefer 1 sentence when possible. Never exceed 2 sentences under any circumstance.
 - Build on the candidate's previous answers when appropriate.
 - After a substantive answer, briefly acknowledge what the candidate said (e.g. "That's a solid point about X." or "Interesting, you mentioned Y.") before asking your next question. Never ignore their answer.
 - If the candidate gives a partial or weak answer, ask one follow-up to probe deeper before moving to a new topic.
@@ -46,7 +46,7 @@ const INTERVIEW_CONSTRAINTS = `\
 const INTERVIEW_OUTPUT_FORMAT = `\
 Output Format:
 - Conversational tone
-- 1-2 sentences max per question
+- Maximum 2 sentences per question. Prefer 1 sentence. Never exceed 2.
 - No explanations unless asked`;
 
 interface InterviewPromptParams {

@@ -53,14 +53,8 @@ export interface AnalyticsAdapter {
   track(name: string, props?: Record<string, string | number | boolean>): Promise<void>;
 }
 
-// Durable diagnostics. Tauri writes to `app_log_dir()` via `tauri-plugin-log`;
-// web writes to the browser console.
-//
-// Callers MUST NOT pass secrets or PII: no raw `Response`/`Request`, no
-// headers, no API keys, session tokens, or user input (candidate name,
-// transcript, answer text). Third-party SDK error messages sometimes echo
-// the request payload — prefer `error.name + error.message` over the full
-// `Error` object when the source isn't under our control.
+// Durable diagnostics. Callers must never pass secrets, PII or raw request/response
+// objects since third-party SDK errors sometimes echo the payload.
 export interface LoggerAdapter {
   info(message: string, ...extras: unknown[]): void;
   warn(message: string, ...extras: unknown[]): void;
@@ -113,20 +107,18 @@ export interface TranscribeCommitRequest {
   model: string;
   filename: string;
   contentType: string;
-  // Set when buffered chunks are raw 16-bit mono PCM at this rate; the
-  // backend prepends a WAV header before uploading. Omit for self-contained
-  // container formats.
+  // Set when chunks are raw 16-bit mono PCM at this rate so the backend can
+  // prepend a WAV header. Omit for self-contained container formats.
   sampleRate?: number;
 }
 
-/** Optional capability: push audio bytes to the backend during recording so
- *  the final upload doesn't have to ship the entire blob across IPC at
- *  mic-stop time. Implemented by the Tauri adapter; the web path has no
- *  intermediate backend to pre-buffer into and leaves these undefined. */
+/**
+ * Push audio bytes to the backend during recording so commit doesn't ship
+ * the full blob at mic-stop. Tauri only; web has no backend to buffer into.
+ */
 export interface TranscribeStreamingOps {
-  // `chunk` is raw 16-bit little-endian mono PCM at CAPTURE_SAMPLE_RATE
-  // (16kHz) from `public/audio/downsample-worklet.js`. Rust concatenates
-  // chunks in arrival order and prepends a WAV header on commit.
+  // `chunk` is raw 16-bit LE mono PCM at CAPTURE_SAMPLE_RATE (16kHz). Rust
+  // concatenates chunks in arrival order and prepends a WAV header on commit.
   pushChunk(requestId: string, chunk: Uint8Array): Promise<void>;
   /** Called on mic-stop. Returns the transcript. */
   commit(req: TranscribeCommitRequest, signal?: AbortSignal): Promise<string>;
@@ -137,8 +129,7 @@ export interface TranscribeStreamingOps {
 export interface OpenAIHttpAdapter {
   /** Non-streaming chat. Returns the full text. Used for feedback generation. */
   chat(req: ChatRequest, signal?: AbortSignal): Promise<string>;
-  /** Streaming chat. Yields text chunks as they arrive. Used for the live
-   *  interview turn so TTS can start on sentence 1 before chat completes. */
+  /** Streaming chat. Yields chunks so TTS can start on sentence 1 before the LLM finishes. */
   chatStream(req: ChatRequest, signal?: AbortSignal): AsyncIterable<string>;
   /** Transcribes an audio blob. */
   transcribe(req: TranscribeRequest, signal?: AbortSignal): Promise<string>;
@@ -146,6 +137,11 @@ export interface OpenAIHttpAdapter {
   transcribeStreaming?: TranscribeStreamingOps;
   /** Requests TTS audio. Plays it to completion or rejects on abort. */
   speak(req: TtsRequest, signal?: AbortSignal): Promise<void>;
+  /**
+   * Fetches TTS bytes without playing, enabling sentence-level prefetch on web.
+   * Web-only: Tauri uses streaming MediaSource playback instead.
+   */
+  fetchSpeech?: (req: TtsRequest, signal?: AbortSignal) => Promise<ArrayBuffer>;
 }
 
 export interface HttpAdapter {
@@ -160,16 +156,15 @@ export interface UpdateInfo {
 }
 
 export interface UpdaterAdapter {
-  /** Resolves with an `UpdateInfo` when a newer release exists, or `null`
-   *  when the current version is up to date. Rejects when the check itself
-   *  fails (network, rate limit, parse error) so callers can distinguish
-   *  "up to date" from "can't check": the launch toast catches rejections
-   *  silently; the Settings row shows an error state. The web adapter
-   *  always resolves to `null` — no installed artifact to update. */
+  /**
+   * Resolves to `UpdateInfo` for a newer release or `null` when up to date.
+   * Rejects on check failure so callers can distinguish "up to date" from "can't check".
+   */
   checkForUpdate(): Promise<UpdateInfo | null>;
-  /** Opens the release page in the user's default browser. Adapters
-   *  validate the URL and contain platform failures — callers do not
-   *  need to try/catch. */
+  /**
+   * Opens the release page in the default browser. Adapters validate the URL
+   * and swallow platform failures so callers don't need to try/catch.
+   */
   openReleasePage(url: string): Promise<void>;
 }
 
