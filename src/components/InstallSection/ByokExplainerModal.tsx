@@ -13,15 +13,7 @@ interface ByokExplainerModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Explainer for the BYOK security difference between the Tauri desktop
-// app and the PWA web app. Surfaced from the desktop secondary CTA so
-// users picking the PWA route understand the tradeoff before they
-// install.
-//
-// The plan was explicit: "do not bury this in a tooltip alone". An
-// always-visible one-liner sits next to the CTA; this dialog provides
-// the longer paragraph for the curious. Avoid scaring people off the
-// PWA — for many users the convenience tradeoff is fine.
+// BYOK Tauri-vs-PWA tradeoff; opened from desktop secondary CTA + Settings.
 export function ByokExplainerModal({ open, onOpenChange }: ByokExplainerModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

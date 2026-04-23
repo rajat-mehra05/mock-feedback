@@ -9,28 +9,19 @@ import { runtimeCaching } from './src/lib/pwa/workboxConfig';
 export default defineConfig(({ mode }) => {
   const isTauri = mode === 'tauri';
 
-  // PWA only ships in the web build. Tauri's webview has no use for a
-  // service worker (the native shell handles app lifecycle, the Rust
-  // proxy handles network) and registering one in the Tauri context is
-  // undefined behaviour territory.
+  // PWA ships in web only; Tauri's webview has no use for a SW.
   const pwaPlugin = isTauri
     ? []
     : [
         VitePWA({
           registerType: 'prompt',
           injectRegister: 'auto',
-          // devOptions intentionally omitted (defaults to disabled). Opt-in
-          // only when explicitly testing SW behaviour. Otherwise the dev
-          // server caches stale modules and produces "I changed code, why
-          // is it stale" surprises during normal development.
+          // devOptions stays disabled to avoid stale-module surprises in dev.
           workbox: {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
             cleanupOutdatedCaches: true,
             runtimeCaching,
-            // Default navigation fallback to the precached shell. The
-            // navigation route in runtimeCaching above handles online-but-
-            // slow with NetworkFirst + 3s timeout. This kicks in for true
-            // offline.
+            // True-offline fallback; the runtimeCaching navigation route handles online-but-slow.
             navigateFallback: '/index.html',
           },
           manifest: {
@@ -80,10 +71,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        // In Tauri builds vite-plugin-pwa is not loaded, so the virtual
-        // module it provides cannot resolve. Alias the import to a no-op
-        // stub so UpdateBanner compiles in both targets without
-        // duplicating the import chain.
+        // Stub the virtual module in Tauri builds so UpdateBanner compiles without the plugin.
         ...(isTauri && {
           'virtual:pwa-register/react': path.resolve(__dirname, './src/lib/pwa/pwaRegisterStub.ts'),
         }),

@@ -6,10 +6,7 @@ import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 import { _resetWebPlatformForTests } from '@/platform/web';
 import { server } from '@/test/msw/server';
 
-// jsdom does not implement matchMedia. Stub one that always returns
-// false so detectPlatform()'s standalone check works in tests without
-// each test having to wire up a per-case mock. Tests that care about
-// the actual standalone state can override this in beforeEach.
+// jsdom matchMedia stub for detectPlatform's standalone check.
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

@@ -1,17 +1,13 @@
 import { test, expect } from 'vitest';
 import { detectPlatform, type DetectInput } from './detectPlatform';
 
-// Real UA strings captured from actual browsers, not hand-rolled. The
-// plan requires coverage for these cases because the InstallSection
-// branches on the result and a misdetection ships a misleading CTA.
-
+// Real UA strings; misdetection here ships a misleading install CTA.
 const UA = {
   iphoneSafari:
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
   ipadMobile:
     'Mozilla/5.0 (iPad; CPU OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
-  // iPadOS 13+ default: UA identical to macOS Safari. Disambiguation via
-  // navigator.maxTouchPoints > 1.
+  // iPadOS 13+ desktop mode: UA matches macOS, disambiguated via maxTouchPoints > 1.
   ipadDesktopMode:
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
   androidChrome:
@@ -69,8 +65,7 @@ test('iPad in desktop mode disambiguates via MacIntel + maxTouchPoints > 1', () 
 });
 
 test('desktop Mac with same UA but no touch does NOT get classified as iOS', () => {
-  // Real Macs report maxTouchPoints 0 (or 1 with some trackpads). The
-  // iPad disambiguation must not false-positive on actual desktop Macs.
+  // Macs report maxTouchPoints 0-1; the iPad disambiguation must not false-positive.
   const p = detectPlatform(
     base({
       userAgent: UA.macSafari,
@@ -155,9 +150,7 @@ test('matchMedia display-mode standalone sets isStandalone to true', () => {
 });
 
 test('iOS navigator.standalone (legacy path) sets isStandalone to true', () => {
-  // iOS Safari in A2HS mode doesn't fire the display-mode media query
-  // on older iOS versions. The navigator.standalone boolean is the
-  // reliable signal there.
+  // Older iOS A2HS doesn't fire the display-mode media query; navigator.standalone is the reliable signal.
   const p = detectPlatform(
     base({
       userAgent: UA.iphoneSafari,
@@ -169,9 +162,7 @@ test('iOS navigator.standalone (legacy path) sets isStandalone to true', () => {
 });
 
 test('empty UA falls back to unknown+desktop (safe default for install CTA)', () => {
-  // If detection fails we bias towards showing the Tauri desktop CTA
-  // rather than an empty InstallSection. Better to misdirect than to
-  // hide the affordance entirely.
+  // Bias towards desktop CTA over empty section when detection fails.
   const p = detectPlatform(base({ userAgent: '' }));
   expect(p.device).toBe('desktop');
   expect(p.os).toBe('unknown');

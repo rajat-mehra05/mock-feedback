@@ -1,16 +1,6 @@
 #!/usr/bin/env node
-// PWA.4 invariant: the web build must not contain @tauri-apps/* code.
-//
-// It's easy to introduce this by accident — any file that imports from
-// @tauri-apps/api/* gets pulled into the web bundle unless the import
-// is dynamic AND gated by VITE_TARGET. A bundled @tauri-apps module
-// either fails at runtime in a regular browser (no window.__TAURI_*)
-// or silently bloats the web download with desktop-only code.
-//
-// Strategy: greps the dist/assets/*.js output for the literal string
-// "@tauri-apps/". Minified bundles preserve string literals from
-// import paths so a substring match catches both static and dynamic
-// imports that the bundler resolved.
+// PWA.4: web bundle must not contain @tauri-apps/* (runtime-fails outside Tauri).
+// Greps dist/assets/*.js for the import-path literal; minifier preserves it.
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';

@@ -4,19 +4,11 @@ import './index.css';
 import App from './App';
 import { initInstallPromptCapture } from '@/lib/installPrompt';
 
-// PWA.4: register the beforeinstallprompt + appinstalled listeners
-// before React mounts. Chromium fires beforeinstallprompt exactly once,
-// driven by its own engagement heuristics; missing it strands the
-// in-app install CTA. No-op outside the web target (Tauri has no
-// install prompt to capture) but cheap to call.
+// PWA.4: capture beforeinstallprompt before React mounts (Chromium fires it exactly once per session).
 if (import.meta.env.VITE_TARGET !== 'tauri') {
   initInstallPromptCapture();
 
-  // Track the display mode at session start so install-prompt funnel
-  // analysis can attribute behaviour by surface (browser tab vs.
-  // installed PWA standalone vs. WCO etc). Fired once per page load,
-  // which is the natural granularity. Defer the analytics import to
-  // keep the entry chunk lean.
+  // Display-mode telemetry attributes install-prompt funnel by surface.
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     const modes = ['standalone', 'minimal-ui', 'fullscreen', 'window-controls-overlay'] as const;
     const matched =

@@ -2,9 +2,7 @@ import { expect, test, vi, afterEach } from 'vitest';
 import { db, createSession, getSession, getAllSessions, deleteSession } from './sessionsDexie';
 import { makeSession } from '@/test/factories';
 
-// setup.ts also clears sessions globally, but doing it explicitly here
-// keeps the test file readable and bulletproof against an assertion
-// failing before the per-test trailing clear runs.
+// Explicit clear keeps file readable; setup.ts also clears globally.
 afterEach(async () => {
   await db.sessions.clear();
   vi.unstubAllGlobals();
@@ -39,12 +37,10 @@ test('session lifecycle: create, read, list ordering, and delete', async () => {
 test('createSession evicts the oldest session when storage is over 80% quota', async () => {
   await db.sessions.clear();
 
-  // Pre-fill with three sessions of ascending ages.
   await db.sessions.add(makeSession({ id: 'oldest', createdAt: new Date('2026-01-01') }));
   await db.sessions.add(makeSession({ id: 'middle', createdAt: new Date('2026-02-01') }));
   await db.sessions.add(makeSession({ id: 'newer', createdAt: new Date('2026-03-01') }));
 
-  // Stub navigator.storage.estimate to report 95% usage.
   vi.stubGlobal('navigator', {
     ...navigator,
     storage: {
@@ -57,7 +53,6 @@ test('createSession evicts the oldest session when storage is over 80% quota', a
 
   const ids = (await getAllSessions()).map((s) => s.id).sort();
   expect(ids).toEqual(['incoming', 'middle', 'newer']);
-  // 'oldest' was evicted to make room for 'incoming'.
 });
 
 test('createSession does NOT evict when usage is below 80% quota', async () => {
@@ -86,4 +81,43 @@ test('createSession tolerates a missing navigator.storage API (falls through cle
   await expect(
     createSession(makeSession({ id: 'works-anyway', createdAt: new Date('2026-01-01') })),
   ).resolves.toBeUndefined();
+});
+
+test('post-write eviction never deletes the just-created session even if it has the smallest createdAt', async () => {
+  // Backdated incoming session must not be evicted by its own post-write quota check.
+  await db.sessions.clear();
+  await db.sessions.add(makeSession({ id: 'newer1', createdAt: new Date('2026-03-01') }));
+  await db.sessions.add(makeSession({ id: 'newer2', createdAt: new Date('2026-04-01') }));
+
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    storage: {
+      estimate: vi.fn().mockResolvedValue({ usage: 95, quota: 100 }),
+      persist: vi.fn().mockResolvedValue(false),
+    },
+  });
+
+  const session = makeSession({ id: 'incoming-but-oldest', createdAt: new Date('2025-01-01') });
+  await createSession(session);
+
+  expect(await getSession(session.id)).toBeDefined();
+  const remainingIds = (await getAllSessions()).map((s) => s.id).sort();
+  expect(remainingIds).toContain(session.id);
+});
+
+test('createSession on an empty DB with high quota inserts cleanly without eviction errors', async () => {
+  // Empty DB + high quota: eviction should no-op (no oldest row), not crash.
+  await db.sessions.clear();
+
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    storage: {
+      estimate: vi.fn().mockResolvedValue({ usage: 95, quota: 100 }),
+      persist: vi.fn().mockResolvedValue(false),
+    },
+  });
+
+  const session = makeSession({ id: 'first-and-only', createdAt: new Date('2026-01-01') });
+  await expect(createSession(session)).resolves.toBeUndefined();
+  expect(await getSession(session.id)).toBeDefined();
 });

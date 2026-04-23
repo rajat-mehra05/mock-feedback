@@ -83,10 +83,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             ) : null}
           </div>
 
-          {/* PWA.0: BYOK transparency. Web/PWA storage is IndexedDB; the
-              desktop app uses the OS keychain. The explainer modal
-              spells out the implications so users on shared devices or
-              with extensions installed know what they're trading. */}
+          {/* PWA.0: BYOK transparency for shared devices / extensions; Tauri uses OS keychain. */}
           {import.meta.env.VITE_TARGET !== 'tauri' ? (
             <button
               type="button"

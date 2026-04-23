@@ -15,15 +15,8 @@ export async function playAudioArrayBuffer(
     if (audioContext.state !== 'closed') void audioContext.close();
   };
 
-  // iOS Safari opens a fresh AudioContext in the 'suspended' state
-  // regardless of user activation. Explicit resume() nudges it awake.
-  // On Chromium desktop the context is already 'running' so resume() is
-  // effectively a no-op.
-  //
-  // If resume() rejects or the state stays 'suspended', source.start()
-  // below would queue playback but no audio would actually play (iOS
-  // fires no error, it simply stays silent). Propagate the failure so
-  // the caller can surface it or retry on the next user gesture.
+  // iOS opens AudioContext suspended; throw if resume fails so playback
+  // doesn't silently no-op (source.start on a suspended context is silent).
   if (audioContext.state === 'suspended') {
     await audioContext.resume().catch(() => undefined);
   }
@@ -38,9 +31,7 @@ export async function playAudioArrayBuffer(
   try {
     audioBuffer = await audioContext.decodeAudioData(buffer);
   } catch (error) {
-    // MediaSession + visibilitychange get attached *after* this decode
-    // block, so there's nothing to unregister here. Just close the
-    // context and surface the error.
+    // MediaSession + visibilitychange attach below, so nothing to unregister here.
     closeContext();
     if (signal?.aborted) {
       throw new DOMException('Audio playback aborted', 'AbortError');
@@ -52,94 +43,61 @@ export async function playAudioArrayBuffer(
   source.buffer = audioBuffer;
   source.connect(audioContext.destination);
 
-  // Lock-screen / Control Center integration on mobile. iOS + Android
-  // display whatever MediaSession metadata is set while audio is
-  // playing. Without this the lock-screen shows a generic "web
-  // content" tile instead of the app name.
-  //
-  // Per-question title (e.g. "Question 3 of 10") would be nicer but
-  // requires plumbing the question index through speak(). Left as a
-  // follow-up; generic app-name metadata covers the regression case
-  // (no tile at all) which is the main UX complaint.
+  // Lock-screen tile via MediaSession; per-question title left as follow-up.
   const mediaSession = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
   const previousMetadata = mediaSession?.metadata ?? null;
   if (mediaSession && typeof MediaMetadata !== 'undefined') {
+    // BASE_URL keeps artwork resolvable under Tauri's './' base.
+    const baseUrl = import.meta.env.BASE_URL;
     mediaSession.metadata = new MediaMetadata({
       title: 'VoiceRound',
       artist: 'Mock interview',
       artwork: [
-        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: `${baseUrl}icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
+        { src: `${baseUrl}icons/icon-512.png`, sizes: '512x512', type: 'image/png' },
       ],
     });
   }
   const clearMediaSession = () => {
     if (!mediaSession) return;
-    // Restore whatever was set before (null on a fresh session) so we
-    // don't leave a stale "VoiceRound playing" tile after the audio
-    // ends.
+    if ('playbackState' in mediaSession) {
+      try {
+        mediaSession.playbackState = 'none';
+      } catch {
+        /* read-only on older implementations */
+      }
+    }
     mediaSession.metadata = previousMetadata;
     try {
       mediaSession.setActionHandler('play', null);
       mediaSession.setActionHandler('pause', null);
     } catch {
-      /* some browsers throw on unknown actions; safe to ignore */
+      /* some browsers throw on unknown actions */
     }
   };
 
-  // Two flags coordinate visibility-driven and user-driven pause/resume
-  // so they don't fight each other. Without them the visibility handler
-  // on tab-restore would unconditionally resume() and override a
-  // user-initiated pause from the lock screen.
-  //
-  //   visibilitySuspended: true when WE suspended due to document.hidden
-  //     (so we know it's safe to resume on visible without overriding
-  //     user intent)
-  //   userPaused: true when the user pressed pause on the lock screen
-  //     or Control Center (so visibility-restore knows to keep paused)
+  // Track who suspended the context so visibility-restore doesn't override a user pause.
   let visibilitySuspended = false;
   let userPaused = false;
 
-  // Suspend the context when the tab goes hidden and resume on visible
-  // unless the user has paused via the lock-screen control.
-  // Without this, iOS Safari suspends the context for us but doesn't
-  // always resume cleanly when the user switches back; manual control
-  // makes the transition deterministic. Also covers the "phone rings
-  // mid-TTS" case on mobile.
+  // Manual visibility handling because iOS suspends/resumes inconsistently across tab switches.
   const onVisibilityChange = () => {
     if (audioContext.state === 'closed') return;
     if (document.hidden) {
-      // Only suspend if currently running. If user already paused,
-      // don't change the suspended-by-visibility flag — they get to
-      // own that state.
       if (audioContext.state === 'running') {
         visibilitySuspended = true;
-        void audioContext.suspend().catch(() => {
-          /* best-effort */
-        });
+        void audioContext.suspend().catch(() => undefined);
       }
-    } else {
-      // Resume only if WE were the one who suspended AND the user
-      // hasn't pressed pause in the meantime. Otherwise we'd override
-      // their explicit pause when they tab back to the app.
-      if (visibilitySuspended && !userPaused) {
-        visibilitySuspended = false;
-        void audioContext.resume().catch(() => {
-          /* best-effort */
-        });
-      } else if (visibilitySuspended) {
-        // User paused while tab was hidden. Clear the flag without
-        // resuming so a later user-play action handles the resume.
-        visibilitySuspended = false;
-      }
+    } else if (visibilitySuspended && !userPaused) {
+      visibilitySuspended = false;
+      void audioContext.resume().catch(() => undefined);
+    } else if (visibilitySuspended) {
+      visibilitySuspended = false;
     }
   };
   document.addEventListener('visibilitychange', onVisibilityChange);
 
-  // Action handlers on the MediaSession let users pause/resume from the
-  // lock screen or Control Center. Suspend/resume the AudioContext to
-  // match — pausing via setValueAtTime on the node would leave the
-  // context running and burn battery.
+  // Lock-screen play/pause maps to AudioContext suspend/resume so battery isn't burned on a paused track.
   if (mediaSession) {
     try {
       mediaSession.setActionHandler('pause', () => {
@@ -158,7 +116,7 @@ export async function playAudioArrayBuffer(
       });
       mediaSession.playbackState = 'playing';
     } catch {
-      /* ignore browsers without action-handler support */
+      /* browsers without action-handler support */
     }
   }
 
@@ -170,13 +128,11 @@ export async function playAudioArrayBuffer(
 
     const abortHandler = () => {
       source.onended = null;
-      // `source.stop()` throws InvalidStateError if called before `start()`.
-      // Abort can fire in the narrow window between listener registration and
-      // the `start()` call below; swallow the throw so we still reject cleanly.
+      // source.stop() throws InvalidStateError if called before start(); swallow.
       try {
         source.stop();
       } catch {
-        // not yet started — nothing to stop
+        /* not yet started */
       }
       teardown();
       closeContext();

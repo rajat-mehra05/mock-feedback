@@ -7,9 +7,7 @@ beforeEach(() => {
 });
 
 function fireBeforeInstallPrompt(): Event {
-  // The real BeforeInstallPromptEvent isn't constructible in jsdom. Build
-  // a plain Event with the prompt() / userChoice fields the listener
-  // stashes and the UI later calls.
+  // jsdom can't construct the real BeforeInstallPromptEvent; fake the shape.
   const event = new Event('beforeinstallprompt') as Event & {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
@@ -56,11 +54,7 @@ test('appinstalled event clears the stashed prompt and flips installed to true',
 });
 
 test('initInstallPromptCapture is idempotent: only one window listener registered for each event', () => {
-  // Spy on window.addEventListener so we can directly verify that a
-  // second call to initInstallPromptCapture does not register the
-  // listeners twice. Counting fires from a single dispatchEvent
-  // wouldn't catch double-registration because both copies write the
-  // same module-level state.
+  // Spy directly because counting event fires can't distinguish duplicate listeners writing the same state.
   const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
   try {
     initInstallPromptCapture();

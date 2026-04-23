@@ -211,17 +211,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
-      // iOS Safari starts a fresh AudioContext suspended even when called
-      // from a user gesture if any prior await has consumed the activation.
-      // Explicit resume() is a no-op on Chromium where the context is
-      // already running.
-      //
-      // Surface failure rather than swallowing: addModule() succeeds against
-      // a suspended context but no audio frames are processed, so the
-      // recording is silent. The previous "fall through and let addModule
-      // surface the error" assumption was wrong. The catch{} below routes
-      // a thrown error into setError(classifyMicError(...)) which surfaces
-      // a "Recording failed unexpectedly" UI rather than a silent mic.
+      // iOS opens AudioContext suspended; throw on resume failure since addModule succeeds
+      // on a suspended context but no audio frames flow (silent recording).
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
@@ -231,9 +222,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         );
       }
 
-      // AudioWorkletNode runs the downsample+Int16 pipeline on the audio
-      // thread. `addModule` is a no-op when the module is already registered
-      // (it's preloaded at app boot).
+      // addModule is a no-op when preloaded at app boot.
       await audioContext.audioWorklet.addModule(WORKLET_URL);
       const workletNode = new AudioWorkletNode(audioContext, 'downsample-processor');
       workletNodeRef.current = workletNode;

@@ -4,22 +4,8 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
 
-// PWA update prompt. Renders only when a new SW is waiting (i.e. a new
-// build is deployed and the SW has installed but not yet activated).
-//
-// vite.config.ts uses registerType: 'prompt', meaning the SW won't auto-
-// apply. The user clicks Refresh to call updateServiceWorker(true), which
-// posts SKIP_WAITING to the waiting worker and reloads the page once the
-// new one takes control.
-//
-// Copy adapts based on route:
-//   /session  → warns about losing the in-flight interview
-//   anything else → neutral "Refresh to apply" prompt
-//
-// On Tauri, the import resolves to a no-op stub (see vite.config.ts
-// alias) and needRefresh stays false forever, so the component renders
-// nothing. App.tsx still gates the render by VITE_TARGET so this stub
-// path is just defence in depth.
+// Renders only when a new SW is waiting; user-clicked Refresh applies it.
+// Tauri builds get a no-op stub via vite.config.ts alias.
 export function UpdateBanner() {
   const { pathname } = useLocation();
   const [dismissed, setDismissed] = useState(false);
@@ -29,17 +15,13 @@ export function UpdateBanner() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegisterError: (error) => {
-      // SW registration is best-effort. A failure shouldn't break the app.
       console.error('SW registration failed', error);
     },
   });
 
   if (!needRefresh || dismissed) return null;
 
-  // Strict route boundary: /session and any deep path under /session/.
-  // pathname.startsWith('/session') would also match a sibling route
-  // like '/sessions' which would silently disable refresh for users
-  // outside an actual interview if such a route is ever added.
+  // Strict boundary so a future '/sessions' route doesn't silently disable refresh.
   const inSession = pathname === '/session' || pathname.startsWith('/session/');
   const message = inSession
     ? 'Update ready. Finish your interview before refreshing.'

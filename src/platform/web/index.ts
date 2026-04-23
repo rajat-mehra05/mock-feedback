@@ -21,18 +21,8 @@ function requireOpenAIKey(key: string): void {
   }
 }
 
-/**
- * Best-effort: ask the browser to mark IndexedDB as persistent so it
- * survives storage pressure eviction. Chromium prompts the user (or
- * silently grants based on engagement). Safari almost always returns
- * false — that's a no-op, not an error to surface. We deliberately
- * don't gate the secret save on the result: a failed persist() request
- * shouldn't block the user from saving their key.
- *
- * The first call must be triggered from a user gesture (e.g. clicking
- * Save in the SettingsModal) to make the Chromium prompt fire reliably.
- * Calling it from a useEffect or a background task may silently no-op.
- */
+// Best-effort durability nudge; Chromium may prompt, Safari silently rejects.
+// Must be called from a user gesture for the Chromium prompt to fire.
 async function requestStoragePersistence(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.storage?.persist) return;
   try {
@@ -42,10 +32,7 @@ async function requestStoragePersistence(): Promise<void> {
   }
 }
 
-// Cache the in-flight promise, not just the resolved value — concurrent
-// callers (two analytics events fired during boot) must all await the same
-// `getOrCreateDeviceId` call, otherwise they race and each generates and
-// persists a distinct UUID.
+// Cache the in-flight promise so concurrent boot callers share one UUID generation.
 let deviceIdPromise: Promise<string> | null = null;
 function ensureDeviceId(): Promise<string> {
   if (!deviceIdPromise) {
@@ -63,12 +50,7 @@ export const webPlatform: Platform = {
       async set(key, value) {
         requireOpenAIKey(key);
         await saveApiKey(value);
-        // Fire-and-forget: persist() can trigger a Chromium permission
-        // prompt that blocks for seconds while the user decides. The
-        // key is already saved at this point and the persist hint is
-        // a best-effort durability nudge, not a precondition.
-        // Surface no rejection here — the helper swallows errors
-        // internally so the floating promise never rejects.
+        // Fire-and-forget; persist() can prompt for seconds and the key save shouldn't wait.
         void requestStoragePersistence();
       },
       async has(key) {

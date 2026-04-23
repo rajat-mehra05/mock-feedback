@@ -13,16 +13,7 @@ interface IosInstallModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// iOS Safari has no beforeinstallprompt event. Add to Home Screen is
-// strictly a manual flow via the Share menu. Show step-by-step
-// instructions with the Apple Share glyph rather than a screenshot —
-// screenshots age across iOS versions and become misleading after a
-// system redesign.
-//
-// The SVG glyph below is a hand-traced approximation of Apple's Share
-// icon that renders consistently regardless of iOS version, system
-// font, or OS theme. Decorative only (aria-hidden); the surrounding
-// text carries the real instruction.
+// iOS A2HS instructions; SVG glyph (not screenshot) ages cleanly across iOS versions.
 function ShareIconGlyph() {
   return (
     <svg

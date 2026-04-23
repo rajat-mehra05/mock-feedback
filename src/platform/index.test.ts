@@ -77,10 +77,7 @@ test('web secrets.set calls navigator.storage.persist after a successful save', 
   });
   vi.resetModules();
   const { platform } = await import('./index');
-  // Register cleanup with the in-scope platform reference so the
-  // secret is cleared even if the assertion below throws. setup.ts
-  // also clears across-test, but per-test cleanup keeps the secret
-  // out of the next assertion in the same module instance.
+  // Cleanup runs even if the assertion below throws.
   onTestFinished(async () => {
     await platform.storage.secrets.clear('openai_api_key').catch(() => undefined);
     vi.unstubAllGlobals();
