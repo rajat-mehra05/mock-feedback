@@ -62,7 +62,7 @@ export function IosInstallModal({ open, onOpenChange }: IosInstallModalProps) {
               1
             </span>
             <span>
-              Tap the <ShareIconGlyph /> <strong>Share</strong> button at the bottom of Safari.
+              Tap the <ShareIconGlyph /> <strong>Share</strong> button in the Safari toolbar.
             </span>
           </li>
           <li className="flex gap-3">

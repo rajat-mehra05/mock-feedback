@@ -33,6 +33,11 @@ const navigationRoute: PwaRuntimeRoute = {
   options: {
     cacheName: 'navigations',
     networkTimeoutSeconds: 3,
+    // Bound the cache: this app has a handful of routes today, but a
+    // future Vite SPA with many code-split routes could otherwise grow
+    // the cache unbounded as users browse around. Daily expiry keeps
+    // entries fresh enough that a stale 24h-old shell isn't typical.
+    expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
   },
 };
 

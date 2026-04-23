@@ -63,11 +63,13 @@ export const webPlatform: Platform = {
       async set(key, value) {
         requireOpenAIKey(key);
         await saveApiKey(value);
-        // After the user has committed a key, it's worth telling the
-        // browser to keep this origin's IndexedDB around even under
-        // storage pressure. Safari ignores this; Chromium grants it
-        // for installed PWAs and many regular sites.
-        await requestStoragePersistence();
+        // Fire-and-forget: persist() can trigger a Chromium permission
+        // prompt that blocks for seconds while the user decides. The
+        // key is already saved at this point and the persist hint is
+        // a best-effort durability nudge, not a precondition.
+        // Surface no rejection here — the helper swallows errors
+        // internally so the floating promise never rejects.
+        void requestStoragePersistence();
       },
       async has(key) {
         requireOpenAIKey(key);

@@ -215,10 +215,20 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // from a user gesture if any prior await has consumed the activation.
       // Explicit resume() is a no-op on Chromium where the context is
       // already running.
+      //
+      // Surface failure rather than swallowing: addModule() succeeds against
+      // a suspended context but no audio frames are processed, so the
+      // recording is silent. The previous "fall through and let addModule
+      // surface the error" assumption was wrong. The catch{} below routes
+      // a thrown error into setError(classifyMicError(...)) which surfaces
+      // a "Recording failed unexpectedly" UI rather than a silent mic.
       if (audioContext.state === 'suspended') {
-        await audioContext.resume().catch(() => {
-          /* fall through; addModule below will surface a real failure */
-        });
+        await audioContext.resume();
+      }
+      if (audioContext.state !== 'running') {
+        throw new Error(
+          `AudioContext failed to resume (state: ${audioContext.state}). On iOS this typically means user activation was consumed before recording started.`,
+        );
       }
 
       // AudioWorkletNode runs the downsample+Int16 pipeline on the audio

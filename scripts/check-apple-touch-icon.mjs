@@ -56,6 +56,14 @@ if (!buf.subarray(0, 8).equals(PNG_SIGNATURE)) {
 //   bytes 20..23  height (big-endian uint32)
 //   byte    24    bit depth
 //   byte    25    color type
+// Guard against truncated PNGs so readUInt* throws a friendly fail()
+// message instead of a raw RangeError. The first 26 bytes cover the
+// signature (8) + IHDR length (4) + chunk type (4) + width (4) +
+// height (4) + bit depth (1) + color type (1) = 26.
+if (buf.length < 26) {
+  fail(`truncated PNG: expected at least 26 bytes for signature + IHDR, got ${buf.length}`);
+}
+
 const chunkType = buf.subarray(12, 16).toString('ascii');
 if (chunkType !== 'IHDR') {
   fail(`expected IHDR as first chunk, got "${chunkType}"`);

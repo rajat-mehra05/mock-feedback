@@ -30,10 +30,21 @@ self.addEventListener('activate', (event) => {
       const cacheKeys = await caches.keys();
       await Promise.all(cacheKeys.map((key) => caches.delete(key)));
 
-      // 2. Unregister this SW so the origin reverts to no controller.
+      // 2. Take control of every in-scope tab. Without claim() the
+      //    kill-switch only controls clients that the previous SW was
+      //    already controlling (or that register with the kill-switch
+      //    on next load). claim() ensures matchAll() below returns the
+      //    full set of in-scope windows so the reload reaches all of
+      //    them on the first activation.
+      await self.clients.claim();
+
+      // 3. Unregister this SW so the origin reverts to no controller.
+      //    Ordering matters: claim() before unregister(), otherwise
+      //    the clients we want to reload are no longer considered
+      //    controlled by the time we enumerate them.
       await self.registration.unregister();
 
-      // 3. Force every controlled client to reload. The reload navigates
+      // 4. Force every controlled client to reload. The reload navigates
       //    to the same URL but no SW intercepts it this time, so the
       //    fetch hits the network and the app reloads clean.
       const clients = await self.clients.matchAll({ type: 'window' });

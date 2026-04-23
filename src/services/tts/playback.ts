@@ -18,16 +18,20 @@ export async function playAudioArrayBuffer(
   // iOS Safari opens a fresh AudioContext in the 'suspended' state
   // regardless of user activation. Explicit resume() nudges it awake.
   // On Chromium desktop the context is already 'running' so resume() is
-  // effectively a no-op. resume() rejects only if the context is
-  // already closed, which can't happen this early.
+  // effectively a no-op.
+  //
+  // If resume() rejects or the state stays 'suspended', source.start()
+  // below would queue playback but no audio would actually play (iOS
+  // fires no error, it simply stays silent). Propagate the failure so
+  // the caller can surface it or retry on the next user gesture.
   if (audioContext.state === 'suspended') {
-    await audioContext.resume().catch(() => {
-      // If resume() fails (can happen when the call chain has lost its
-      // user-activation trail on iOS), let the subsequent start() still
-      // try. Either the user gesture is still valid or playback silently
-      // fails — in the latter case the caller's AbortSignal or the STT
-      // flow's timeout will surface the stall.
-    });
+    await audioContext.resume().catch(() => undefined);
+  }
+  if (audioContext.state !== 'running') {
+    closeContext();
+    throw new Error(
+      `AudioContext could not resume (state: ${audioContext.state}). On iOS this usually means user activation was consumed before playback started.`,
+    );
   }
 
   let audioBuffer: AudioBuffer;
@@ -83,7 +87,21 @@ export async function playAudioArrayBuffer(
     }
   };
 
-  // Suspend the context when the tab goes hidden and resume on visible.
+  // Two flags coordinate visibility-driven and user-driven pause/resume
+  // so they don't fight each other. Without them the visibility handler
+  // on tab-restore would unconditionally resume() and override a
+  // user-initiated pause from the lock screen.
+  //
+  //   visibilitySuspended: true when WE suspended due to document.hidden
+  //     (so we know it's safe to resume on visible without overriding
+  //     user intent)
+  //   userPaused: true when the user pressed pause on the lock screen
+  //     or Control Center (so visibility-restore knows to keep paused)
+  let visibilitySuspended = false;
+  let userPaused = false;
+
+  // Suspend the context when the tab goes hidden and resume on visible
+  // unless the user has paused via the lock-screen control.
   // Without this, iOS Safari suspends the context for us but doesn't
   // always resume cleanly when the user switches back; manual control
   // makes the transition deterministic. Also covers the "phone rings
@@ -91,13 +109,29 @@ export async function playAudioArrayBuffer(
   const onVisibilityChange = () => {
     if (audioContext.state === 'closed') return;
     if (document.hidden) {
-      void audioContext.suspend().catch(() => {
-        /* best-effort */
-      });
+      // Only suspend if currently running. If user already paused,
+      // don't change the suspended-by-visibility flag — they get to
+      // own that state.
+      if (audioContext.state === 'running') {
+        visibilitySuspended = true;
+        void audioContext.suspend().catch(() => {
+          /* best-effort */
+        });
+      }
     } else {
-      void audioContext.resume().catch(() => {
-        /* best-effort */
-      });
+      // Resume only if WE were the one who suspended AND the user
+      // hasn't pressed pause in the meantime. Otherwise we'd override
+      // their explicit pause when they tab back to the app.
+      if (visibilitySuspended && !userPaused) {
+        visibilitySuspended = false;
+        void audioContext.resume().catch(() => {
+          /* best-effort */
+        });
+      } else if (visibilitySuspended) {
+        // User paused while tab was hidden. Clear the flag without
+        // resuming so a later user-play action handles the resume.
+        visibilitySuspended = false;
+      }
     }
   };
   document.addEventListener('visibilitychange', onVisibilityChange);
@@ -109,12 +143,14 @@ export async function playAudioArrayBuffer(
   if (mediaSession) {
     try {
       mediaSession.setActionHandler('pause', () => {
+        userPaused = true;
         if (audioContext.state === 'running') {
           void audioContext.suspend().catch(() => undefined);
         }
         mediaSession.playbackState = 'paused';
       });
       mediaSession.setActionHandler('play', () => {
+        userPaused = false;
         if (audioContext.state === 'suspended') {
           void audioContext.resume().catch(() => undefined);
         }

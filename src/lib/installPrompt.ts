@@ -13,6 +13,8 @@
 // help because the listener has to be in place before React mounts,
 // and Chromium fires the event exactly once per session.
 
+import { useSyncExternalStore } from 'react';
+
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   prompt(): Promise<void>;
@@ -83,7 +85,25 @@ export function initInstallPromptCapture(): void {
   window.addEventListener('appinstalled', appInstalledListener);
 }
 
-import { useSyncExternalStore } from 'react';
+/**
+ * Mark the stashed beforeinstallprompt event as consumed. Call this
+ * after the user has clicked the install CTA and the browser's prompt
+ * has resolved (regardless of accepted/dismissed outcome). Chromium
+ * rejects a second .prompt() call on the same event, so the UI must
+ * stop offering to call it.
+ *
+ * Notifying subscribers means the disabled={!promptEvent} state on
+ * install buttons flips back to disabled, which matches reality:
+ * there's no usable prompt to fire anymore. If the user dismissed,
+ * Chromium typically suppresses re-prompts for ~90 days; if they
+ * accepted, the appinstalled event will fire and clear the CTA via a
+ * different code path.
+ */
+export function consumeInstallPrompt(): void {
+  if (stashedEvent === null) return;
+  stashedEvent = null;
+  notify();
+}
 
 /**
  * Returns the most recent beforeinstallprompt event (or null if Chrome

@@ -2,7 +2,11 @@ import { expect, test, vi, afterEach } from 'vitest';
 import { db, createSession, getSession, getAllSessions, deleteSession } from './sessionsDexie';
 import { makeSession } from '@/test/factories';
 
-afterEach(() => {
+// setup.ts also clears sessions globally, but doing it explicitly here
+// keeps the test file readable and bulletproof against an assertion
+// failing before the per-test trailing clear runs.
+afterEach(async () => {
+  await db.sessions.clear();
   vi.unstubAllGlobals();
 });
 
@@ -30,9 +34,6 @@ test('session lifecycle: create, read, list ordering, and delete', async () => {
   const remaining = await getAllSessions();
   expect(remaining).toHaveLength(2);
   expect(remaining.map((s) => s.id)).toEqual(['newer', 'older']);
-
-  await db.sessions.clear();
-  expect(await getAllSessions()).toHaveLength(0);
 });
 
 test('createSession evicts the oldest session when storage is over 80% quota', async () => {
@@ -57,8 +58,6 @@ test('createSession evicts the oldest session when storage is over 80% quota', a
   const ids = (await getAllSessions()).map((s) => s.id).sort();
   expect(ids).toEqual(['incoming', 'middle', 'newer']);
   // 'oldest' was evicted to make room for 'incoming'.
-
-  await db.sessions.clear();
 });
 
 test('createSession does NOT evict when usage is below 80% quota', async () => {
@@ -77,8 +76,6 @@ test('createSession does NOT evict when usage is below 80% quota', async () => {
 
   const all = await getAllSessions();
   expect(all).toHaveLength(2);
-
-  await db.sessions.clear();
 });
 
 test('createSession tolerates a missing navigator.storage API (falls through cleanly)', async () => {
@@ -89,6 +86,4 @@ test('createSession tolerates a missing navigator.storage API (falls through cle
   await expect(
     createSession(makeSession({ id: 'works-anyway', createdAt: new Date('2026-01-01') })),
   ).resolves.toBeUndefined();
-
-  await db.sessions.clear();
 });

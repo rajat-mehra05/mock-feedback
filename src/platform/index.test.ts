@@ -76,17 +76,19 @@ test('web secrets.set calls navigator.storage.persist after a successful save', 
     storage: { persist: persistMock, estimate: vi.fn().mockResolvedValue({}) },
   });
   vi.resetModules();
-  onTestFinished(() => {
+  const { platform } = await import('./index');
+  // Register cleanup with the in-scope platform reference so the
+  // secret is cleared even if the assertion below throws. setup.ts
+  // also clears across-test, but per-test cleanup keeps the secret
+  // out of the next assertion in the same module instance.
+  onTestFinished(async () => {
+    await platform.storage.secrets.clear('openai_api_key').catch(() => undefined);
     vi.unstubAllGlobals();
     vi.resetModules();
   });
 
-  const { platform } = await import('./index');
   await platform.storage.secrets.set('openai_api_key', 'sk-test');
-
   expect(persistMock).toHaveBeenCalledOnce();
-  // Cleanup so the apiKey doesn't leak across tests.
-  await platform.storage.secrets.clear('openai_api_key');
 });
 
 test('web secrets.set tolerates a false return from persist (Safari path)', async ({
@@ -98,17 +100,17 @@ test('web secrets.set tolerates a false return from persist (Safari path)', asyn
     storage: { persist: persistMock, estimate: vi.fn().mockResolvedValue({}) },
   });
   vi.resetModules();
-  onTestFinished(() => {
+  const { platform } = await import('./index');
+  onTestFinished(async () => {
+    await platform.storage.secrets.clear('openai_api_key').catch(() => undefined);
     vi.unstubAllGlobals();
     vi.resetModules();
   });
 
-  const { platform } = await import('./index');
   await expect(
     platform.storage.secrets.set('openai_api_key', 'sk-safari'),
   ).resolves.toBeUndefined();
   expect(persistMock).toHaveBeenCalledOnce();
-  await platform.storage.secrets.clear('openai_api_key');
 });
 
 test('web secrets.set tolerates a thrown persist (paranoid browser path)', async ({
@@ -120,13 +122,13 @@ test('web secrets.set tolerates a thrown persist (paranoid browser path)', async
     storage: { persist: persistMock, estimate: vi.fn().mockResolvedValue({}) },
   });
   vi.resetModules();
-  onTestFinished(() => {
+  const { platform } = await import('./index');
+  onTestFinished(async () => {
+    await platform.storage.secrets.clear('openai_api_key').catch(() => undefined);
     vi.unstubAllGlobals();
     vi.resetModules();
   });
 
-  const { platform } = await import('./index');
   await expect(platform.storage.secrets.set('openai_api_key', 'sk-test')).resolves.toBeUndefined();
   expect(persistMock).toHaveBeenCalledOnce();
-  await platform.storage.secrets.clear('openai_api_key');
 });

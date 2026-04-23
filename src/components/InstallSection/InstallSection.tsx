@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentPlatform, type Platform } from '@/lib/detectPlatform';
-import { useInstallPrompt } from '@/lib/installPrompt';
+import { consumeInstallPrompt, useInstallPrompt } from '@/lib/installPrompt';
 import { trackEvent } from '@/lib/analytics';
 import { DownloadCta } from './DownloadCta';
 import { OsWarning, type TauriOs } from './OsWarning';
@@ -69,6 +69,12 @@ function MobileInstallCta({ platform, promptEvent }: CtaProps) {
       );
     } catch {
       // prompt() can reject on double-call; swallow silently.
+    } finally {
+      // Clear the stashed event so the disabled={!promptEvent} state
+      // on the button accurately reflects that the prompt has been
+      // consumed. Chromium rejects a second .prompt() on the same
+      // event, so we shouldn't keep offering to fire it.
+      consumeInstallPrompt();
     }
   };
 
@@ -142,19 +148,22 @@ function MobileInstallCta({ platform, promptEvent }: CtaProps) {
 
 function DesktopInstallCta({ platform, promptEvent }: CtaProps) {
   const [byokOpen, setByokOpen] = useState(false);
-  const tauriOs: TauriOs = platform.os === 'windows' ? 'windows' : 'mac';
-  const [cta, setCta] = useState<TauriOs>(tauriOs);
+  // Only mac and Windows have Tauri builds. Linux and unknown-OS users
+  // get a PWA-primary layout without the misleading .dmg CTA.
+  const hasTauriBuild = platform.os === 'mac' || platform.os === 'windows';
+  const initialTauriOs: TauriOs = platform.os === 'windows' ? 'windows' : 'mac';
+  const [cta, setCta] = useState<TauriOs>(initialTauriOs);
 
   // Fire a one-time "prompt shown" impression when the desktop PWA
   // secondary CTA is actually visible (i.e. supportsPwaInstall).
   useEffect(() => {
     if (platform.supportsPwaInstall) {
       void trackEvent('pwa_install_prompt_shown', {
-        surface: 'desktop-secondary',
+        surface: hasTauriBuild ? 'desktop-secondary' : 'desktop-primary',
         browser: platform.browser,
       });
     }
-  }, [platform.supportsPwaInstall, platform.browser]);
+  }, [platform.supportsPwaInstall, platform.browser, hasTauriBuild]);
 
   const handlePwaInstall = async () => {
     if (!promptEvent) return;
@@ -163,12 +172,69 @@ function DesktopInstallCta({ platform, promptEvent }: CtaProps) {
       const { outcome } = await promptEvent.userChoice;
       void trackEvent(
         outcome === 'accepted' ? 'pwa_install_prompt_accepted' : 'pwa_install_prompt_dismissed',
-        { surface: 'desktop-secondary' },
+        { surface: hasTauriBuild ? 'desktop-secondary' : 'desktop-primary' },
       );
     } catch {
       /* double-prompt rejection is safe to ignore */
+    } finally {
+      consumeInstallPrompt();
     }
   };
+
+  // Linux / unknown OS: no native Tauri build. PWA is the only install
+  // path. Promote it to primary; don't render the misleading .dmg CTA.
+  if (!hasTauriBuild) {
+    return (
+      <section className="border-4 border-black bg-white p-8 shadow-neo-lg sm:p-12">
+        <p className="text-xs font-black uppercase tracking-widest text-black/50">
+          Install as a web app
+        </p>
+        <h2 className="mt-3 text-xl font-black uppercase leading-tight tracking-tight text-black sm:text-2xl">
+          VoiceRound on{' '}
+          <span className="relative inline-block whitespace-nowrap">
+            <span className="relative z-10">your desktop.</span>
+            <span
+              className="absolute bottom-1 left-0 -z-0 h-3 w-full -rotate-1 bg-neo-accent"
+              aria-hidden="true"
+            />
+          </span>
+        </h2>
+        <p className="mt-4 text-sm font-medium text-black/70">
+          No native build for Linux. The web app installs from your browser and runs in a standalone
+          window.
+        </p>
+
+        {platform.supportsPwaInstall ? (
+          <>
+            <button
+              type="button"
+              onClick={() => void handlePwaInstall()}
+              disabled={!promptEvent}
+              className="mt-6 cursor-pointer border-2 border-black bg-neo-accent px-6 py-3 text-sm font-bold uppercase tracking-wide text-black shadow-neo transition-all hover:-translate-y-0.5 hover:shadow-neo-md disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Install in browser
+            </button>
+            <p className="mt-3 text-xs font-medium text-black/60">
+              Web app stores your API key in the browser instead of your OS keychain.{' '}
+              <button
+                type="button"
+                onClick={() => setByokOpen(true)}
+                className="cursor-pointer underline hover:text-black"
+              >
+                Why the difference?
+              </button>
+            </p>
+          </>
+        ) : (
+          <p className="mt-6 text-sm font-medium text-black/70">
+            Your browser doesn&apos;t expose a programmatic install. Use the browser&apos;s menu
+            (Chrome / Edge: &quot;Install VoiceRound&quot;; Firefox Android: three-dot menu).
+          </p>
+        )}
+        <ByokExplainerModal open={byokOpen} onOpenChange={setByokOpen} />
+      </section>
+    );
+  }
 
   return (
     <section className="border-4 border-black bg-white p-8 shadow-neo-lg sm:p-12">

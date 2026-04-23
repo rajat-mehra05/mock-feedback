@@ -55,23 +55,29 @@ test('appinstalled event clears the stashed prompt and flips installed to true',
   expect(result.current.event).toBeNull();
 });
 
-test('initInstallPromptCapture is idempotent (safe to call twice)', () => {
-  initInstallPromptCapture();
-  initInstallPromptCapture();
+test('initInstallPromptCapture is idempotent: only one window listener registered for each event', () => {
+  // Spy on window.addEventListener so we can directly verify that a
+  // second call to initInstallPromptCapture does not register the
+  // listeners twice. Counting fires from a single dispatchEvent
+  // wouldn't catch double-registration because both copies write the
+  // same module-level state.
+  const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+  try {
+    initInstallPromptCapture();
+    initInstallPromptCapture();
 
-  const { result } = renderHook(() => useInstallPrompt());
-  let fireCount = 0;
-  act(() => {
-    fireBeforeInstallPrompt();
-    fireCount++;
-  });
+    const beforePromptCount = addEventListenerSpy.mock.calls.filter(
+      ([type]) => type === 'beforeinstallprompt',
+    ).length;
+    const appInstalledCount = addEventListenerSpy.mock.calls.filter(
+      ([type]) => type === 'appinstalled',
+    ).length;
 
-  // If the listener registered twice, both would fire on a single
-  // dispatchEvent, but they'd both write the same event so we can't
-  // observe duplication that way. Instead assert that re-init didn't
-  // wipe the stashed event.
-  expect(result.current.event).not.toBeNull();
-  expect(fireCount).toBe(1);
+    expect(beforePromptCount).toBe(1);
+    expect(appInstalledCount).toBe(1);
+  } finally {
+    addEventListenerSpy.mockRestore();
+  }
 });
 
 test('preventDefault is called on the captured event (Chromium needs it to suppress the native infobar)', () => {

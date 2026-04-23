@@ -36,7 +36,11 @@ export function UpdateBanner() {
 
   if (!needRefresh || dismissed) return null;
 
-  const inSession = pathname.startsWith('/session');
+  // Strict route boundary: /session and any deep path under /session/.
+  // pathname.startsWith('/session') would also match a sibling route
+  // like '/sessions' which would silently disable refresh for users
+  // outside an actual interview if such a route is ever added.
+  const inSession = pathname === '/session' || pathname.startsWith('/session/');
   const message = inSession
     ? 'Update ready. Finish your interview before refreshing.'
     : 'Update ready. Refresh to apply.';

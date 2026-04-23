@@ -14,12 +14,24 @@ import { runtimeCaching } from './workboxConfig';
 // add the route to a separate config object with a whitelist; do not
 // loosen this test.
 
-const FORBIDDEN_URLS = [
-  'https://api.openai.com/v1/chat/completions',
-  'https://api.openai.com/v1/audio/transcriptions',
-  'https://api.openai.com/v1/audio/speech',
-  'https://api.github.com/repos/rajat-mehra05/voice-round/releases/latest',
-];
+// Hosts that no Workbox route may match, period — regardless of which
+// path is being fetched. Asserting host-level rather than full-URL means
+// a future "/v1/files" or "/v1/models" call also can't slip through.
+const FORBIDDEN_HOSTS = ['api.openai.com', 'api.github.com'];
+
+// A spread of paths per host so a route that uses a path-only regex
+// would still get caught alongside a full-URL pattern. Add new paths
+// as the app starts hitting them.
+const FORBIDDEN_PATHS: Record<string, string[]> = {
+  'api.openai.com': [
+    '/v1/chat/completions',
+    '/v1/audio/transcriptions',
+    '/v1/audio/speech',
+    '/v1/models',
+    '/v1/files',
+  ],
+  'api.github.com': ['/repos/rajat-mehra05/voice-round/releases/latest'],
+};
 
 function matchesUrl(
   pattern: RegExp | ((options: { request: Request; url: URL }) => boolean),
@@ -34,14 +46,19 @@ function matchesUrl(
   return pattern({ request, url: parsed });
 }
 
-test('no runtime caching route matches credential-bearing URLs', () => {
-  for (const url of FORBIDDEN_URLS) {
-    for (const route of runtimeCaching) {
-      expect(
-        matchesUrl(route.urlPattern, url),
-        `Route with handler "${route.handler}" must not match ${url}. ` +
-          `OpenAI / GitHub credential-bearing requests must bypass Workbox entirely.`,
-      ).toBe(false);
+test('no runtime caching route matches any URL on credential-bearing hosts', () => {
+  for (const host of FORBIDDEN_HOSTS) {
+    const paths = FORBIDDEN_PATHS[host] ?? ['/'];
+    for (const path of paths) {
+      const url = `https://${host}${path}`;
+      for (const route of runtimeCaching) {
+        expect(
+          matchesUrl(route.urlPattern, url),
+          `Route with handler "${route.handler}" must not match ${url}. ` +
+            `Any route touching ${host} must be removed; OpenAI / GitHub ` +
+            `credential-bearing requests must bypass Workbox entirely.`,
+        ).toBe(false);
+      }
     }
   }
 });
