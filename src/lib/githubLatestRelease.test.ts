@@ -92,6 +92,14 @@ test('pickAssetForPlatform returns null when no matching extension exists', () =
   expect(pickAssetForPlatform([], 'mac')).toBeNull();
 });
 
+test('pickAssetForPlatform returns null on Windows when only non-setup .exe binaries exist', () => {
+  // A loose fallback would hand the user a non-installer binary (e.g. a
+  // standalone updater). Better to return null and let the UI surface
+  // "Open releases page" so the user picks the right file themselves.
+  const assets = [{ name: 'VoiceRound-updater.exe', browser_download_url: 'https://x/upd.exe' }];
+  expect(pickAssetForPlatform(assets, 'windows')).toBeNull();
+});
+
 test('fetchLatestRelease throws on a 403 so callers can distinguish "up to date" from "can\'t check"', async () => {
   // Swallowing to null would collapse "rate-limited" with "up to date".
   server.use(

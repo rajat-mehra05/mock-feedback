@@ -48,7 +48,10 @@ export async function fetchLatestRelease(): Promise<GitHubRelease> {
 }
 
 // Prefer `universal` .dmg (tauri-action's `--target universal-apple-darwin`
-// output) and `setup` .exe (NSIS installer over the updater binary).
+// output) and a `-setup.exe` NSIS installer on Windows. If the Windows
+// release ever ships a non-installer .exe (e.g. a standalone updater
+// binary), return null instead of handing the user the wrong file — the
+// UI falls back to "Open releases page".
 export function pickAssetForPlatform(
   assets: GitHubReleaseAsset[],
   platform: 'mac' | 'windows',
@@ -57,6 +60,8 @@ export function pickAssetForPlatform(
     const dmgs = assets.filter((a) => a.name.toLowerCase().endsWith('.dmg'));
     return dmgs.find((a) => /universal/i.test(a.name)) ?? dmgs[0] ?? null;
   }
-  const exes = assets.filter((a) => a.name.toLowerCase().endsWith('.exe'));
-  return exes.find((a) => /setup/i.test(a.name)) ?? exes[0] ?? null;
+  const installer = assets.find(
+    (a) => a.name.toLowerCase().endsWith('.exe') && /setup/i.test(a.name),
+  );
+  return installer ?? null;
 }

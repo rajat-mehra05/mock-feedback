@@ -5,7 +5,10 @@ interface OsWarningProps {
   platform: DownloadTarget;
 }
 
-const MAC_QUARANTINE_COMMAND = 'xattr -d com.apple.quarantine /Applications/VoiceRound.app';
+// `-dr` is recursive: the DMG drag-install puts the quarantine attribute on
+// nested files inside the bundle too, so a non-recursive `-d` leaves most of
+// the .app still quarantined and the Gatekeeper prompt returns.
+const MAC_QUARANTINE_COMMAND = 'xattr -dr com.apple.quarantine /Applications/VoiceRound.app';
 
 export function OsWarning({ platform }: OsWarningProps) {
   const isMac = platform === 'mac';

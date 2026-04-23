@@ -42,7 +42,7 @@ test('macOS visitor can download the mac asset, then switch to Windows and downl
 
   expect(screen.getByRole('heading', { name: /you're on macos/i })).toBeInTheDocument();
   expect(screen.getByText(/expect a one-time os warning/i)).toBeInTheDocument();
-  expect(screen.getByText(/xattr -d com\.apple\.quarantine/)).toBeInTheDocument();
+  expect(screen.getByText(/xattr -dr com\.apple\.quarantine/)).toBeInTheDocument();
   const primary = screen.getByRole('button', { name: /download for macos/i });
 
   await user.click(primary);
@@ -51,7 +51,7 @@ test('macOS visitor can download the mac asset, then switch to Windows and downl
   await user.click(screen.getByRole('button', { name: /^windows$/i }));
   expect(screen.getByRole('heading', { name: /you're on windows/i })).toBeInTheDocument();
   expect(screen.getByText(/Windows protected your PC/i)).toBeInTheDocument();
-  expect(screen.queryByText(/xattr -d com\.apple\.quarantine/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/xattr -dr com\.apple\.quarantine/)).not.toBeInTheDocument();
   expect(downloadSpy).toHaveBeenCalledWith(WIN_ASSET.browser_download_url, WIN_ASSET.name);
 
   vi.restoreAllMocks();
