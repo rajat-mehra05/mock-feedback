@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentPlatform, type Platform } from '@/lib/detectPlatform';
@@ -54,6 +54,7 @@ async function runInstallPrompt(
 
 function MobileInstallCta({ platform, promptEvent }: CtaProps) {
   const [iosOpen, setIosOpen] = useState(false);
+  const iosInstructionsTrackedRef = useRef(false);
   const surface = platform.os === 'ios' ? 'mobile-ios' : 'mobile-other';
 
   // Fire once per mount; route remounts count as a new impression.
@@ -69,8 +70,9 @@ function MobileInstallCta({ platform, promptEvent }: CtaProps) {
 
   const handleIosInstall = () => {
     setIosOpen(true);
-    // iOS provides no install-confirm signal; track the impression. Real install requires
-    // a follow-up display-mode standalone check on the next visit.
+    if (iosInstructionsTrackedRef.current) return;
+    iosInstructionsTrackedRef.current = true;
+    // iOS has no install-confirm signal; fire one impression per mount to match pwa_install_prompt_shown.
     void trackEvent('pwa_install_instructions_shown', { surface });
   };
 
