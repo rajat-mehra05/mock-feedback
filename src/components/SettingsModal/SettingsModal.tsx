@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useApiKey } from '@/hooks/useApiKey/useApiKey';
 import { ApiKeyInput } from '@/components/ApiKeyInput/ApiKeyInput';
+import { ByokExplainerModal } from '@/components/InstallSection/ByokExplainerModal';
 import { UpdateCheckRow } from './UpdateCheckRow';
 import { APP_NAME } from '@/constants/copy';
 
@@ -19,6 +20,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { hasKey, remove } = useApiKey();
+  const [byokOpen, setByokOpen] = useState(false);
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -74,20 +76,35 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <span className="text-black/70">No key configured</span>
               )}
             </div>
-            {hasKey && (
+            {hasKey ? (
               <Button type="button" variant="destructive" size="sm" onClick={() => void remove()}>
-                Remove
+                Forget my key
               </Button>
-            )}
+            ) : null}
           </div>
 
+          {/* PWA.0: BYOK transparency. Web/PWA storage is IndexedDB; the
+              desktop app uses the OS keychain. The explainer modal
+              spells out the implications so users on shared devices or
+              with extensions installed know what they're trading. */}
+          {import.meta.env.VITE_TARGET !== 'tauri' ? (
+            <button
+              type="button"
+              onClick={() => setByokOpen(true)}
+              className="cursor-pointer text-left text-xs font-medium text-black/60 underline hover:text-black"
+            >
+              How is my key stored?
+            </button>
+          ) : null}
+
           {/* Desktop only; web has no installed artifact to update. */}
-          {import.meta.env.VITE_TARGET === 'tauri' && (
+          {import.meta.env.VITE_TARGET === 'tauri' ? (
             <div className="border-t-2 border-black/20 pt-4">
               <UpdateCheckRow />
             </div>
-          )}
+          ) : null}
         </div>
+        <ByokExplainerModal open={byokOpen} onOpenChange={setByokOpen} />
       </DialogContent>
     </Dialog>
   );

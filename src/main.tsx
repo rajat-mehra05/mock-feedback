@@ -2,6 +2,32 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { initInstallPromptCapture } from '@/lib/installPrompt';
+
+// PWA.4: register the beforeinstallprompt + appinstalled listeners
+// before React mounts. Chromium fires beforeinstallprompt exactly once,
+// driven by its own engagement heuristics; missing it strands the
+// in-app install CTA. No-op outside the web target (Tauri has no
+// install prompt to capture) but cheap to call.
+if (import.meta.env.VITE_TARGET !== 'tauri') {
+  initInstallPromptCapture();
+
+  // Track the display mode at session start so install-prompt funnel
+  // analysis can attribute behaviour by surface (browser tab vs.
+  // installed PWA standalone vs. WCO etc). Fired once per page load,
+  // which is the natural granularity. Defer the analytics import to
+  // keep the entry chunk lean.
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    const modes = ['standalone', 'minimal-ui', 'fullscreen', 'window-controls-overlay'] as const;
+    const matched =
+      modes.find((m) => window.matchMedia(`(display-mode: ${m})`).matches) ?? 'browser';
+    void import('@/lib/analytics')
+      .then(({ trackEvent }) => trackEvent('display_mode_at_session_start', { mode: matched }))
+      .catch(() => {
+        /* analytics best-effort */
+      });
+  }
+}
 
 async function boot(): Promise<void> {
   // On Tauri, block the render on the IndexedDB → keychain migration so the

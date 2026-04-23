@@ -3,15 +3,90 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
+import { runtimeCaching } from './src/lib/pwa/workboxConfig';
 
 export default defineConfig(({ mode }) => {
   const isTauri = mode === 'tauri';
 
+  // PWA only ships in the web build. Tauri's webview has no use for a
+  // service worker (the native shell handles app lifecycle, the Rust
+  // proxy handles network) and registering one in the Tauri context is
+  // undefined behaviour territory.
+  const pwaPlugin = isTauri
+    ? []
+    : [
+        VitePWA({
+          registerType: 'prompt',
+          injectRegister: 'auto',
+          // devOptions intentionally omitted (defaults to disabled). Opt-in
+          // only when explicitly testing SW behaviour. Otherwise the dev
+          // server caches stale modules and produces "I changed code, why
+          // is it stale" surprises during normal development.
+          workbox: {
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+            cleanupOutdatedCaches: true,
+            runtimeCaching,
+            // Default navigation fallback to the precached shell. The
+            // navigation route in runtimeCaching above handles online-but-
+            // slow with NetworkFirst + 3s timeout. This kicks in for true
+            // offline.
+            navigateFallback: '/index.html',
+          },
+          manifest: {
+            name: 'VoiceRound',
+            short_name: 'VoiceRound',
+            description:
+              'AI-powered mock interviewer for technical interview practice. Voice-based Q&A with detailed feedback.',
+            id: '/',
+            start_url: '/',
+            scope: '/',
+            display: 'standalone',
+            orientation: 'any',
+            theme_color: '#fffdf5',
+            background_color: '#fffdf5',
+            categories: ['education', 'productivity'],
+            launch_handler: { client_mode: 'navigate-existing' },
+            icons: [
+              { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+              {
+                src: '/icons/icon-192-maskable.png',
+                sizes: '192x192',
+                type: 'image/png',
+                purpose: 'maskable',
+              },
+              {
+                src: '/icons/icon-512-maskable.png',
+                sizes: '512x512',
+                type: 'image/png',
+                purpose: 'maskable',
+              },
+            ],
+            shortcuts: [
+              {
+                name: 'Start interview',
+                short_name: 'Start',
+                description: 'Begin a new mock interview session',
+                url: '/',
+              },
+            ],
+          },
+        }),
+      ];
+
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), ...pwaPlugin],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        // In Tauri builds vite-plugin-pwa is not loaded, so the virtual
+        // module it provides cannot resolve. Alias the import to a no-op
+        // stub so UpdateBanner compiles in both targets without
+        // duplicating the import chain.
+        ...(isTauri && {
+          'virtual:pwa-register/react': path.resolve(__dirname, './src/lib/pwa/pwaRegisterStub.ts'),
+        }),
       },
     },
     // Don't clear the terminal so Tauri's output stays visible alongside Vite's.

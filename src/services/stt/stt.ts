@@ -25,6 +25,17 @@ export async function transcribeAudio(
   // full-blob upload so the stage still appears in the perf log.
   if (!streaming || !streamingId) mark('transcribe_start');
 
+  // Per-upload diagnostic log so device-specific transcription failures
+  // ("works on Android, fails on iPhone 12") can be cross-referenced
+  // against the actual blob shape. The AudioWorklet produces audio/wav
+  // uniformly today, but logging size + container makes a future MIME
+  // regression visible without instrumenting downstream.
+  console.debug(
+    `[stt] upload blob: type=${blob.type || '(unset)'} size=${blob.size}B streaming=${
+      streaming && streamingId ? 'yes' : 'no'
+    }`,
+  );
+
   try {
     if (streaming && streamingId) {
       return await streaming.commit(

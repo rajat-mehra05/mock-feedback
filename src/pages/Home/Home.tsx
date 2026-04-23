@@ -104,8 +104,15 @@ export function Home() {
         </div>
       </section>
 
-      {/* Install section — web-only. Desktop users already have the app. */}
-      {import.meta.env.VITE_TARGET !== 'tauri' && <InstallSection />}
+      {/* Install section — web-only and desktop-viewport-only. The CTAs pitch
+          .dmg/.exe downloads which are useless on a phone, and the "You're on
+          macOS/Windows" detection is desktop-shaped. PWA.4 will replace this
+          with a real mobile install CTA. */}
+      {import.meta.env.VITE_TARGET !== 'tauri' ? (
+        <div className="hidden md:block">
+          <InstallSection />
+        </div>
+      ) : null}
 
       {/* Footer */}
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-4 text-center text-sm font-bold text-black/60">
@@ -132,24 +139,25 @@ export function Home() {
         >
           Open an issue
         </a>
-        {/* Desktop download CTA — web-only. Desktop users are already
-            running the native app, so the pitch is moot there. */}
-        {import.meta.env.VITE_TARGET !== 'tauri' && (
+        {/* Desktop download CTA — web-only and hidden on mobile (links a
+            .dmg/.exe which the user can't run on a phone). PWA.4 replaces
+            this with a per-device-aware install path. */}
+        {import.meta.env.VITE_TARGET !== 'tauri' ? (
           <>
-            <span aria-hidden="true" className="text-black/20">
+            <span aria-hidden="true" className="hidden text-black/20 md:inline">
               |
             </span>
             <a
               href={GITHUB_RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-black"
+              className="hidden underline hover:text-black md:inline"
               title={`${HOME_DESKTOP_CTA_HINT} macOS · Windows`}
             >
               {HOME_DESKTOP_CTA_LABEL}
             </a>
           </>
-        )}
+        ) : null}
       </footer>
 
       <StartModal open={startOpen} onOpenChange={setStartOpen} />

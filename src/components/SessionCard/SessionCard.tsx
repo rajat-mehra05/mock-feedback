@@ -73,15 +73,15 @@ export function SessionCard({ session, onDelete }: SessionCardProps) {
           </CardFooter>
         </Card>
       </Link>
-      {onDelete && (
+      {onDelete ? (
         <button
           onClick={() => onDelete(session.id)}
           aria-label={`Delete ${session.topic} session`}
-          className="absolute bottom-4 right-6 flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000] transition-all duration-100 group-hover/article:-translate-y-1 hover:brightness-90 focus-visible:ring-2 focus-visible:ring-black"
+          className="absolute bottom-3 right-3 flex h-11 w-11 cursor-pointer items-center justify-center border-2 border-black bg-neo-accent text-black shadow-[2px_2px_0px_0px_#000] transition-all duration-100 group-hover/article:-translate-y-1 hover:brightness-90 focus-visible:ring-2 focus-visible:ring-black sm:bottom-4 sm:right-6 sm:h-7 sm:w-7"
         >
-          <Trash2Icon className="h-3.5 w-3.5" />
+          <Trash2Icon className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
         </button>
-      )}
+      ) : null}
     </article>
   );
 }

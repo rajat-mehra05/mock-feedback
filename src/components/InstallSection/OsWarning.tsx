@@ -1,8 +1,11 @@
-import type { DownloadTarget } from '@/lib/detectDownloadTarget';
 import { CopyableCommand } from './CopyableCommand';
 
+// Restricted to the OSes for which a Tauri build exists. The PWA install
+// path (mobile + desktop browser) doesn't go through OsWarning at all.
+export type TauriOs = 'mac' | 'windows';
+
 interface OsWarningProps {
-  platform: DownloadTarget;
+  platform: TauriOs;
 }
 
 // `-dr` is recursive: the DMG drag-install puts the quarantine attribute on

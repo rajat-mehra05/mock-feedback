@@ -211,6 +211,15 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
+      // iOS Safari starts a fresh AudioContext suspended even when called
+      // from a user gesture if any prior await has consumed the activation.
+      // Explicit resume() is a no-op on Chromium where the context is
+      // already running.
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume().catch(() => {
+          /* fall through; addModule below will surface a real failure */
+        });
+      }
 
       // AudioWorkletNode runs the downsample+Int16 pipeline on the audio
       // thread. `addModule` is a no-op when the module is already registered

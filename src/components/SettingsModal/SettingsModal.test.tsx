@@ -28,7 +28,7 @@ test('user saves a new key, sees confirmation, then removes the key', async () =
 
   await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeInTheDocument());
 
-  await user.click(screen.getByRole('button', { name: /remove/i }));
+  await user.click(screen.getByRole('button', { name: /forget my key/i }));
   await waitFor(() => expect(screen.getByText(/no key configured/i)).toBeInTheDocument());
 });
 
