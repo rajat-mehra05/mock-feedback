@@ -2,6 +2,24 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { initInstallPromptCapture } from '@/lib/installPrompt';
+
+// PWA.4: capture beforeinstallprompt before React mounts (Chromium fires it exactly once per session).
+if (import.meta.env.VITE_TARGET !== 'tauri') {
+  initInstallPromptCapture();
+
+  // Display-mode telemetry attributes install-prompt funnel by surface.
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    const modes = ['standalone', 'minimal-ui', 'fullscreen', 'window-controls-overlay'] as const;
+    const matched =
+      modes.find((m) => window.matchMedia(`(display-mode: ${m})`).matches) ?? 'browser';
+    void import('@/lib/analytics')
+      .then(({ trackEvent }) => trackEvent('display_mode_at_session_start', { mode: matched }))
+      .catch(() => {
+        /* analytics best-effort */
+      });
+  }
+}
 
 async function boot(): Promise<void> {
   // On Tauri, block the render on the IndexedDB → keychain migration so the

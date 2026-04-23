@@ -7,8 +7,26 @@
       name="description"
       content="AI-powered mock interviewer that helps developers practice technical interviews with voice-based Q&A and detailed feedback — VoiceRound."
     />
+    <!-- PWA: theme color. Single value because the app has no dark mode
+         today, so dual light/dark values would be identical. Add a
+         dark variant if a dark theme ever ships.
+         The <link rel="manifest"> is injected by vite-plugin-pwa at build
+         time; the manifest itself is configured in vite.config.ts. -->
+    <meta name="theme-color" content="#fffdf5" />
+
+    <!-- PWA: standalone hints. Ship both the standard name and the
+         Apple-prefixed one. iOS Safari hasn't migrated to the standard
+         name and dropping the Apple form breaks iOS standalone. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VoiceRound" />
+    <!-- "default": white status bar background, dark icons. The
+         alternative "black-translucent" overlays content behind the
+         status bar and forces layout work this app doesn't budget for. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>VoiceRound</title>
   </head>
   <body>

@@ -25,6 +25,13 @@ export async function transcribeAudio(
   // full-blob upload so the stage still appears in the perf log.
   if (!streaming || !streamingId) mark('transcribe_start');
 
+  // Diagnostic for device-specific transcription failures (size + container).
+  console.debug(
+    `[stt] upload blob: type=${blob.type || '(unset)'} size=${blob.size}B streaming=${
+      streaming && streamingId ? 'yes' : 'no'
+    }`,
+  );
+
   try {
     if (streaming && streamingId) {
       return await streaming.commit(

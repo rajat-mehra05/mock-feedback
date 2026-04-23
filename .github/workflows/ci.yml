@@ -19,11 +19,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
           cache: npm
@@ -37,6 +37,9 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      - name: PWA apple-touch-icon invariants
+        run: npm run check:apple-touch-icon
+
       - name: Unit tests
         run: npm run test:coverage
 
@@ -46,6 +49,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: PWA no-Tauri-in-web-bundle invariant
+        run: npm run check:no-tauri-in-web-bundle
 
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12

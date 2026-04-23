@@ -1,10 +1,27 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { platform, SECRET_OPENAI_API_KEY } from '@/platform';
 import { _resetWebPlatformForTests } from '@/platform/web';
 import { server } from '@/test/msw/server';
+
+// jsdom matchMedia stub for detectPlatform's standalone check.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 

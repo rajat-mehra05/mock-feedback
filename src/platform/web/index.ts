@@ -21,10 +21,18 @@ function requireOpenAIKey(key: string): void {
   }
 }
 
-// Cache the in-flight promise, not just the resolved value — concurrent
-// callers (two analytics events fired during boot) must all await the same
-// `getOrCreateDeviceId` call, otherwise they race and each generates and
-// persists a distinct UUID.
+// Best-effort durability nudge; Chromium may prompt, Safari silently rejects.
+// Must be called from a user gesture for the Chromium prompt to fire.
+async function requestStoragePersistence(): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.storage?.persist) return;
+  try {
+    await navigator.storage.persist();
+  } catch {
+    /* swallow — best effort */
+  }
+}
+
+// Cache the in-flight promise so concurrent boot callers share one UUID generation.
 let deviceIdPromise: Promise<string> | null = null;
 function ensureDeviceId(): Promise<string> {
   if (!deviceIdPromise) {
@@ -42,6 +50,8 @@ export const webPlatform: Platform = {
       async set(key, value) {
         requireOpenAIKey(key);
         await saveApiKey(value);
+        // Fire-and-forget; persist() can prompt for seconds and the key save shouldn't wait.
+        void requestStoragePersistence();
       },
       async has(key) {
         requireOpenAIKey(key);

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import type { DownloadTarget } from '@/lib/detectDownloadTarget';
 import { fetchLatestRelease, pickAssetForPlatform } from '@/lib/githubLatestRelease';
 import { triggerDownload } from '@/lib/triggerDownload';
 import { GITHUB_RELEASES_URL } from '@/constants/copy';
+import type { TauriOs } from './OsWarning';
 
 type Status = 'idle' | 'fetching' | 'error';
 
-const PLATFORM_LABEL: Record<DownloadTarget, string> = {
+const PLATFORM_LABEL: Record<TauriOs, string> = {
   mac: 'macOS',
   windows: 'Windows',
 };
@@ -20,18 +20,18 @@ function getPrimaryLabel(status: Status, platformLabel: string): string {
 }
 
 interface DownloadCtaProps {
-  platform: DownloadTarget;
-  onSwitch: (next: DownloadTarget) => void;
+  platform: TauriOs;
+  onSwitch: (next: TauriOs) => void;
 }
 
 export function DownloadCta({ platform, onSwitch }: DownloadCtaProps) {
   const [status, setStatus] = useState<Status>('idle');
-  const otherPlatform: DownloadTarget = platform === 'mac' ? 'windows' : 'mac';
+  const otherPlatform: TauriOs = platform === 'mac' ? 'windows' : 'mac';
   const platformLabel = PLATFORM_LABEL[platform];
   const otherLabel = PLATFORM_LABEL[otherPlatform];
   const primaryLabel = getPrimaryLabel(status, platformLabel);
 
-  async function handleDownload(target: DownloadTarget): Promise<void> {
+  async function handleDownload(target: TauriOs): Promise<void> {
     onSwitch(target);
 
     // Error-state retry on the same platform matches the "Open releases page"

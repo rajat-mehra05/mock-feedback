@@ -211,10 +211,18 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
+      // iOS opens AudioContext suspended; throw on resume failure since addModule succeeds
+      // on a suspended context but no audio frames flow (silent recording).
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      if (audioContext.state !== 'running') {
+        throw new Error(
+          `AudioContext failed to resume (state: ${audioContext.state}). On iOS this typically means user activation was consumed before recording started.`,
+        );
+      }
 
-      // AudioWorkletNode runs the downsample+Int16 pipeline on the audio
-      // thread. `addModule` is a no-op when the module is already registered
-      // (it's preloaded at app boot).
+      // addModule is a no-op when preloaded at app boot.
       await audioContext.audioWorklet.addModule(WORKLET_URL);
       const workletNode = new AudioWorkletNode(audioContext, 'downsample-processor');
       workletNodeRef.current = workletNode;

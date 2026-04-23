@@ -7,6 +7,7 @@ import { AppRouter } from '@/components/AppRouter/AppRouter';
 import { Layout } from '@/components/Layout/Layout';
 import { ErrorBoundary, SessionErrorFallback } from '@/components/ErrorBoundary/ErrorBoundary';
 import { UpdateToast } from '@/components/UpdateToast/UpdateToast';
+import { UpdateBanner } from '@/components/UpdateBanner/UpdateBanner';
 import { Spinner } from '@/components/ui/spinner';
 import { Home } from '@/pages/Home/Home';
 const Session = lazy(() => import('@/pages/Session/Session').then((m) => ({ default: m.Session })));
@@ -88,10 +89,13 @@ export default function App() {
         <ApiKeyProvider>
           <AppRoutes />
         </ApiKeyProvider>
+        {/* UpdateBanner uses useLocation to adapt copy on /session. That
+            hook throws outside a Router, so keep this inside AppRouter. */}
+        {import.meta.env.VITE_TARGET !== 'tauri' ? <UpdateBanner /> : null}
       </AppRouter>
       <UpdateToast />
-      {import.meta.env.VITE_TARGET !== 'tauri' && <Analytics />}
-      {import.meta.env.DEV && <Agentation />}
+      {import.meta.env.VITE_TARGET !== 'tauri' ? <Analytics /> : null}
+      {import.meta.env.DEV ? <Agentation /> : null}
     </ErrorBoundary>
   );
 }

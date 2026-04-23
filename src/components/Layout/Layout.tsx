@@ -111,7 +111,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <Button
               ref={menuToggleRef}
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-expanded={mobileMenuOpen}
               aria-haspopup="menu"
