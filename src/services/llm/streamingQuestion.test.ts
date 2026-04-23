@@ -40,7 +40,7 @@ test('streaming turn speaks each sentence as it completes and returns the full q
   const fetchSpeech = vi
     .spyOn(platform.http.openai, 'fetchSpeech')
     .mockResolvedValue(new ArrayBuffer(0));
-  vi.mocked(playAudioArrayBuffer).mockClear();
+  vi.mocked(playAudioArrayBuffer).mockReset().mockResolvedValue(undefined);
 
   const textUpdates: string[] = [];
   const result = await streamAndSpeakQuestion({

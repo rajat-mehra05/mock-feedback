@@ -35,6 +35,36 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
     return cachedClient;
   }
 
+  async function fetchSpeechImpl(req: TtsRequest, signal?: AbortSignal): Promise<ArrayBuffer> {
+    /*
+      Network timeout covers only the fetch. Playback-side aborts use the
+      caller's signal directly so long responses don't get cut off mid-speech.
+    */
+    const { signal: networkSignal, cleanup } = createTimeoutSignal(
+      req.timeoutMs ?? TTS_TIMEOUT_MS,
+      signal,
+    );
+    try {
+      const client = await getClient();
+      const response = await client.audio.speech.create(
+        {
+          model: req.model,
+          voice: req.voice,
+          input: req.input,
+          instructions: req.instructions,
+          response_format: req.responseFormat,
+        },
+        { signal: networkSignal },
+      );
+      return await response.arrayBuffer();
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
+      throw classifyOpenAIError(error);
+    } finally {
+      cleanup();
+    }
+  }
+
   const adapter: OpenAIHttpAdapter = {
     async chat(req: ChatRequest, signal?: AbortSignal): Promise<string> {
       const { signal: merged, cleanup } = createTimeoutSignal(
@@ -97,36 +127,6 @@ export function makeWebOpenAIHttp(readKey: KeyReader): WebOpenAIHttp {
       await playAudioArrayBuffer(arrayBuffer, signal);
     },
   };
-
-  async function fetchSpeechImpl(req: TtsRequest, signal?: AbortSignal): Promise<ArrayBuffer> {
-    /*
-      Network timeout covers only the fetch. Playback-side aborts use the
-      caller's signal directly so long responses don't get cut off mid-speech.
-    */
-    const { signal: networkSignal, cleanup } = createTimeoutSignal(
-      req.timeoutMs ?? TTS_TIMEOUT_MS,
-      signal,
-    );
-    try {
-      const client = await getClient();
-      const response = await client.audio.speech.create(
-        {
-          model: req.model,
-          voice: req.voice,
-          input: req.input,
-          instructions: req.instructions,
-          response_format: req.responseFormat,
-        },
-        { signal: networkSignal },
-      );
-      return await response.arrayBuffer();
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- classified error
-      throw classifyOpenAIError(error);
-    } finally {
-      cleanup();
-    }
-  }
 
   return {
     adapter,
