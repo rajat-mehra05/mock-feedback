@@ -1,6 +1,6 @@
 [package]
 name = "voiceround"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI-powered mock interviewer for technical interview practice"
 authors = ["rajat-mehra05"]
 edition = "2021"
