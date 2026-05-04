@@ -7,21 +7,17 @@ import {
   FEEDBACK_TIMEOUT_MS,
 } from '@/constants/feedback';
 import { buildFeedbackPrompt } from '@/constants/prompts';
+import type { TopicScope } from '@/constants/topics';
 import type { ConversationTurn, FeedbackResult } from '@/services/types';
 
 /**
  * Generates structured feedback for all Q&A pairs in a completed interview.
  */
-interface FeedbackScope {
-  focus?: readonly string[];
-  outOfScope?: readonly string[];
-}
-
 export async function generateFeedback(
   topic: string,
   turns: ConversationTurn[],
   signal?: AbortSignal,
-  scope?: FeedbackScope,
+  scope?: TopicScope,
 ): Promise<FeedbackResult> {
   const systemPrompt = buildFeedbackPrompt({ topic, ...scope });
   const userContent = turns

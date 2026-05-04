@@ -277,6 +277,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const recordingStartedAt = Date.now();
 
       silenceTimerRef.current = setInterval(() => {
+        // Skip while the tab is hidden: getFloatTimeDomainData returns stale
+        // or zeroed samples when the AudioContext is suspended, which would
+        // otherwise let `silentSince` accumulate against fake silence and
+        // trigger finishRecording mid-answer.
+        if (document.visibilityState !== 'visible') return;
         analyser.getFloatTimeDomainData(rmsSamples);
         let sumSquares = 0;
         for (let i = 0; i < rmsSamples.length; i++) sumSquares += rmsSamples[i] * rmsSamples[i];

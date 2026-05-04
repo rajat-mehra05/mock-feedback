@@ -75,11 +75,13 @@ function buildScopeBlock(
 ): string {
   if (!focus?.length && !outOfScope?.length) return '';
   const lines: string[] = ['', 'Scope guardrails:'];
+  // Semicolon-delimited so items with internal commas (e.g. "Playwright,
+  // Cypress, Selenium") stay distinguishable from the list separator.
   if (focus?.length) {
-    lines.push(`- Stay strictly within these areas: ${focus.join(', ')}.`);
+    lines.push(`- Stay strictly within these areas: ${focus.join('; ')}.`);
   }
   if (outOfScope?.length) {
-    lines.push(`- Do not ask about: ${outOfScope.join(', ')}.`);
+    lines.push(`- Do not ask about: ${outOfScope.join('; ')}.`);
   }
   lines.push(
     "- If the candidate's answer wanders out of scope, briefly acknowledge it then steer back to a focus area.",
@@ -185,10 +187,10 @@ function buildFeedbackScopeBlock(
   if (!focus?.length && !outOfScope?.length) return '';
   const lines: string[] = ['Scope context:'];
   if (focus?.length) {
-    lines.push(`- This interview was scoped to: ${focus.join(', ')}.`);
+    lines.push(`- This interview was scoped to: ${focus.join('; ')}.`);
   }
   if (outOfScope?.length) {
-    lines.push(`- The following were explicitly out of scope: ${outOfScope.join(', ')}.`);
+    lines.push(`- The following were explicitly out of scope: ${outOfScope.join('; ')}.`);
   }
   lines.push(
     '- Evaluate answers within this scope. Do not penalise the candidate for not covering out-of-scope topics, and keep model answers within the focus area.',

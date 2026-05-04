@@ -38,11 +38,33 @@ test('interview prompt injects scope guardrails when focus and outOfScope are pr
 
   expect(prompt).toContain('Scope guardrails:');
   expect(prompt).toContain(
-    'Stay strictly within these areas: REST and GraphQL contract testing, auth flows.',
+    'Stay strictly within these areas: REST and GraphQL contract testing; auth flows.',
   );
   expect(prompt).toContain(
-    'Do not ask about: UI or browser-based testing, load and performance testing.',
+    'Do not ask about: UI or browser-based testing; load and performance testing.',
   );
+});
+
+test('interview prompt renders only the focus line when outOfScope is omitted', () => {
+  const prompt = buildInterviewPrompt({
+    topic: 'API Test Automation',
+    focus: ['REST and GraphQL contract testing'],
+  });
+
+  expect(prompt).toContain('Scope guardrails:');
+  expect(prompt).toContain('Stay strictly within these areas:');
+  expect(prompt).not.toContain('Do not ask about:');
+});
+
+test('interview prompt renders only the do-not-ask line when focus is omitted', () => {
+  const prompt = buildInterviewPrompt({
+    topic: 'API Test Automation',
+    outOfScope: ['UI or browser-based testing'],
+  });
+
+  expect(prompt).toContain('Scope guardrails:');
+  expect(prompt).toContain('Do not ask about:');
+  expect(prompt).not.toContain('Stay strictly within these areas:');
 });
 
 test('interview prompt omits scope block when focus and outOfScope are absent', () => {
@@ -63,6 +85,28 @@ test('feedback prompt injects scope context when scope is provided', () => {
   expect(prompt).toContain('Scope context:');
   expect(prompt).toContain('This interview was scoped to: REST and GraphQL contract testing.');
   expect(prompt).toContain('explicitly out of scope: UI or browser-based testing.');
+});
+
+test('feedback prompt renders only the scoped-to line when outOfScope is omitted', () => {
+  const prompt = buildFeedbackPrompt({
+    topic: 'API Test Automation',
+    focus: ['REST and GraphQL contract testing'],
+  });
+
+  expect(prompt).toContain('Scope context:');
+  expect(prompt).toContain('This interview was scoped to:');
+  expect(prompt).not.toContain('explicitly out of scope:');
+});
+
+test('feedback prompt renders only the out-of-scope line when focus is omitted', () => {
+  const prompt = buildFeedbackPrompt({
+    topic: 'API Test Automation',
+    outOfScope: ['UI or browser-based testing'],
+  });
+
+  expect(prompt).toContain('Scope context:');
+  expect(prompt).toContain('explicitly out of scope:');
+  expect(prompt).not.toContain('This interview was scoped to:');
 });
 
 test('feedback prompt omits scope context when scope is absent', () => {
