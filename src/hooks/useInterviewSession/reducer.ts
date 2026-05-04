@@ -1,8 +1,10 @@
 import type { InterviewSessionState, InterviewAction } from './types';
+import { DEFAULT_TOPIC } from '@/constants/topics';
 
 export const initialState: InterviewSessionState = {
   status: 'idle',
-  topic: '',
+  // Sentinel — never observed because status is 'idle' until START fires.
+  topic: DEFAULT_TOPIC,
   topicLabel: '',
   targetQuestionCount: 0,
   currentQuestionIndex: 0,

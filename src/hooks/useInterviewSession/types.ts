@@ -1,4 +1,5 @@
 import type { ConversationTurn, OpenAIServiceError } from '@/services/types';
+import type { TopicValue } from '@/constants/topics';
 
 export type InterviewState =
   | 'idle'
@@ -13,7 +14,7 @@ export type InterviewState =
 
 export interface InterviewSessionState {
   status: InterviewState;
-  topic: string;
+  topic: TopicValue;
   topicLabel: string;
   targetQuestionCount: number;
   currentQuestionIndex: number;
@@ -35,7 +36,7 @@ export interface InterviewSessionState {
 export type InterviewAction =
   | {
       type: 'START';
-      topic: string;
+      topic: TopicValue;
       topicLabel: string;
       questionCount: number;
       candidateName?: string;
@@ -54,7 +55,7 @@ export type InterviewAction =
   | { type: 'SKIP_DONE' };
 
 export interface InterviewConfig {
-  topic: string;
+  topic: TopicValue;
   topicLabel: string;
   questionCount: number;
   candidateName?: string;

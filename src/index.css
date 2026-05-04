@@ -148,9 +148,34 @@
   }
 }
 
+/* Periodic attention wiggle: mostly at rest, brief tilt-counter-tilt every 5s. */
+@keyframes neo-start-wiggle {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  70% {
+    transform: rotate(-3deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+  90% {
+    transform: rotate(-1deg);
+  }
+}
+
+@utility animate-neo-start-wiggle {
+  animation: neo-start-wiggle 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .soundwave-bar {
     animation: none !important;
     transform: scaleY(0.6);
+  }
+  .animate-neo-start-wiggle {
+    animation: none !important;
   }
 }

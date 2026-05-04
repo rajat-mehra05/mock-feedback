@@ -79,7 +79,9 @@ export function DownloadCta({ platform, onSwitch }: DownloadCtaProps) {
         type="button"
         onClick={() => void handleDownload(platform)}
         disabled={status === 'fetching'}
-        className={`${buttonVariants({ size: 'lg' })} h-14 min-w-[280px] text-base`}
+        // Coral gradient layered over bg-neo-accent (#ff6b6b). Hex pinned
+        // because Tailwind v4 @theme can't derive shifted shades.
+        className={`${buttonVariants({ size: 'lg' })} h-14 min-w-[280px] bg-gradient-to-br from-[#ff7676] to-[#ff5757] text-base`}
       >
         {status === 'fetching' ? (
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

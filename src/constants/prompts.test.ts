@@ -1,12 +1,12 @@
 import { expect, test } from 'vitest';
-import { buildInterviewPrompt } from './prompts';
+import { buildInterviewPrompt, buildFeedbackPrompt } from './prompts';
 
 test('interviewer uses the candidate name when given a clean value, and addresses them in the system rules', () => {
   const prompt = buildInterviewPrompt({ topic: 'React', candidateName: 'Alice' });
 
   // Warm-intro rule references the name, and the constraints section reminds
   // the model to address the candidate by name.
-  expect(prompt).toContain('Hey Alice');
+  expect(prompt).toContain('Hey Alice, can you walk me through your work experience');
   expect(prompt).toContain("candidate's name is Alice");
 });
 
@@ -15,7 +15,7 @@ test('malicious or empty-after-sanitize candidate names are dropped rather than 
   // greeting instead of emitting "Hey , how are you doing?".
   const prompt = buildInterviewPrompt({ topic: 'React', candidateName: '!!!@@@' });
 
-  expect(prompt).toContain('Hey there, how are you doing?');
+  expect(prompt).toContain('Hey there, can you walk me through your work experience');
   expect(prompt).not.toContain("candidate's name is");
 });
 
@@ -27,4 +27,45 @@ test('topic value flows into the prompt for both the greeting and the role descr
 
   expect(prompt).toContain('Nodejs technical interview');
   expect(prompt).toContain('especially with Nodejs');
+});
+
+test('interview prompt injects scope guardrails when focus and outOfScope are provided', () => {
+  const prompt = buildInterviewPrompt({
+    topic: 'API Test Automation',
+    focus: ['REST and GraphQL contract testing', 'auth flows'],
+    outOfScope: ['UI or browser-based testing', 'load and performance testing'],
+  });
+
+  expect(prompt).toContain('Scope guardrails:');
+  expect(prompt).toContain(
+    'Stay strictly within these areas: REST and GraphQL contract testing, auth flows.',
+  );
+  expect(prompt).toContain(
+    'Do not ask about: UI or browser-based testing, load and performance testing.',
+  );
+});
+
+test('interview prompt omits scope block when focus and outOfScope are absent', () => {
+  // Topics without scope (Python, behavioral, etc.) must not get an empty
+  // "Scope guardrails:" header — the LLM treats empty headers as a signal
+  // that the constraint exists with unknown contents.
+  const prompt = buildInterviewPrompt({ topic: 'Python' });
+  expect(prompt).not.toContain('Scope guardrails:');
+});
+
+test('feedback prompt injects scope context when scope is provided', () => {
+  const prompt = buildFeedbackPrompt({
+    topic: 'API Test Automation',
+    focus: ['REST and GraphQL contract testing'],
+    outOfScope: ['UI or browser-based testing'],
+  });
+
+  expect(prompt).toContain('Scope context:');
+  expect(prompt).toContain('This interview was scoped to: REST and GraphQL contract testing.');
+  expect(prompt).toContain('explicitly out of scope: UI or browser-based testing.');
+});
+
+test('feedback prompt omits scope context when scope is absent', () => {
+  const prompt = buildFeedbackPrompt({ topic: 'Python' });
+  expect(prompt).not.toContain('Scope context:');
 });

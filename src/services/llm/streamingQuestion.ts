@@ -24,6 +24,8 @@ export interface StreamingQuestionOptions {
   topic: string;
   history: ConversationTurn[];
   candidateName?: string;
+  focus?: readonly string[];
+  outOfScope?: readonly string[];
   /**
     Fires every time the accumulated text grows, so the UI can display the
     question as it streams in rather than waiting for chat_end.
@@ -46,8 +48,8 @@ export interface StreamingQuestionResult {
 export async function streamAndSpeakQuestion(
   opts: StreamingQuestionOptions,
 ): Promise<StreamingQuestionResult> {
-  const { topic, history, candidateName, onTextUpdate, signal } = opts;
-  const systemPrompt = buildInterviewPrompt({ topic, candidateName });
+  const { topic, history, candidateName, focus, outOfScope, onTextUpdate, signal } = opts;
+  const systemPrompt = buildInterviewPrompt({ topic, candidateName, focus, outOfScope });
   const messages: Array<{ role: 'system' | 'assistant' | 'user'; content: string }> = [
     { role: 'system', content: systemPrompt },
     ...history.flatMap((turn) => [
