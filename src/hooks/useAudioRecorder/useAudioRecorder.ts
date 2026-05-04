@@ -277,6 +277,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const recordingStartedAt = Date.now();
 
       silenceTimerRef.current = setInterval(() => {
+        // Skip while the tab is hidden: getFloatTimeDomainData returns stale
+        // or zeroed samples when the AudioContext is suspended, which would
+        // otherwise let `silentSince` accumulate against fake silence and
+        // trigger finishRecording mid-answer.
+        if (document.visibilityState !== 'visible') return;
         analyser.getFloatTimeDomainData(rmsSamples);
         let sumSquares = 0;
         for (let i = 0; i < rmsSamples.length; i++) sumSquares += rmsSamples[i] * rmsSamples[i];
@@ -325,16 +330,26 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     };
   }, [releaseCaptureGraph]);
 
-  // Stop recording when the window loses focus. Prevents silent background
-  // recording when the user switches tabs or apps. Captured audio is
-  // preserved via the finishRecording handler.
+  /*
+    Recording deliberately survives tab/window blur. The browser's mic
+    indicator plus the SILENCE_TIMEOUT_SECONDS auto-stop are enough; an
+    aggressive blur-stop also fires for DevTools, address bar focus, and
+    multi-monitor clicks, which used to truncate real answers.
+
+    Defensive: some browsers (notably Safari historically) suspend the
+    AudioContext when the tab is hidden, which silently drops worklet
+    frames. On visibility return, resume the context if it landed in
+    'suspended' so capture continues from where it left off.
+  */
   useEffect(() => {
-    const handleBlur = () => {
-      if (workletNodeRef.current) finishRecording();
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state === 'suspended') void ctx.resume();
     };
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, [finishRecording]);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const clearBlob = useCallback(() => setAudioBlob(null), []);
 

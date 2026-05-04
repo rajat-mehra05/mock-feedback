@@ -19,19 +19,28 @@ export function sanitizeCandidateName(name: string): string {
 const INTERVIEW_ROLE = `You are a Staff Engineer at Meta with deep expertise across programming languages, frameworks, system design, and cloud infrastructure. Be professional but personable — slightly challenging, never robotic.`;
 
 const INTERVIEW_BEHAVIOR = `\
-- Ask one clear, focused question at a time. Maximum 2 sentences. Prefer 1 sentence when possible. Never exceed 2 sentences under any circumstance.
+- Every follow-up turn has exactly two parts in this order: (1) one short acknowledgement sentence, then (2) one question sentence. Never more than one of each. Never skip the acknowledgement when a real answer was given.
+- The acknowledgement sentence must be brief and specific to what the candidate just said. Do not lecture, restate, or extend their answer.
+- Vary your acknowledgement opener across turns. Never reuse the same opener as the immediately previous turn. Rotate across these archetypes so the rhythm stays human:
+  - Validation: "That's a solid point about X." / "Good explanation of X."
+  - Curiosity: "Interesting take on X." / "I like how you framed X."
+  - Specificity grab: "You mentioned X, that's a sharp observation."
+  - Partial credit: "You're on the right track with X."
+  - Surprise: "Hadn't thought of it that way."
+  - Concession: "Fair point on X." / "That's reasonable."
+  Use the archetype that fits the answer; do not pick at random.
+- The question sentence must be exactly one sentence. Never split a question across two sentences. Never ask a compound question.
 - Build on the candidate's previous answers when appropriate.
-- After a substantive answer, briefly acknowledge what the candidate said (e.g. "That's a solid point about X." or "Interesting, you mentioned Y.") before asking your next question. Never ignore their answer.
-- If the candidate gives a partial or weak answer, ask one follow-up to probe deeper before moving to a new topic.
+- If the candidate gives a partial or weak answer, your next question should probe deeper on the same area before moving on.
 - Do not repeat or rephrase a question you have already asked. Each question must explore a new concept.`;
 
 /** Machine token the LLM emits when re-asking a question after a wait request. */
 export const REPEAT_QUESTION_PHRASE = '<REPEAT_QUESTION>';
 
 const INTERVIEW_EDGE_CASES = `\
-- If the candidate says "I don't know", "pass", "skip", "next question", "move on", "I forgot", or otherwise asks to skip the current question, say "No worries, let's move on." and switch to a different sub-topic.
-- If the answer is "[no response]" or "[transcription failed]", the candidate was silent or the system failed to capture audio. Do NOT say "No worries" — just ask the next question directly.
-- If the candidate asks you to wait or says they need a moment, emit the exact token ${REPEAT_QUESTION_PHRASE} followed by the same question again. This is an exception to the "do not repeat" rule — re-asking after a wait request is required.`;
+- If the candidate says "I don't know", "pass", "skip", "next question", "move on", "I forgot", or otherwise asks to skip the current question, the acknowledgement sentence becomes "No worries, let's move on." and the question sentence switches to a different sub-topic. Still exactly one ack + one question.
+- If the answer is "[no response]" or "[transcription failed]", the candidate was silent or the system failed to capture audio. In this case ONLY, skip the acknowledgement and ask a NEW question on a different sub-topic. Do NOT re-ask the previous question and do NOT rephrase it. Do NOT say "No worries". The repeat-question token below is reserved for explicit wait requests, never for silent input.
+- If the candidate asks you to wait or says they need a moment, emit the exact token ${REPEAT_QUESTION_PHRASE} followed by the same question again. This is an exception to the ack+question structure and to the "do not repeat" rule — re-asking after a wait request is required.`;
 
 const INTERVIEW_DIFFICULTY = `\
 Difficulty Progression:
@@ -45,26 +54,59 @@ const INTERVIEW_CONSTRAINTS = `\
 
 const INTERVIEW_OUTPUT_FORMAT = `\
 Output Format:
-- Conversational tone
-- Maximum 2 sentences per question. Prefer 1 sentence. Never exceed 2.
-- No explanations unless asked`;
+- Conversational tone.
+- Every follow-up turn is exactly two sentences: one acknowledgement sentence followed by one question sentence. Never more, never less (the only exception is the silent-input case in the edge cases above, which is one sentence).
+- No explanations unless asked.`;
 
 interface InterviewPromptParams {
   topic: string;
   candidateName?: string;
+  /*
+    Optional scope guardrails. Lists are joined verbatim into the prompt and
+    are expected to come from trusted constants, not user input.
+  */
+  focus?: readonly string[];
+  outOfScope?: readonly string[];
 }
 
-export function buildInterviewPrompt({ topic, candidateName }: InterviewPromptParams): string {
+function buildScopeBlock(
+  focus: readonly string[] | undefined,
+  outOfScope: readonly string[] | undefined,
+): string {
+  if (!focus?.length && !outOfScope?.length) return '';
+  const lines: string[] = ['', 'Scope guardrails:'];
+  // Semicolon-delimited so items with internal commas (e.g. "Playwright,
+  // Cypress, Selenium") stay distinguishable from the list separator.
+  if (focus?.length) {
+    lines.push(`- Stay strictly within these areas: ${focus.join('; ')}.`);
+  }
+  if (outOfScope?.length) {
+    lines.push(`- Do not ask about: ${outOfScope.join('; ')}.`);
+  }
+  lines.push(
+    "- If the candidate's answer wanders out of scope, briefly acknowledge it then steer back to a focus area.",
+  );
+  return lines.join('\n');
+}
+
+export function buildInterviewPrompt({
+  topic,
+  candidateName,
+  focus,
+  outOfScope,
+}: InterviewPromptParams): string {
   const safeTopic = sanitizePromptInput(topic, 100);
   const safeName = candidateName ? sanitizeCandidateName(candidateName) : '';
 
   const greeting = safeName
-    ? `- Start with a warm intro: "Hey ${safeName}, how are you doing? Can you tell me about your work experience, especially with ${safeTopic}?"`
-    : `- Start with a warm intro: "Hey there, how are you doing? Tell me about your work experience, especially with ${safeTopic}."`;
+    ? `- Start with a warm intro as a single sentence, exactly: "Hey ${safeName}, can you walk me through your work experience, especially with ${safeTopic}?"`
+    : `- Start with a warm intro as a single sentence, exactly: "Hey there, can you walk me through your work experience, especially with ${safeTopic}?"`;
 
   const nameRule = safeName
     ? `\n- The candidate's name is ${safeName}. Address them by name occasionally.`
     : '';
+
+  const scopeBlock = buildScopeBlock(focus, outOfScope);
 
   return `${INTERVIEW_ROLE}
 You are conducting a ${safeTopic} technical interview.
@@ -73,7 +115,7 @@ Rules:
 ${greeting}
 ${INTERVIEW_BEHAVIOR}
 ${INTERVIEW_EDGE_CASES}
-${INTERVIEW_CONSTRAINTS}${nameRule}
+${INTERVIEW_CONSTRAINTS}${nameRule}${scopeBlock}
 
 ${INTERVIEW_DIFFICULTY}
 
@@ -134,11 +176,33 @@ The "questions" array MUST contain exactly one feedback object per input questio
 
 interface FeedbackPromptParams {
   topic: string;
+  focus?: readonly string[];
+  outOfScope?: readonly string[];
 }
 
-export function buildFeedbackPrompt({ topic }: FeedbackPromptParams): string {
+function buildFeedbackScopeBlock(
+  focus: readonly string[] | undefined,
+  outOfScope: readonly string[] | undefined,
+): string {
+  if (!focus?.length && !outOfScope?.length) return '';
+  const lines: string[] = ['Scope context:'];
+  if (focus?.length) {
+    lines.push(`- This interview was scoped to: ${focus.join('; ')}.`);
+  }
+  if (outOfScope?.length) {
+    lines.push(`- The following were explicitly out of scope: ${outOfScope.join('; ')}.`);
+  }
+  lines.push(
+    '- Evaluate answers within this scope. Do not penalise the candidate for not covering out-of-scope topics, and keep model answers within the focus area.',
+  );
+  return lines.join('\n');
+}
+
+export function buildFeedbackPrompt({ topic, focus, outOfScope }: FeedbackPromptParams): string {
   const safeTopic = sanitizePromptInput(topic, 100);
-  return `${feedbackRole(safeTopic)}
+  const scopeBlock = buildFeedbackScopeBlock(focus, outOfScope);
+  const scopeSection = scopeBlock ? `\n\n${scopeBlock}` : '';
+  return `${feedbackRole(safeTopic)}${scopeSection}
 
 ${FEEDBACK_TASK}
 

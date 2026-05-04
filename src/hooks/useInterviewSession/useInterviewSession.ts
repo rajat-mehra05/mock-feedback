@@ -6,6 +6,7 @@ import { streamAndSpeakQuestion } from '@/services/llm/streamingQuestion';
 import { speakText } from '@/services/tts/tts';
 import { transcribeAudio } from '@/services/stt/stt';
 import { generateFeedback } from '@/services/feedback/feedback';
+import { getTopicScope } from '@/constants/topics';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder/useAudioRecorder';
 import { withRetry } from '@/lib/retry';
 import { RETRY_MAX_ATTEMPTS, RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS } from '@/constants/interview';
@@ -88,6 +89,7 @@ export function useInterviewSession() {
                 topic: state.topicLabel,
                 history: state.history,
                 candidateName: state.candidateName,
+                ...getTopicScope(state.topic),
                 onTextUpdate: scheduleTextUpdate,
                 signal: sig,
               }),
@@ -164,7 +166,12 @@ export function useInterviewSession() {
             // TTS failure is non-blocking
           }
           if (effectSignal.aborted) return;
-          const result = await generateFeedback(state.topicLabel, state.history, effectSignal);
+          const result = await generateFeedback(
+            state.topicLabel,
+            state.history,
+            effectSignal,
+            getTopicScope(state.topic),
+          );
           if (effectSignal.aborted) return;
           const sessionId = crypto.randomUUID();
           const elapsed = state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : 0;

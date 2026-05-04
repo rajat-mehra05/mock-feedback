@@ -22,7 +22,7 @@ export const FEATURES = [
   {
     icon: Zap,
     title: 'Zero Setup',
-    desc: 'Runs in your browser. Your OpenAI key is used only to call OpenAI.',
+    desc: 'Runs on Mac, Windows or install as a PWA. Your OpenAI key never leaves your device.',
     color: 'bg-neo-cream',
   },
 ] as const;

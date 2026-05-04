@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { StartModal } from '@/components/StartModal/StartModal';
 import { InstallSection } from '@/components/InstallSection/InstallSection';
 import { FEATURES } from '@/constants/home';
@@ -60,7 +61,7 @@ export function Home() {
             onMouseEnter={preloadSession}
             onFocus={preloadSession}
             aria-label={HOME_START_LABEL}
-            className="group relative flex h-40 w-40 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-2xl font-black uppercase tracking-wide text-black shadow-neo-lg transition-all duration-150 hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none sm:h-48 sm:w-48 sm:text-3xl"
+            className="group relative flex h-40 w-40 cursor-pointer items-center justify-center border-4 border-black bg-neo-accent text-2xl font-black uppercase tracking-wide text-black shadow-neo-lg transition-all duration-150 animate-neo-start-wiggle hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000] hover:[animation-play-state:paused] focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none sm:h-48 sm:w-48 sm:text-3xl"
           >
             <span className="transition-transform duration-150 group-hover:scale-110">Start</span>
           </button>
@@ -75,8 +76,9 @@ export function Home() {
       <section aria-labelledby="features-heading" className="space-y-8">
         <h2
           id="features-heading"
-          className="text-center text-2xl font-black uppercase tracking-tight text-black sm:text-3xl"
+          className="flex items-center gap-1 text-2xl font-black uppercase tracking-tight text-black sm:text-3xl"
         >
+          <ChevronRight className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" strokeWidth={3} />
           Why{' '}
           <span className="relative inline-block">
             <span className="relative z-10">VoiceRound</span>
@@ -109,9 +111,23 @@ export function Home() {
           macOS/Windows" detection is desktop-shaped. PWA.4 will replace this
           with a real mobile install CTA. */}
       {import.meta.env.VITE_TARGET !== 'tauri' ? (
-        <div className="hidden md:block">
+        <section aria-labelledby="install-heading" className="hidden space-y-8 md:block">
+          <h2
+            id="install-heading"
+            className="flex items-center gap-1 text-2xl font-black uppercase tracking-tight text-black sm:text-3xl"
+          >
+            <ChevronRight className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" strokeWidth={3} />
+            Run it{' '}
+            <span className="relative inline-block">
+              <span className="relative z-10">anywhere</span>
+              <span
+                className="absolute bottom-1 left-0 -z-0 h-2 w-full -rotate-1 bg-neo-accent sm:h-2.5"
+                aria-hidden="true"
+              />
+            </span>
+          </h2>
           <InstallSection />
-        </div>
+        </section>
       ) : null}
 
       {/* Footer */}

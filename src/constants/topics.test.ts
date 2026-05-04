@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { toValidTopic, TOPIC_GROUPS, TOPICS, TOPIC_LABELS } from './topics';
+import { toValidTopic, TOPIC_GROUPS, TOPICS, TOPIC_LABELS, getTopicScope } from './topics';
 
 test('toValidTopic returns valid topics unchanged and rejects malicious input', () => {
   // Original topics still valid
@@ -20,6 +20,13 @@ test('toValidTopic returns valid topics unchanged and rejects malicious input', 
   expect(toValidTopic('docker-kubernetes')).toBe('docker-kubernetes');
   expect(toValidTopic('aws-cloud')).toBe('aws-cloud');
   expect(toValidTopic('graphql')).toBe('graphql');
+
+  // QA & Test Engineering category
+  expect(toValidTopic('qa-manual')).toBe('qa-manual');
+  expect(toValidTopic('qa-sdet')).toBe('qa-sdet');
+  expect(toValidTopic('qa-ui-automation')).toBe('qa-ui-automation');
+  expect(toValidTopic('qa-api-automation')).toBe('qa-api-automation');
+  expect(toValidTopic('qa-performance')).toBe('qa-performance');
 
   // null falls back to default
   expect(toValidTopic(null)).toBe('javascript-typescript');
@@ -44,4 +51,26 @@ test('TOPIC_GROUPS, TOPICS, and TOPIC_LABELS are consistent', () => {
   // No duplicate values
   const values = TOPICS.map((t) => t.value);
   expect(new Set(values).size).toBe(values.length);
+});
+
+test('QA topics carry scope metadata; non-QA topics do not', () => {
+  // The five testing roles each declare focus + outOfScope so the LLM stays in lane.
+  const qaTopics = [
+    'qa-manual',
+    'qa-sdet',
+    'qa-ui-automation',
+    'qa-api-automation',
+    'qa-performance',
+  ] as const;
+  for (const value of qaTopics) {
+    const scope = getTopicScope(value);
+    expect(scope).toBeDefined();
+    expect(scope!.focus.length).toBeGreaterThan(0);
+    expect(scope!.outOfScope.length).toBeGreaterThan(0);
+  }
+
+  // Non-QA topics intentionally have no scope guardrails — prompts no-op.
+  expect(getTopicScope('python')).toBeUndefined();
+  expect(getTopicScope('react-nextjs')).toBeUndefined();
+  expect(getTopicScope('behavioral')).toBeUndefined();
 });

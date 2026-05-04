@@ -7,6 +7,7 @@ import {
   FEEDBACK_TIMEOUT_MS,
 } from '@/constants/feedback';
 import { buildFeedbackPrompt } from '@/constants/prompts';
+import type { TopicScope } from '@/constants/topics';
 import type { ConversationTurn, FeedbackResult } from '@/services/types';
 
 /**
@@ -16,8 +17,9 @@ export async function generateFeedback(
   topic: string,
   turns: ConversationTurn[],
   signal?: AbortSignal,
+  scope?: TopicScope,
 ): Promise<FeedbackResult> {
-  const systemPrompt = buildFeedbackPrompt({ topic });
+  const systemPrompt = buildFeedbackPrompt({ topic, ...scope });
   const userContent = turns
     .map((t, i) => `Question ${i + 1}: ${t.question}\nAnswer: ${t.answer}`)
     .join('\n\n');
